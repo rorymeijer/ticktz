@@ -34,6 +34,7 @@ export default function PortalLayout({
     // Extended per phase as the portal grows; see docs/roadmap.md.
     const links = [
         { href: '/portal', label: t('portal.nav.browse') },
+        { href: '/portal/kb', label: t('kb.portal_title') },
         { href: '/portal/requests', label: t('portal.nav.my_requests') },
     ];
 

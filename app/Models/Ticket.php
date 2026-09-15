@@ -174,6 +174,14 @@ class Ticket extends Model
         return $this->belongsTo(EmailChannel::class, 'email_channel_id');
     }
 
+    /** @return BelongsToMany<KbArticle, $this> */
+    public function kbArticles(): BelongsToMany
+    {
+        return $this->belongsToMany(KbArticle::class, 'kb_article_ticket')
+            ->withPivot('linked_by')
+            ->withTimestamps();
+    }
+
     /** @return HasMany<SlaTimer, $this> */
     public function slaTimers(): HasMany
     {

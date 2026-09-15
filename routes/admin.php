@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\AutomationRuleController;
 use App\Http\Controllers\Admin\CustomFieldController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EmailChannelController;
+use App\Http\Controllers\Admin\KbArticleController;
 use App\Http\Controllers\Admin\LabelController;
 use App\Http\Controllers\Admin\LdapConfigController;
 use App\Http\Controllers\Admin\OrganizationController;
@@ -57,6 +58,19 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::post('email/templates', [EmailChannelController::class, 'storeTemplate'])->name('email.templates.store');
     Route::put('email/templates/{template}', [EmailChannelController::class, 'updateTemplate'])->name('email.templates.update');
     Route::delete('email/templates/{template}', [EmailChannelController::class, 'destroyTemplate'])->name('email.templates.destroy');
+
+    // Articles resolve by id in the admin area: an editor renaming an article
+    // must not break the URL of the page they are renaming it on.
+    Route::get('kb', [KbArticleController::class, 'index'])->name('kb.index');
+    Route::post('kb', [KbArticleController::class, 'store'])->name('kb.store');
+    Route::get('kb/{article}/edit', [KbArticleController::class, 'edit'])->name('kb.edit');
+    Route::put('kb/{article}', [KbArticleController::class, 'update'])->name('kb.update');
+    Route::delete('kb/{article}', [KbArticleController::class, 'destroy'])->name('kb.destroy');
+    Route::patch('kb/{article}/published', [KbArticleController::class, 'publish'])->name('kb.publish');
+    Route::post('kb/{article}/versions/{version}/restore', [KbArticleController::class, 'restore'])->name('kb.restore');
+    Route::post('kb/categories', [KbArticleController::class, 'storeCategory'])->name('kb.categories.store');
+    Route::put('kb/categories/{category}', [KbArticleController::class, 'updateCategory'])->name('kb.categories.update');
+    Route::delete('kb/categories/{category}', [KbArticleController::class, 'destroyCategory'])->name('kb.categories.destroy');
 
     Route::get('automation', [AutomationRuleController::class, 'index'])->name('automation.index');
     Route::post('automation/rules', [AutomationRuleController::class, 'store'])->name('automation.rules.store');

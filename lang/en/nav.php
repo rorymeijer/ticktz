@@ -6,6 +6,7 @@ return [
     'dashboard' => 'Dashboard',
     'tickets' => 'Tickets',
     'queues' => 'Queues',
+    'kb' => 'Knowledge base',
     'portal' => 'Portal',
     'my_requests' => 'My requests',
     'new_request' => 'New request',

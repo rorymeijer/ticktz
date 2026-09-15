@@ -89,6 +89,13 @@ export default function AdminLayout({
             section: 'service_desk',
         },
         {
+            key: 'kb',
+            href: '/admin/kb',
+            label: t('admin.nav.kb'),
+            permission: 'kb.manage',
+            section: 'service_desk',
+        },
+        {
             key: 'sla',
             href: '/admin/sla',
             label: t('admin.nav.sla'),

@@ -56,6 +56,7 @@ curl -s http://localhost:8080/health | jq
 | [E-mail](docs/email.md) | Mailboxes, notification templates, email-to-ticket |
 | [Service levels](docs/sla.md) | Calendars, policies, targets, escalations |
 | [Automation](docs/automation.md) | Rules, conditions, actions, webhooks |
+| [Knowledge base](docs/kb.md) | Articles, versions, visibility, search, suggestions |
 | [Design decisions](docs/decisions.md) | Defaults chosen where the brief left room |
 | [Screenshots](docs/screenshots.md) | What the product looks like |
 | [Contributing](CONTRIBUTING.md) | Local development without Docker, coding standards |

@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react';
 
-import { IconCog, IconDashboard, IconInbox, IconTicket } from '@/Components/Icons';
+import { IconBook, IconCog, IconDashboard, IconInbox, IconTicket } from '@/Components/Icons';
 import type { User } from '@/types';
 
 export interface NavItem {
@@ -36,6 +36,10 @@ export function agentNavigation(user: User | null, t: Translator): NavItem[] {
             { key: 'tickets', label: t('nav.tickets'), href: '/agent/tickets', icon: IconTicket, match: ['/agent/tickets'] },
             { key: 'queues', label: t('nav.queues'), href: '/agent/queues', icon: IconInbox, match: ['/agent/queues'] },
         );
+    }
+
+    if (can('kb.view')) {
+        items.push({ key: 'kb', label: t('nav.kb'), href: '/agent/kb', icon: IconBook, match: ['/agent/kb'] });
     }
 
     if (can('settings.manage') || can('users.manage')) {

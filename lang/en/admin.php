@@ -22,6 +22,7 @@ return [
         'email' => 'Mailboxes',
         'sla' => 'Service levels',
         'automation' => 'Automation',
+        'kb' => 'Knowledge base',
         'settings' => 'Settings',
         'audit' => 'Audit log',
         'service_desk' => 'Service desk',

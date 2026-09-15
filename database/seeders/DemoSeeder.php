@@ -9,6 +9,8 @@ use App\Models\AuditLogEntry;
 use App\Models\AutomationRule;
 use App\Models\CustomField;
 use App\Models\EmailChannel;
+use App\Models\KbArticle;
+use App\Models\KbCategory;
 use App\Models\Label;
 use App\Models\Organization;
 use App\Models\PortalCategory;
@@ -20,6 +22,7 @@ use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\TicketStatus;
 use App\Models\User;
+use App\Services\Kb\ArticleService;
 use App\Services\Sla\SlaEngine;
 use App\Services\Sla\SlaEscalator;
 use App\Services\Tickets\TicketService;
@@ -144,6 +147,209 @@ class DemoSeeder extends Seeder
         $this->seedMailbox($teams['servicedesk']);
         $this->seedAutomation($teams);
         $this->seedTickets();
+        $this->seedKnowledgeBase();
+    }
+
+    /**
+     * A small knowledge base: the answers this desk gives most often.
+     *
+     * Written in Dutch like the rest of the demo, and deliberately mixed —
+     * public articles a requester can find, one internal runbook they cannot,
+     * and one draft that is not an answer yet. Two are linked to the tickets
+     * they would have resolved, because a knowledge base that nothing points
+     * at demonstrates only half the feature.
+     */
+    private function seedKnowledgeBase(): void
+    {
+        $articles = app(ArticleService::class);
+        $author = User::query()->where('email', 'joost@ticktz.test')->first();
+
+        $categories = collect([
+            ['slug' => 'accounts', 'name' => 'Accounts en inloggen', 'nl' => 'Accounts en inloggen', 'en' => 'Accounts and sign-in', 'position' => 10],
+            ['slug' => 'werkplek', 'name' => 'Werkplek', 'nl' => 'Werkplek', 'en' => 'Workplace', 'position' => 20],
+            ['slug' => 'netwerk', 'name' => 'Netwerk en wifi', 'nl' => 'Netwerk en wifi', 'en' => 'Network and wi-fi', 'position' => 30],
+            ['slug' => 'runbooks', 'name' => 'Runbooks', 'nl' => 'Runbooks', 'en' => 'Runbooks', 'position' => 40, 'internal' => true],
+        ])->mapWithKeys(fn (array $category) => [
+            $category['slug'] => KbCategory::query()->updateOrCreate(['slug' => $category['slug']], [
+                'name' => $category['name'],
+                'name_translations' => ['nl' => $category['nl'], 'en' => $category['en']],
+                'visibility' => ($category['internal'] ?? false) ? KbCategory::INTERNAL : KbCategory::PUBLIC,
+                'is_active' => true,
+                'position' => $category['position'],
+            ]),
+        ]);
+
+        foreach ($this->articleBlueprints() as $blueprint) {
+            $slug = Str::slug($blueprint['title']);
+
+            // Idempotent like the rest of the seeder: re-running the demo must
+            // not leave a second copy of every article behind.
+            if (KbArticle::query()->withTrashed()->where('slug', $slug)->exists()) {
+                continue;
+            }
+
+            $article = $articles->create([
+                'title' => $blueprint['title'],
+                'kb_category_id' => $categories[$blueprint['category']]->getKey(),
+                'body' => $blueprint['body'],
+                'status' => $blueprint['status'] ?? KbArticle::PUBLISHED,
+                'visibility' => $blueprint['visibility'] ?? KbArticle::PUBLIC,
+                // No locale: this desk writes in Dutch and every reader should
+                // find these, whichever language they run the UI in. Pinning
+                // them to `nl` would empty the help centre for an English
+                // reader, which is the wrong lesson for a demo to teach.
+                'locale' => null,
+                'position' => $blueprint['position'] ?? 100,
+            ], $author);
+
+            if (isset($blueprint['answers'])) {
+                $ticket = Ticket::query()->where('subject', $blueprint['answers'])->first();
+
+                if ($ticket) {
+                    $articles->linkToTicket($article, $ticket, $author);
+                }
+            }
+
+            // A plausible read count, so "most read" orders the list the way a
+            // live instance would rather than by insertion order.
+            KbArticle::query()->whereKey($article->getKey())->toBase()
+                ->update(['view_count' => $blueprint['views'] ?? 0]);
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function articleBlueprints(): array
+    {
+        return [
+            [
+                'title' => 'Wachtwoord opnieuw instellen',
+                'category' => 'accounts',
+                'views' => 412,
+                'position' => 10,
+                'body' => <<<'HTML'
+                    <p>Je kunt je wachtwoord zelf opnieuw instellen. Dat gaat sneller dan een melding maken.</p>
+                    <ol>
+                        <li>Ga naar <a href="https://wachtwoord.zandvliet.test">wachtwoord.zandvliet.test</a>.</li>
+                        <li>Vul je werkmailadres in en klik op <strong>Verstuur code</strong>.</li>
+                        <li>Voer de code uit de sms in en kies een nieuw wachtwoord.</li>
+                    </ol>
+                    <h2>Eisen aan het wachtwoord</h2>
+                    <ul>
+                        <li>Minimaal twaalf tekens.</li>
+                        <li>Geen wachtwoord dat je eerder hebt gebruikt.</li>
+                        <li>Een zin werkt beter dan een woord met tekens erin.</li>
+                    </ul>
+                    <p>Lukt het niet? Maak dan een melding aan, dan zetten wij het account klaar.</p>
+                    HTML,
+            ],
+            [
+                'title' => 'Melding "ongeldige sessie" in het zaaksysteem',
+                'category' => 'accounts',
+                'views' => 268,
+                'position' => 20,
+                'answers' => 'Kan niet inloggen op het zaaksysteem',
+                'body' => <<<'HTML'
+                    <p>Deze melding verschijnt als je account op twee werkplekken tegelijk actief is.</p>
+                    <h2>Wat je zelf kunt doen</h2>
+                    <ol>
+                        <li>Sluit het zaaksysteem op alle werkplekken, ook thuis.</li>
+                        <li>Wacht vijf minuten; de sessie loopt dan vanzelf af.</li>
+                        <li>Log opnieuw in.</li>
+                    </ol>
+                    <p>Blijft de melding komen, meld het dan bij de servicedesk. Vermeld op welke
+                    werkplekken je hebt ingelogd — dat scheelt ons het uitzoekwerk.</p>
+                    HTML,
+            ],
+            [
+                'title' => 'Papierstoring verhelpen bij de Canon-printers',
+                'category' => 'werkplek',
+                'views' => 193,
+                'position' => 10,
+                'answers' => 'Printer 3e etage geeft steeds papierstoring',
+                'body' => <<<'HTML'
+                    <p>Bijna alle papierstoringen los je zelf op in twee minuten.</p>
+                    <ol>
+                        <li>Open de achterklep (de grijze hendel rechtsonder).</li>
+                        <li>Trek het vastgelopen vel <em>met de papierrichting mee</em> naar buiten, nooit terug.</li>
+                        <li>Controleer of er geen snippers zijn achtergebleven.</li>
+                        <li>Sluit de klep. De printer hervat de opdracht zelf.</li>
+                    </ol>
+                    <h2>Blijft het gebeuren?</h2>
+                    <p>Dan ligt het meestal aan het papier, niet aan de printer:</p>
+                    <ul>
+                        <li>Papier dat te lang open heeft gelegen, trekt vocht.</li>
+                        <li>Een lade die te vol zit, pakt twee vellen tegelijk.</li>
+                        <li>Waaier de stapel los voordat je hem in de lade legt.</li>
+                    </ul>
+                    HTML,
+            ],
+            [
+                'title' => 'Een nieuwe werkplek aanvragen',
+                'category' => 'werkplek',
+                'views' => 154,
+                'position' => 20,
+                'body' => <<<'HTML'
+                    <p>Vraag een werkplek aan zodra de startdatum bekend is. Wij hebben tien werkdagen
+                    nodig, en bij levertijden van leveranciers soms langer.</p>
+                    <h2>Wat we nodig hebben</h2>
+                    <ul>
+                        <li>Naam van de nieuwe collega.</li>
+                        <li>Eerste werkdag.</li>
+                        <li>Afdeling en leidinggevende.</li>
+                        <li>Of er afwijkende apparatuur nodig is.</li>
+                    </ul>
+                    <p>Gebruik het formulier <strong>Nieuwe medewerker</strong> op het portaal; dan
+                    vragen we die gegevens meteen goed uit.</p>
+                    HTML,
+            ],
+            [
+                'title' => 'Wifi in de vergaderruimtes',
+                'category' => 'netwerk',
+                'views' => 121,
+                'position' => 10,
+                'body' => <<<'HTML'
+                    <p>De vergaderruimtes hangen aan hetzelfde netwerk als de werkplekken, maar aan
+                    één accesspoint per ruimte.</p>
+                    <h2>Verbinding valt weg tijdens een overleg</h2>
+                    <ul>
+                        <li>Zet wifi op je laptop uit en weer aan; je verbindt dan opnieuw met het sterkste punt.</li>
+                        <li>Deel geen scherm via wifi als het via de kabel kan — dat scheelt de helft van de bandbreedte.</li>
+                        <li>Zitten er meer dan acht mensen, meld het dan bij ons. Dan is de ruimte te krap bemeten.</li>
+                    </ul>
+                    HTML,
+            ],
+            [
+                'title' => 'Sessietabel zaaksysteem opschonen',
+                'category' => 'runbooks',
+                'visibility' => KbArticle::INTERNAL,
+                'views' => 47,
+                'position' => 10,
+                'body' => <<<'HTML'
+                    <p><strong>Alleen voor beheerders.</strong> Deze ingreep raakt alle actieve sessies.</p>
+                    <ol>
+                        <li>Log in op <code>zaak-app-01</code>.</li>
+                        <li>Controleer eerst welke rijen je raakt:
+                            <code>SELECT id, user_id, last_seen_at FROM sessions WHERE last_seen_at &lt; NOW() - INTERVAL 2 HOUR;</code></li>
+                        <li>Verwijder ze pas daarna, in batches van duizend.</li>
+                        <li>Noteer het rij-id in het ticket, zodat de volgende collega ziet wat je hebt gedaan.</li>
+                    </ol>
+                    <blockquote>Nooit uitvoeren tijdens kantooruren zonder overleg met Applicatiebeheer.</blockquote>
+                    HTML,
+            ],
+            [
+                'title' => 'Mailbox voor een team aanvragen',
+                'category' => 'accounts',
+                'status' => KbArticle::DRAFT,
+                'position' => 30,
+                'body' => <<<'HTML'
+                    <p>Concept — nog af te stemmen met Functioneel beheer.</p>
+                    <p>Een gedeelde mailbox vraag je aan via het portaal. Vermeld wie de eigenaar is
+                    en wie er toegang moeten krijgen.</p>
+                    HTML,
+            ],
+        ];
     }
 
     /**

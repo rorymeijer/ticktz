@@ -2,6 +2,7 @@ import { useForm } from '@inertiajs/react';
 import { useRef, useState, type FormEventHandler } from 'react';
 
 import PortalLayout from '@/Layouts/PortalLayout';
+import { ArticleSuggestions } from '@/Components/Portal/ArticleSuggestions';
 import { DynamicField, type FieldDefinition, type FieldValue } from '@/Components/Portal/DynamicField';
 import { IconPaperclip, IconX } from '@/Components/Icons';
 import {
@@ -82,6 +83,11 @@ export default function RequestForm({
     // A template renders the subject for the requester, so we do not ask twice.
     const asksForSubject = !requestType.subject_template;
 
+    // What we look for an answer with. The subject is the better signal, but a
+    // templated request type does not have one, and the description is then
+    // the only thing the requester has written.
+    const suggestionTerm = asksForSubject ? form.data.subject : form.data.description;
+
     return (
         <PortalLayout title={requestType.name}>
             <div className="mx-auto max-w-2xl">
@@ -121,6 +127,8 @@ export default function RequestForm({
                                     )}
                                 </Field>
                             ) : null}
+
+                            <ArticleSuggestions subject={suggestionTerm} />
 
                             {requestType.fields.map((field) => (
                                 <DynamicField

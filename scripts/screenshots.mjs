@@ -69,8 +69,16 @@ const SHOTS = [
     { slug: '14e-admin-request-type-form', path: '/admin/request-types/1/edit?lang=en', as: 'admin', fullPage: true },
     { slug: '14f-admin-custom-fields', path: '/admin/custom-fields?lang=en', as: 'admin' },
     { slug: '31-profile-nl', path: '/profile?lang=nl', as: 'agent' },
+    { slug: '50-portal-kb', path: '/portal/kb?lang=en', as: 'requester' },
+    { slug: '51-portal-kb-article', path: '/portal/kb/papierstoring-verhelpen-bij-de-canon-printers?lang=en', as: 'requester', fullPage: true },
+    { slug: '52-portal-kb-search', path: '/portal/kb?q=printer&lang=en', as: 'requester' },
+    { slug: '53-agent-kb', path: '/agent/kb?lang=en', as: 'agent' },
+    { slug: '54-admin-kb', path: '/admin/kb?lang=en', as: 'admin', fullPage: true },
+    { slug: '55-admin-kb-edit', path: '/admin/kb/papierstoring-verhelpen-bij-de-canon-printers/edit?lang=en', as: 'admin', fullPage: true },
+    { slug: '56-admin-kb-nl', path: '/admin/kb?lang=nl', as: 'admin' },
     { slug: '40-mobile-portal', path: '/portal?lang=en', as: 'requester', width: 400, height: 780 },
     { slug: '41-mobile-tickets', path: '/agent/tickets?lang=en', as: 'agent', width: 400, height: 780 },
+    { slug: '42-mobile-kb', path: '/portal/kb?lang=en', as: 'requester', width: 400, height: 780 },
 ];
 
 async function signIn(context, account) {

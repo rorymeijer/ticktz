@@ -13,8 +13,8 @@ tracks what is shipped. The phase definitions come from the original brief in
 | 4 | E-mail (SMTP out, IMAP in) | ✅ Shipped |
 | 5 | SLA engine & escalations | ✅ Shipped |
 | 6 | Automation rules | ✅ Shipped |
-| 7 | Knowledge base | ⏳ Next |
-| 8 | Approvals | ⏳ Planned |
+| 7 | Knowledge base | ✅ Shipped |
+| 8 | Approvals | ⏳ Next |
 | 9 | Assets / CMDB | ⏳ Planned |
 | 10 | Reporting & dashboards | ⏳ Planned |
 | 11 | Public REST API & webhooks (Sanctum) | ⏳ Planned |
@@ -271,10 +271,51 @@ Actions run on a worker, as the brief asks: a rule can call an endpoint on
 somebody else's server, and nothing a customer does in the portal should wait
 on that.
 
+## Phase 7 — Knowledge base
+
+The answers the desk gives most often, written down once. Full notes in
+[`kb.md`](kb.md).
+
+- **Two visibility scopes, not one scope with a flag.** An internal article on
+  the portal is the failure this feature must not have, so `visibleOnPortal()`
+  and `visibleToAgent()` are written to be read side by side. The agent scope
+  *widens* by permission: an agent holding neither `kb.view.internal` nor
+  `kb.manage` sees exactly what a requester sees ([D22](decisions.md)).
+- **A public article inside an internal category stays hidden.** That is a
+  mistake somebody will make, and the portal is the wrong place to find out.
+- **A direct URL to an internal article answers 404, not 403** — the existence
+  of an internal article is itself information.
+- **Bodies are sanitised on write, once, in `ArticleService`** — allowlist only,
+  built from an empty config rather than Symfony's default-allow shortcut.
+  Nothing writes to `kb_articles` outside that service, so an import and a
+  seeder get the same treatment as the editor, and the browser can be handed
+  the stored HTML as markup ([D23](decisions.md)).
+- **Restoring re-sanitises** rather than trusting what was stored: a body
+  written before the allowlist last changed is not necessarily safe under the
+  allowlist as it stands now.
+- **Every edit snapshots the previous version first**, in the same transaction,
+  so the history can never be half-written and restoring is "put back what was
+  there" rather than a guess. Restoring is itself undoable. Changing only a
+  label does not spend a version ([D24](decisions.md)).
+- **Search reads `body_text`**, the flattened body, so a query for "href" finds
+  articles that discuss links rather than every article that contains one.
+  MySQL uses FULLTEXT; SQLite falls back to LIKE and tokenises the way the
+  index does — a whole ticket subject matched verbatim finds nothing
+  ([D25](decisions.md)).
+- **Suggestions before anybody searches**: on the portal request form as the
+  requester types, and on the ticket page seeded from the ticket's own subject.
+  The cheapest ticket is the one nobody had to file.
+- **Articles link to the tickets they answered**, which turns "what do we get
+  asked most" from a guess into a query. The link is looked up through the
+  agent's own scope, so guessing an id is not a way past the permission.
+- **A read does not touch `updated_at`.** An article does not become newer
+  because somebody read it, or the knowledge base reorders itself by who
+  happened to click what.
+
 ### Not yet wired up
 
 The sidebar only shows destinations that have routes today: Dashboard, Tickets,
-Queues and Administration. The knowledge base, assets, approvals and reporting
+Queues, the knowledge base and Administration. Assets, approvals and reporting
 appear as their phases land — a menu item without a route is worse than an
 absent one. The permission catalogue already covers them, so roles can be
 configured ahead of the features arriving.

@@ -9,6 +9,7 @@ use App\Http\Requests\Tickets\StoreTicketRequest;
 use App\Http\Requests\Tickets\UpdateTicketRequest;
 use App\Models\AuditLogEntry;
 use App\Models\Comment;
+use App\Models\KbArticle;
 use App\Models\Label;
 use App\Models\Priority;
 use App\Models\Queue;
@@ -162,6 +163,7 @@ class TicketController extends Controller
             'organization:id,name', 'labels', 'watchers',
             'links.relatedTicket.status', 'inverseLinks.ticket.status',
             'slaTimers.calendar', 'slaPolicy.calendar',
+            'kbArticles.category',
         ]);
 
         $comments = $ticket->comments()
@@ -183,7 +185,18 @@ class TicketController extends Controller
                 'comment_internal' => $user->can('commentInternally', $ticket),
                 'link' => $user->can('link', $ticket),
                 'delete' => $user->can('delete', $ticket),
+                'kb' => $user->can('kb.view'),
             ],
+            // Filtered through the reader's own scope rather than taken as
+            // linked: an article that has since been made internal must stop
+            // appearing to an agent who may not read internal articles, even
+            // on a ticket where somebody linked it while it was public.
+            'kbArticles' => $ticket->kbArticles
+                ->filter(fn (KbArticle $article) => $article->visibility === KbArticle::PUBLIC
+                    || $user->hasPermission('kb.view.internal'))
+                ->map(fn (KbArticle $article) => $article->toSummaryArray())
+                ->values()
+                ->all(),
             'isWatching' => $ticket->watchers->contains('id', $user->getKey()),
         ]);
     }

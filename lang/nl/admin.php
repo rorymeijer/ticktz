@@ -22,6 +22,7 @@ return [
         'email' => 'Postbussen',
         'sla' => 'Serviceniveaus',
         'automation' => 'Automatisering',
+        'kb' => 'Kennisbank',
         'settings' => 'Instellingen',
         'audit' => 'Audit-log',
         'service_desk' => 'Servicedesk',

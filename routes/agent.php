@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Agent\KbController;
 use App\Http\Controllers\Agent\QueueController;
 use App\Http\Controllers\Agent\TicketActionController;
 use App\Http\Controllers\Agent\TicketCommentController;
@@ -25,6 +26,15 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('agent')->name('agent.')->middleware('can:tickets.view')->group(function (): void {
     Route::get('queues', [QueueController::class, 'index'])->name('queues.index');
+
+    // The knowledge base as an agent reads it. `kb.view` is authorised in the
+    // controller rather than here: an agent who works tickets does not
+    // automatically get the knowledge base, and vice versa.
+    Route::get('kb', [KbController::class, 'index'])->name('kb.index');
+    Route::get('kb/{slug}', [KbController::class, 'show'])->name('kb.show');
+    Route::get('tickets/{ticket}/kb/suggest', [KbController::class, 'suggest'])->name('tickets.kb.suggest');
+    Route::post('tickets/{ticket}/kb', [KbController::class, 'link'])->name('tickets.kb.link');
+    Route::delete('tickets/{ticket}/kb/{article}', [KbController::class, 'unlink'])->name('tickets.kb.unlink');
 
     Route::get('tickets', [TicketController::class, 'index'])->name('tickets.index');
     Route::get('tickets/create', [TicketController::class, 'create'])->name('tickets.create');

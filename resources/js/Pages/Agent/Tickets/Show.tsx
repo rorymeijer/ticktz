@@ -5,11 +5,13 @@ import AppLayout from '@/Layouts/AppLayout';
 import { PriorityBadge, StatusBadge } from '@/Components/Tickets/Badges';
 import { ReplyBox } from '@/Components/Tickets/ReplyBox';
 import { Timeline } from '@/Components/Tickets/Timeline';
+import { KbPanel } from '@/Components/Tickets/KbPanel';
 import { SlaPanel } from '@/Components/Tickets/SlaPanel';
 import { TicketSidebar } from '@/Components/Tickets/TicketSidebar';
 import { Avatar, Badge, Button, Card, CardBody, CardHeader, Modal, Textarea } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import { formatDateTime } from '@/lib/datetime';
+import type { KbArticleSummary } from '@/types/kb';
 import type { TicketDetail, TicketOptions, TimelineItem, TransitionOption } from '@/types/tickets';
 
 export default function TicketShow({
@@ -19,6 +21,7 @@ export default function TicketShow({
     options,
     can,
     isWatching,
+    kbArticles,
 }: {
     ticket: TicketDetail;
     timeline: TimelineItem[];
@@ -26,6 +29,7 @@ export default function TicketShow({
     options: TicketOptions;
     can: Record<string, boolean>;
     isWatching: boolean;
+    kbArticles: KbArticleSummary[];
 }) {
     const { t, locale } = useTranslations();
     const [pendingTransition, setPendingTransition] = useState<TransitionOption | null>(null);
@@ -125,6 +129,7 @@ export default function TicketShow({
                 <div className="space-y-4">
                     <SlaPanel ticket={ticket} />
                     <TicketSidebar ticket={ticket} options={options} can={can} isWatching={isWatching} />
+                    {can.kb ? <KbPanel ticketKey={ticket.key} articles={kbArticles} canLink={can.update} /> : null}
                 </div>
             </div>
 

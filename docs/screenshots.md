@@ -234,6 +234,50 @@ the agent screenshot above is absent from this payload entirely.
 
 ![Request detail](screenshots/34-portal-request-detail.png)
 
+## Knowledge base
+
+### The help centre
+What a requester sees. Internal articles and drafts are not filtered out of
+this list — they never reach it, because every query here goes through one
+scope ([`kb.md`](kb.md)). The Runbooks category is missing for the same reason.
+
+![Help centre](screenshots/50-portal-kb.png)
+
+### An article
+The body is sanitised HTML, cleaned once on the way in, so it can be handed to
+the browser as markup.
+
+![Article](screenshots/51-portal-kb-article.png)
+
+### Searching
+MySQL uses a FULLTEXT index; the search reads the flattened body, so a query
+matches what the article says rather than what its markup contains.
+
+![Search](screenshots/52-portal-kb-search.png)
+
+### The agent's view
+The same articles, widened by permission: an agent with `kb.view.internal` sees
+the internal runbooks too, and they are badged so nobody pastes one to a
+customer by accident.
+
+![Agent knowledge base](screenshots/53-agent-kb.png)
+
+### Administration
+Articles and categories in one screen, with status, audience and read counts.
+
+![Knowledge base administration](screenshots/54-admin-kb.png)
+
+### Writing an article
+Editor on the left, everything that decides who can read it on the right, and
+the version history underneath. The tickets the article answered are listed
+beside it.
+
+![Article editor](screenshots/55-admin-kb-edit.png)
+
+### The same screen, in Dutch
+
+![Kennisbank](screenshots/56-admin-kb-nl.png)
+
 ### Profile, in Dutch
 Language is a per-user preference and applies to notification e-mail as well as
 the interface.
@@ -246,3 +290,5 @@ Every screen is usable at 400px.
 ![Portal on a phone](screenshots/40-mobile-portal.png)
 
 ![Ticket list on a phone](screenshots/41-mobile-tickets.png)
+
+![Help centre on a phone](screenshots/42-mobile-kb.png)

@@ -252,3 +252,103 @@ the same code that prints the rule itself.
 
 The log is pruned nightly — it grows by rules × ticket events per day, and a
 table nobody trims is a table that eventually makes the page it feeds slow.
+
+## D22 — Two visibility scopes, not one scope with a flag
+
+An internal article reaching the portal is the one failure this feature must
+not have. A single scope taking `bool $includeInternal` would put that decision
+at every call site, and the call site that forgets is the one that leaks.
+
+So there are two scopes on `KbArticle`, written to be read side by side.
+`visibleOnPortal()` is the narrow one and every portal query goes through it —
+nothing in the portal controller narrows or widens it by hand.
+`visibleToAgent($user)` starts from the same set and only ever *widens*:
+`kb.view.internal` adds internal articles, `kb.manage` adds drafts. An agent
+holding neither sees exactly what a requester sees, which is the property worth
+having, because it means the portal's guarantee is not a second implementation
+of the agent's.
+
+The category's visibility is checked as well as the article's. A public article
+inside an internal category is a mistake somebody will make, and the portal is
+the wrong place to find out.
+
+A direct URL to an article the reader may not see answers 404 rather than 403.
+The existence of an internal article — "Runbook: decommissioning the Zandvliet
+domain controllers" — is itself information.
+
+Linking is held to the same rule. An agent supplies an article id, so the id is
+resolved *through their own scope*; guessing one is not a way around the
+permission. The panel on a ticket also filters on every render rather than
+trusting what was linked, so an article that has since been made internal stops
+appearing to an agent who may not read internal articles. The row stays — the
+link is part of that ticket's history.
+
+## D23 — The body is sanitised on write, in one place
+
+`kb_articles.body` holds HTML that a requester's browser renders. Sanitising on
+*read* is the arrangement that fails: it has to happen in the portal page, the
+agent page, the admin preview, the search excerpt and the next surface somebody
+adds, and one of those will be missed.
+
+So it happens once, on the way in, inside `ArticleService` — and nothing writes
+to `kb_articles` outside that service. A controller cannot forget, and an
+import or a seeder gets the same treatment as the editor. That is what makes it
+defensible for the React components to hand `body` straight to
+`dangerouslySetInnerHTML`, and the guarantee is written down at both ends.
+
+The config starts from an empty `HtmlSanitizerConfig`. Symfony's
+`allowStaticElements()` looks like the obvious shortcut and is the wrong one:
+it installs a broad default set — `<marquee>` among them — so the explicit list
+would be *adding to* a default-allow config instead of being the allowlist.
+Allowlist means allowlist.
+
+Worth writing down because the names invite the opposite reading:
+`dropElement()` removes an element **and its content**, while `blockElement()`
+removes only the tag and keeps the text. So `<script>` is dropped and `<font>`
+is blocked — if those two were swapped, pasted text would vanish and script
+bodies would survive as plain text.
+
+Restoring an old version re-sanitises it rather than trusting it. A body stored
+before the allowlist last changed is not necessarily safe under the allowlist
+as it stands now.
+
+`body_text` — the same content flattened — is stored alongside and is what
+search reads. A query for "href" should find articles that discuss links, not
+every article that contains one.
+
+## D24 — A version records what was there before the edit
+
+The snapshot is written *before* the new text lands, in the same transaction as
+the update, and the counter increments after. Two consequences, both wanted:
+the history can never be half-written, and restoring a version is "put back
+what was there" rather than a reconstruction.
+
+Restoring snapshots the current text first, so restoring the wrong version has
+cost nobody anything.
+
+Only a change to the title or the body spends a version. Re-categorising an
+article, moving it up the list or publishing it does not — a history where half
+the entries say nothing is a history nobody reads.
+
+## D25 — LIKE fallback tokenises the way the index does
+
+Search uses MySQL's FULLTEXT index in production and falls back to LIKE on
+SQLite, which is what the tests run on. A fallback that behaved differently
+would mean the tests pass on something no user has.
+
+The instructive case: the ticket page seeds its search from the ticket's own
+subject, so the term is often a whole sentence. "Printer keeps jamming" matched
+verbatim against an article called "Printer paper jam" finds nothing at all,
+and the suggestions panel would look broken while the query was working
+perfectly. So the fallback splits the term, drops words under three characters,
+and keeps the whole phrase as well so an exact match still scores.
+
+## D26 — Reading an article does not touch `updated_at`
+
+`recordView()` increments the counter with a query-builder update — `toBase()`,
+deliberately out of Eloquent — because an Eloquent save stamps `updated_at`.
+
+An article does not become newer because somebody read it. Without this, the
+admin list sorted by "recently updated" would reorder itself by whoever
+happened to click what, and "Updated just now" would appear under an article
+nobody has touched in a year.

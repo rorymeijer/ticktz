@@ -6,6 +6,7 @@ return [
     'dashboard' => 'Dashboard',
     'tickets' => 'Tickets',
     'queues' => 'Wachtrijen',
+    'kb' => 'Kennisbank',
     'portal' => 'Portaal',
     'my_requests' => 'Mijn verzoeken',
     'new_request' => 'Nieuw verzoek',
