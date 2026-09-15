@@ -1,0 +1,111 @@
+# ---------------------------------------------------------------------------
+# Ticktz — production stack.
+#
+#   cp .env.example .env && edit it
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Differences from the development stack: the app image is self-contained
+# (vendor + compiled assets baked in, no bind mounts), there is no Vite dev
+# server and no mail sink, and MySQL/Redis are not published on the host.
+# ---------------------------------------------------------------------------
+
+name: ticktz
+
+x-app-base: &app-base
+  build:
+    context: .
+    target: runtime
+  image: ${TICKTZ_IMAGE:-ticktz/app:latest}
+  env_file: [.env]
+  environment:
+    APP_ENV: production
+    APP_DEBUG: "false"
+    DB_HOST: mysql
+    DB_PORT: 3306
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+  volumes:
+    - storage:/var/www/html/storage
+  depends_on:
+    mysql: { condition: service_healthy }
+    redis: { condition: service_healthy }
+  restart: unless-stopped
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "${TICKTZ_HTTP_PORT:-80}:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - public:/var/www/html/public:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  app:
+    <<: *app-base
+    environment:
+      CONTAINER_ROLE: app
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_HOST: mysql
+      DB_PORT: 3306
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - storage:/var/www/html/storage
+      - public:/var/www/html/public
+    expose:
+      - "9000"
+
+  worker:
+    <<: *app-base
+    command: ["supervisord", "-c", "/etc/supervisor/conf.d/ticktz.conf"]
+    environment:
+      CONTAINER_ROLE: worker
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_HOST: mysql
+      DB_PORT: 3306
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TICKTZ_AUTO_MIGRATE: "false"
+      TICKTZ_QUEUES: ${TICKTZ_QUEUES:-high,default,mail,webhooks,low}
+      TICKTZ_QUEUE_WORKERS: ${TICKTZ_QUEUE_WORKERS:-4}
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-ticktz}
+      MYSQL_USER: ${DB_USERNAME:-ticktz}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
+    volumes:
+      - mysql:/var/lib/mysql
+      - ./docker/mysql/ticktz.cnf:/etc/mysql/conf.d/ticktz.cnf:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory-policy noeviction
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  mysql:
+  redis:
+  storage:
+  public:
