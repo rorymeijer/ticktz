@@ -115,6 +115,19 @@ export default function TicketsIndex({
                         label={t('tickets.filters.label')}
                         options={options.labels.map((label) => ({ value: String(label.id), label: label.name }))}
                     />
+                    <FilterSelect
+                        url={url}
+                        filters={query}
+                        name="sla"
+                        label={t('sla.filters.label')}
+                        options={[
+                            { value: 'breached', label: t('sla.filters.breached') },
+                            { value: 'at_risk', label: t('sla.filters.at_risk') },
+                            { value: 'running', label: t('sla.filters.running') },
+                            { value: 'paused', label: t('sla.filters.paused') },
+                            { value: 'none', label: t('sla.filters.none') },
+                        ]}
+                    />
                 </FilterBar>
 
                 {tickets.data.length === 0 ? (
@@ -131,7 +144,7 @@ export default function TicketsIndex({
                     <>
                         <TicketTable
                             tickets={tickets.data}
-                            columns={queue?.columns ?? ['key', 'subject', 'status', 'priority', 'requester', 'assignee', 'updated_at']}
+                            columns={queue?.columns ?? ['key', 'subject', 'status', 'priority', 'sla', 'requester', 'assignee', 'updated_at']}
                             sort={sort}
                             onSort={changeSort}
                         />

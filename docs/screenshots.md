@@ -137,6 +137,16 @@ recipient is written to in the language they read.
 
 ![Postbussen](screenshots/1b-admin-email-nl.png)
 
+### Service levels
+Calendars decide when the clock runs; policies decide which tickets are covered;
+targets decide how long they get. A four-hour target on a Friday afternoon
+expires on Monday morning, which is what the calendar is for.
+
+![Service levels](screenshots/1c-admin-sla.png)
+
+### Service levels, in Dutch
+![Serviceniveaus](screenshots/1d-admin-sla-nl.png)
+
 ## Agent & portal
 
 ### Agent dashboard
@@ -149,6 +159,13 @@ Queues along the top are saved filters, so switching one just changes the query
 string — the URL stays shareable. Sorting and filtering happen server-side.
 
 ![Ticket list](screenshots/21-agent-tickets.png)
+
+### What is about to breach
+The service level column is coloured by how much trouble the ticket is in, and
+the filter bar finds the ones that are past their target, due within the hour,
+or stopped waiting on somebody else.
+
+![Breached tickets](screenshots/21b-agent-tickets-breached.png)
 
 ### A queue
 The built-in "Unassigned" queue: open tickets nobody has picked up, oldest

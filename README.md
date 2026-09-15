@@ -54,6 +54,7 @@ curl -s http://localhost:8080/health | jq
 | --- | --- |
 | [Roadmap](docs/roadmap.md) | What each phase shipped, and what is next |
 | [E-mail](docs/email.md) | Mailboxes, notification templates, email-to-ticket |
+| [Service levels](docs/sla.md) | Calendars, policies, targets, escalations |
 | [Design decisions](docs/decisions.md) | Defaults chosen where the brief left room |
 | [Screenshots](docs/screenshots.md) | What the product looks like |
 | [Contributing](CONTRIBUTING.md) | Local development without Docker, coding standards |

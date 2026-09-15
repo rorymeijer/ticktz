@@ -32,12 +32,15 @@ class Queue extends Model
      */
     public const AVAILABLE_COLUMNS = [
         'key', 'subject', 'status', 'priority', 'requester', 'assignee',
-        'team', 'organization', 'labels', 'created_at', 'updated_at',
+        'team', 'organization', 'labels', 'sla', 'created_at', 'updated_at',
     ];
 
-    public const DEFAULT_COLUMNS = ['key', 'subject', 'status', 'priority', 'requester', 'assignee', 'updated_at'];
+    // SLA sits with the other triage signals rather than at the far right:
+    // "what breaches next" is read in the same glance as status and priority,
+    // and a column past the fold is a column nobody sees.
+    public const DEFAULT_COLUMNS = ['key', 'subject', 'status', 'priority', 'sla', 'requester', 'assignee', 'updated_at'];
 
-    public const SORTABLE = ['created_at', 'updated_at', 'last_activity_at', 'priority_id', 'key', 'subject'];
+    public const SORTABLE = ['created_at', 'updated_at', 'last_activity_at', 'priority_id', 'key', 'subject', 'sla_due_at'];
 
     protected $fillable = [
         'name', 'slug', 'description', 'team_id', 'filters',

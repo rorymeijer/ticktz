@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Jobs\Mail\PollMailboxJob;
+use App\Jobs\Sla\SweepSlaTimersJob;
 use App\Models\EmailChannel;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Schema;
@@ -32,5 +33,16 @@ Schedule::call(function (): void {
         ->each(fn (int $id) => PollMailboxJob::dispatch($id));
 })
     ->name('ticktz:poll-mailboxes')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::call(function (): void {
+    if (! Schema::hasTable('sla_timers')) {
+        return;
+    }
+
+    SweepSlaTimersJob::dispatch();
+})
+    ->name('ticktz:sweep-sla')
     ->everyMinute()
     ->withoutOverlapping();

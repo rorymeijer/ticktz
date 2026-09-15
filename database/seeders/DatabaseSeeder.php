@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             SettingsSeeder::class,
             TicketWorkflowSeeder::class,
+            SlaSeeder::class,
         ]);
     }
 }

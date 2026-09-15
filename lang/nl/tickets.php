@@ -21,6 +21,7 @@ return [
         'created_at' => 'Aangemaakt',
         'updated_at' => 'Bijgewerkt',
         'source' => 'Bron',
+        'sla' => 'Serviceniveau',
     ],
 
     'fields' => [

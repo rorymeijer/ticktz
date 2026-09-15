@@ -11,8 +11,8 @@ tracks what is shipped. The phase definitions come from the original brief in
 | 2 | Ticket core & agent console | ✅ Shipped |
 | 3 | Customer portal & request types | ✅ Shipped |
 | 4 | E-mail (SMTP out, IMAP in) | ✅ Shipped |
-| 5 | SLA engine & escalations | ⏳ Next |
-| 6 | Automation rules | ⏳ Planned |
+| 5 | SLA engine & escalations | ✅ Shipped |
+| 6 | Automation rules | ⏳ Next |
 | 7 | Knowledge base | ⏳ Planned |
 | 8 | Approvals | ⏳ Planned |
 | 9 | Assets / CMDB | ⏳ Planned |
@@ -176,6 +176,55 @@ The development stack runs [GreenMail](https://greenmail-mail-test.github.io/gre
 rather than MailHog, because this phase needs both halves: SMTP to catch what
 goes out, and IMAP to read it back in. Its web interface is on
 <http://localhost:8025>; the demo seeder wires a mailbox to it.
+
+## Phase 5 — SLA engine & escalations
+
+A promise nobody measures is not a promise. This phase measures them.
+
+- **The clock runs on a business calendar**, and that is the whole point. A
+  four-hour target on a Friday afternoon expires on Monday morning, not on
+  Saturday at eight. `BusinessCalendar` is the single place that knows what a
+  working minute is: it walks the week day by day rather than doing arithmetic
+  on a weekly total, because holidays, split shifts and daylight saving all
+  break the arithmetic and none of them break the walk.
+- **Two metrics**: first response (how long until a human answers) and
+  resolution (how long until it is fixed). A policy claims a set of tickets;
+  its goals set the targets, narrowed by priority and request type with the
+  most specific match winning.
+- **A target is copied onto the timer, not read through the goal.** An
+  administrator who shortens a target on Tuesday has not thereby breached every
+  ticket opened on Monday, and deleting a policy does not erase the promises it
+  made — see [D15](decisions.md).
+- **Waiting statuses stop the clock and pay the time back.** Five working hours
+  waiting on the customer push the deadline five working hours out; time spent
+  waiting on someone else is not time the desk owes.
+- **A reopened ticket gets a fresh resolution clock**, because a promise to fix
+  it again is a new promise. The original is kept exactly as it finished.
+- **Breaches are found by sweeping**, because a breach is the absence of an
+  event and nothing else notices it. A `ShouldBeUnique` job runs every minute,
+  marks overdue clocks, and fires escalation thresholds. It is safe to run
+  twice: a breach writes `breached_at` before announcing anything, and an
+  escalation claims its threshold in `sla_events` first — so an escalation
+  fires once however often the job runs ([D16](decisions.md)).
+- **Escalations are deliberately few** — notify, raise the priority, hand the
+  ticket to another team. A breach also emits a domain event, which is where
+  the automation engine (phase 6) hangs anything more elaborate. This is not a
+  rule engine and should not grow into one.
+- **Agents see a countdown**, coloured by how much trouble the ticket is in.
+  The remaining time is computed server-side against the calendar, because a
+  browser has no idea when the desk is shut and a countdown that ticks through
+  the night would be a lie.
+- **Lists sort and filter on SLA without a join per row**: the tightest live
+  clock is mirrored onto `tickets.sla_due_at` and `tickets.sla_breached`. The
+  filter bar offers breached, due within the hour, on track, paused and not
+  measured.
+- **Every clock keeps a history.** `sla_events` records when it started, every
+  pause and resume, every escalation and the moment it ran out — which is what
+  a dispute about a breach is settled with.
+
+A fresh instance ships a working policy: an office-hours calendar with Dutch
+public holidays, targets per priority, and escalations on the two urgent tiers.
+An SLA feature that starts empty is one nobody turns on.
 
 ### Not yet wired up
 

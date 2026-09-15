@@ -47,6 +47,33 @@ export interface AttachmentSummary {
     created_at: string | null;
 }
 
+export type SlaMetric = 'first_response' | 'resolution';
+
+export type SlaStatus = 'running' | 'paused' | 'met' | 'breached' | 'cancelled';
+
+export interface SlaTimerSummary {
+    id: number;
+    metric: SlaMetric;
+    status: SlaStatus;
+    target_minutes: number;
+    due_at: string;
+    paused_at: string | null;
+    completed_at: string | null;
+    breached_at: string | null;
+    /** Working minutes left; negative once the target has passed, null once finished. */
+    minutes_remaining: number | null;
+    /** How much of the target has been used. Can exceed 100. */
+    percent_elapsed: number;
+}
+
+export interface SlaEventItem {
+    id: number;
+    event: string;
+    metric: SlaMetric | null;
+    occurred_at: string;
+    context: Record<string, unknown> | null;
+}
+
 export interface TicketListItem {
     id: number;
     key: string;
@@ -59,6 +86,10 @@ export interface TicketListItem {
     organization: { id: number; name: string } | null;
     labels: LabelSummary[];
     source: string;
+    /** The live clock closest to breaching, which is what the badge shows. */
+    sla: SlaTimerSummary | null;
+    sla_due_at: string | null;
+    sla_breached: boolean;
     created_at: string | null;
     updated_at: string | null;
     last_activity_at: string | null;
@@ -80,6 +111,9 @@ export interface TicketDetail extends TicketListItem {
     closed_at: string | null;
     reopen_count: number;
     links: TicketLinkItem[];
+    sla_timers: SlaTimerSummary[];
+    sla_events: SlaEventItem[];
+    sla_policy: { id: number; name: string; calendar: string | null } | null;
 }
 
 export interface TimelineComment {

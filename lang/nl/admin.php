@@ -20,6 +20,7 @@ return [
         'organizations' => 'Organisaties',
         'directories' => 'Directories (LDAP)',
         'email' => 'Postbussen',
+        'sla' => 'Serviceniveaus',
         'settings' => 'Instellingen',
         'audit' => 'Audit-log',
         'service_desk' => 'Servicedesk',

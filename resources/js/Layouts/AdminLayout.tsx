@@ -82,6 +82,13 @@ export default function AdminLayout({
             section: 'service_desk',
         },
         {
+            key: 'sla',
+            href: '/admin/sla',
+            label: t('admin.nav.sla'),
+            permission: 'sla.manage',
+            section: 'service_desk',
+        },
+        {
             key: 'email',
             href: '/admin/email',
             label: t('admin.nav.email'),

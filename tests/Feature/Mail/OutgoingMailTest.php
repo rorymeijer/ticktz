@@ -6,6 +6,7 @@ use App\Events\Tickets\TicketAssigned;
 use App\Events\Tickets\TicketCommented;
 use App\Events\Tickets\TicketCreated;
 use App\Events\Tickets\TicketTransitioned;
+use App\Events\Tickets\TicketUpdated;
 use App\Mail\TicketNotification;
 use App\Models\EmailChannel;
 use App\Models\EmailTemplate;
@@ -239,18 +240,35 @@ it('skips people without an address or with a deactivated account', function ():
     Mail::assertNothingQueued();
 });
 
-it('registers one listener per ticket event so nothing goes out twice', function (): void {
+/**
+ * Laravel auto-discovers a listener by the event its `handle*` method
+ * type-hints. Registering the same class again by hand — in a provider, or in
+ * an `Event::subscribe()` map — is silent, and doubles every notification.
+ * Several classes legitimately listen to one event; none may listen twice.
+ */
+it('registers each ticket listener once so nothing goes out twice', function (): void {
     $events = [
         TicketCreated::class,
         TicketCommented::class,
         TicketAssigned::class,
         TicketTransitioned::class,
+        TicketUpdated::class,
     ];
 
-    foreach ($events as $event) {
-        $listeners = collect(Event::getListeners($event));
+    $raw = Event::getRawListeners();
 
-        expect($listeners)->toHaveCount(1, "expected exactly one listener for {$event}");
+    foreach ($events as $event) {
+        $handlers = collect($raw[$event] ?? [])
+            ->map(fn ($listener) => is_array($listener) ? implode('@', $listener) : $listener)
+            ->filter(fn ($listener) => is_string($listener))
+            ->values();
+
+        expect($handlers->toArray())->toBe(
+            $handlers->unique()->values()->toArray(),
+            "a listener is registered more than once for {$event}",
+        );
+
+        expect($handlers->isNotEmpty())->toBeTrue("nothing listens to {$event}");
     }
 });
 

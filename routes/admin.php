@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\QueueController;
 use App\Http\Controllers\Admin\RequestTypeController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SlaPolicyController;
 use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\TicketStatusController;
 use App\Http\Controllers\Admin\UserController;
@@ -55,6 +56,21 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::post('email/templates', [EmailChannelController::class, 'storeTemplate'])->name('email.templates.store');
     Route::put('email/templates/{template}', [EmailChannelController::class, 'updateTemplate'])->name('email.templates.update');
     Route::delete('email/templates/{template}', [EmailChannelController::class, 'destroyTemplate'])->name('email.templates.destroy');
+
+    // Policies and goals resolve by id rather than slug: an administrator
+    // renaming a policy must not break the screen they are renaming it on.
+    Route::get('sla', [SlaPolicyController::class, 'index'])->name('sla.index');
+    Route::post('sla/policies', [SlaPolicyController::class, 'store'])->name('sla.policies.store');
+    Route::put('sla/policies/{policy}', [SlaPolicyController::class, 'update'])->name('sla.policies.update');
+    Route::delete('sla/policies/{policy}', [SlaPolicyController::class, 'destroy'])->name('sla.policies.destroy');
+    Route::post('sla/policies/{policy}/goals', [SlaPolicyController::class, 'storeGoal'])->name('sla.goals.store');
+    Route::put('sla/goals/{goal}', [SlaPolicyController::class, 'updateGoal'])->name('sla.goals.update');
+    Route::delete('sla/goals/{goal}', [SlaPolicyController::class, 'destroyGoal'])->name('sla.goals.destroy');
+    Route::post('sla/calendars', [SlaPolicyController::class, 'storeCalendar'])->name('sla.calendars.store');
+    Route::put('sla/calendars/{calendar}', [SlaPolicyController::class, 'updateCalendar'])->name('sla.calendars.update');
+    Route::delete('sla/calendars/{calendar}', [SlaPolicyController::class, 'destroyCalendar'])->name('sla.calendars.destroy');
+    Route::post('sla/calendars/{calendar}/holidays', [SlaPolicyController::class, 'storeHoliday'])->name('sla.holidays.store');
+    Route::delete('sla/holidays/{holiday}', [SlaPolicyController::class, 'destroyHoliday'])->name('sla.holidays.destroy');
 
     Route::get('directories', [LdapConfigController::class, 'index'])->name('directories.index');
     Route::post('directories', [LdapConfigController::class, 'store'])->name('directories.store');

@@ -30,7 +30,16 @@ class TicketFilter
         'search', 'status', 'status_category', 'priority', 'assignee', 'team',
         'queue', 'requester', 'organization', 'label', 'source',
         'created_from', 'created_to', 'updated_from', 'updated_to', 'unanswered',
+        'sla',
     ];
+
+    /**
+     * What the SLA filter can ask for. `at_risk` is the one agents live in:
+     * still on track, but not for much longer.
+     *
+     * @var array<int, string>
+     */
+    public const SLA_STATES = ['breached', 'at_risk', 'running', 'paused', 'none'];
 
     /**
      * @param  Builder<Ticket>  $query
@@ -69,11 +78,44 @@ class TicketFilter
                 'updated_from' => $query->where('tickets.updated_at', '>=', $this->date($value)),
                 'updated_to' => $query->where('tickets.updated_at', '<=', $this->date($value, endOfDay: true)),
                 'unanswered' => $this->applyUnanswered($query),
+                'sla' => $this->applySla($query, (string) $value),
                 default => null,
             };
         }
 
         return $query;
+    }
+
+    /**
+     * Filter by how a ticket is doing against its promise.
+     *
+     * These read the denormalised columns on `tickets` rather than joining
+     * `sla_timers`: the whole reason those columns exist is that a list of ten
+     * thousand tickets must not join a second table per row.
+     *
+     * @param  Builder<Ticket>  $query
+     */
+    private function applySla(Builder $query, string $state): void
+    {
+        match ($state) {
+            'breached' => $query->where('tickets.sla_breached', true),
+            // Approaching, but not yet missed. An hour is the window an agent
+            // can still do something about.
+            'at_risk' => $query->where('tickets.sla_breached', false)
+                ->whereNotNull('tickets.sla_due_at')
+                ->whereBetween('tickets.sla_due_at', [Carbon::now(), Carbon::now()->addHour()]),
+            'running' => $query->where('tickets.sla_breached', false)
+                ->whereNotNull('tickets.sla_due_at')
+                ->whereHas('slaTimers', fn (Builder $timers) => $timers->where('status', 'running')),
+            'paused' => $query->whereHas(
+                'slaTimers',
+                fn (Builder $timers) => $timers->where('status', 'paused')
+            ),
+            // Nothing is being measured: no policy claimed it, or every clock
+            // has finished.
+            'none' => $query->whereNull('tickets.sla_due_at'),
+            default => null,
+        };
     }
 
     /**

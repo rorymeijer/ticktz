@@ -145,3 +145,58 @@ ticket — could not be exercised in the dev stack at all. GreenMail speaks both
 disabled and mailboxes created on first use, so `docker compose up` gives a
 working round trip: reply to a ticket, watch it arrive, reply to that, watch it
 land back on the ticket as a comment.
+
+## D15 — A timer copies its target rather than reading it from the goal
+
+`sla_timers` stores `target_minutes`, `due_at` and the calendar it was computed
+against, and only keeps the policy and goal as provenance. The alternative —
+resolving the target through the goal on every read — means an administrator
+who shortens a target on Tuesday has retroactively breached every ticket opened
+on Monday, and deleting a policy erases the promises it made.
+
+The cost is that correcting a genuinely wrong target does not fix the tickets
+already running under it. That is the right way round: an SLA report has to be
+reproducible, and a number that changes when someone edits a form is not.
+
+Changing what a ticket *is* — its priority, its queue — does recalculate, but
+explicitly, from the original start, and it writes a `recalculated` event
+saying what moved and why.
+
+## D16 — Breaches are swept, and everything that acts is claimed first
+
+A breach is the absence of an event: nothing happens, and that is the problem.
+So something has to go and look, and a job runs every minute.
+
+That job must be safe to run twice — a worker dies mid-sweep, the scheduler
+fires while the last run is still going, an operator runs it by hand. Both
+guarantees come from the database rather than from being careful:
+
+- A breach sets `breached_at` before dispatching anything, and the sweep only
+  selects timers where it is null.
+- An escalation writes its `escalated` event, inside a transaction, before it
+  acts; a threshold that already has one is skipped.
+
+So the sweep can run as often as it likes and each thing happens once. The
+failure mode is a breach noticed a minute late, never one announced twice.
+
+## D17 — Escalations notify by adding watchers
+
+An escalation that needs to tell someone adds them as a watcher rather than
+sending its own mail. The notification machinery from phase 4 then does what it
+already does, in the recipient's language, with the right threading — and there
+is one path to somebody's inbox rather than two that drift apart.
+
+It also leaves a visible trace: an agent looking at an escalated ticket can see
+who was pulled in, which a silent mail would not show.
+
+## D18 — Escalation actions are a closed set, not a rule language
+
+An SLA escalation can notify, raise the priority one step, or hand the ticket to
+a team. That is all, and it is on purpose: a breach also emits `SlaBreached`,
+which the automation engine in phase 6 can act on with arbitrary conditions and
+actions. Building a second rule engine inside the SLA feature would mean two
+places to look when a ticket does something unexpected.
+
+The escalations live as JSON on the goal rather than in their own table, because
+an escalation is meaningless without the target it is a fraction of, the list is
+short, and it is always read whole.

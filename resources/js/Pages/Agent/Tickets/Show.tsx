@@ -5,6 +5,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { PriorityBadge, StatusBadge } from '@/Components/Tickets/Badges';
 import { ReplyBox } from '@/Components/Tickets/ReplyBox';
 import { Timeline } from '@/Components/Tickets/Timeline';
+import { SlaPanel } from '@/Components/Tickets/SlaPanel';
 import { TicketSidebar } from '@/Components/Tickets/TicketSidebar';
 import { Avatar, Badge, Button, Card, CardBody, CardHeader, Modal, Textarea } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
@@ -121,7 +122,10 @@ export default function TicketShow({
                     <ReplyBox ticketKey={ticket.key} canReply={can.comment} canNote={can.comment_internal} />
                 </div>
 
-                <TicketSidebar ticket={ticket} options={options} can={can} isWatching={isWatching} />
+                <div className="space-y-4">
+                    <SlaPanel ticket={ticket} />
+                    <TicketSidebar ticket={ticket} options={options} can={can} isWatching={isWatching} />
+                </div>
             </div>
 
             {pendingTransition ? (

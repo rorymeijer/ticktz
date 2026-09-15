@@ -12,6 +12,8 @@ use App\Models\Comment;
 use App\Models\Label;
 use App\Models\Priority;
 use App\Models\Queue;
+use App\Models\SlaEvent;
+use App\Models\SlaTimer;
 use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\TicketLink;
@@ -66,7 +68,17 @@ class TicketController extends Controller
 
         $query = Ticket::query()
             ->visibleTo($user)
-            ->with(['status', 'priority', 'requester', 'assignee', 'team', 'organization', 'labels']);
+            ->with([
+                'status', 'priority', 'requester', 'assignee', 'team', 'organization', 'labels',
+                // The badge reads the tightest live clock off the ticket, and
+                // falls back to a missed one when nothing is still running, so
+                // both are loaded — one eager load rather than a query per row.
+                'slaTimers' => fn ($timers) => $timers
+                    ->where(fn ($query) => $query
+                        ->whereIn('status', SlaTimer::LIVE)
+                        ->orWhereNotNull('breached_at'))
+                    ->with('calendar'),
+            ]);
 
         if ($queue) {
             $this->filter->applyQueue($query, $queue, $user);
@@ -149,6 +161,7 @@ class TicketController extends Controller
             'queue:id,name,slug', 'requester.organization:id,name', 'assignee', 'team:id,name',
             'organization:id,name', 'labels', 'watchers',
             'links.relatedTicket.status', 'inverseLinks.ticket.status',
+            'slaTimers.calendar', 'slaPolicy.calendar',
         ]);
 
         $comments = $ticket->comments()
@@ -213,6 +226,24 @@ class TicketController extends Controller
             'closed_at' => $ticket->closed_at?->toIso8601String(),
             'reopen_count' => $ticket->reopen_count,
             'links' => $this->linkPayload($ticket, $user),
+            'sla_timers' => $ticket->slaTimers
+                ->sortBy('metric')
+                ->map(fn (SlaTimer $timer) => $timer->toDisplayArray())
+                ->values()
+                ->all(),
+            'sla_events' => $ticket->slaEvents()
+                ->with('timer:id,metric')
+                ->latest('occurred_at')
+                ->latest('id')
+                ->limit(50)
+                ->get()
+                ->map(fn (SlaEvent $event) => $event->toDisplayArray())
+                ->all(),
+            'sla_policy' => $ticket->slaPolicy ? [
+                'id' => $ticket->slaPolicy->id,
+                'name' => $ticket->slaPolicy->name,
+                'calendar' => $ticket->slaPolicy->calendar?->name,
+            ] : null,
         ];
     }
 

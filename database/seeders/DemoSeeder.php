@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Jobs\Sla\SweepSlaTimersJob;
+use App\Models\AuditLogEntry;
 use App\Models\CustomField;
 use App\Models\EmailChannel;
 use App\Models\Label;
@@ -12,10 +14,13 @@ use App\Models\PortalCategory;
 use App\Models\Priority;
 use App\Models\RequestType;
 use App\Models\Role;
+use App\Models\SlaTimer;
 use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\TicketStatus;
 use App\Models\User;
+use App\Services\Sla\SlaEngine;
+use App\Services\Sla\SlaEscalator;
 use App\Services\Tickets\TicketService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -84,6 +89,7 @@ class DemoSeeder extends Seeder
             RoleSeeder::class,
             SettingsSeeder::class,
             TicketWorkflowSeeder::class,
+            SlaSeeder::class,
         ]);
 
         $teams = collect(self::TEAMS)->mapWithKeys(fn (array $team) => [
@@ -528,6 +534,14 @@ class DemoSeeder extends Seeder
         ];
     }
 
+    /**
+     * How old each ticket in `ticketBlueprints()` is, in hours, oldest first.
+     * Roughly: a fortnight, a week, a few days, then today.
+     *
+     * @var array<int, int>
+     */
+    private const AGES_IN_HOURS = [330, 260, 190, 120, 70, 26, 5, 2];
+
     private function seedTickets(): void
     {
         // Idempotent: the demo command may be re-run on an existing instance.
@@ -555,10 +569,12 @@ class DemoSeeder extends Seeder
                 'source' => $index % 3 === 0 ? 'portal' : 'email',
             ], $creator);
 
-            // Spread creation times over the past fortnight so the lists and
-            // the "recently updated" ordering look like a real working week.
+            // Age the ticket. The spread is deliberate rather than even: a
+            // desk has a tail of old cases that have long blown their targets
+            // and a head of fresh ones still comfortably inside them, and a
+            // demo where every clock is the same colour teaches nothing.
             $ticket->forceFill([
-                'created_at' => now()->subDays(14 - $index)->setTime(8 + $index, 15),
+                'created_at' => now()->subHours(self::AGES_IN_HOURS[$index] ?? 24),
             ])->save();
 
             if ($assignee) {
@@ -583,13 +599,149 @@ class DemoSeeder extends Seeder
             // Backdate the activity stamps last, so the list ordering and the
             // relative timestamps look like a real working fortnight rather
             // than eight tickets that all landed this second.
-            $touched = now()->subDays(max(0, 12 - $index * 2))->setTime(9 + $index % 8, ($index * 7) % 60);
+            $touched = now()->subHours(max(1, (int) ((self::AGES_IN_HOURS[$index] ?? 24) / 3)));
 
             $ticket->newQuery()->whereKey($ticket->getKey())->update([
                 'updated_at' => $touched,
                 'last_activity_at' => $touched,
             ]);
+
+            $this->backdateHistory($ticket);
+            $this->backdateSlaClocks($ticket);
         }
+
+        // The clocks now start in the past, so some of them have run out.
+        // Running the sweep the way the scheduler does gives the demo a
+        // realistic mix — met, running, paused and breached — rather than
+        // eight tickets that all look comfortably on track.
+        app(SweepSlaTimersJob::class)->handle(app(SlaEngine::class), app(SlaEscalator::class));
+    }
+
+    /**
+     * Spread a ticket's comments and audit entries across its lifetime.
+     *
+     * Everything the seeder does happens in the same second, so without this
+     * a ticket filed a fortnight ago shows a conversation that all took place
+     * just now — and, once SLA clocks are backdated too, a first response
+     * recorded as met a fortnight before the reply that met it. The ordering
+     * is preserved: only the timestamps move.
+     */
+    private function backdateHistory(Ticket $ticket): void
+    {
+        $start = $ticket->created_at;
+        $comments = $ticket->comments()->orderBy('id')->get()->keyBy('id');
+        $entries = AuditLogEntry::query()->forSubject($ticket)->orderBy('id')->get();
+
+        // One ordered sequence, so "changed the status" lands after the reply
+        // that preceded it rather than before every comment on the ticket. An
+        // audit entry that carries a comment id is that comment's own moment,
+        // and both get the same timestamp.
+        $sequence = $entries->map(fn (AuditLogEntry $entry) => [
+            'entry' => $entry,
+            'comment' => $comments->get($entry->context['comment_id'] ?? null),
+        ])->values();
+
+        // Real desks answer in a burst and then go quiet. Compressing the
+        // conversation into the first hours of the ticket's life keeps the
+        // response targets meaningful: replying a week later would breach
+        // every first-response goal in the demo.
+        $window = (int) min($start->diffInMinutes(now()) * 0.5, 4 * 60);
+        $steps = max(1, $sequence->count());
+
+        foreach ($sequence as $index => $item) {
+            $at = $start->copy()->addMinutes((int) ($window * (($index + 1) / $steps)));
+
+            // The audit log is append-only and has no updated_at.
+            $item['entry']->newQuery()->whereKey($item['entry']->getKey())->update(['created_at' => $at]);
+
+            $item['comment']?->newQuery()
+                ->whereKey($item['comment']->getKey())
+                ->update(['created_at' => $at, 'updated_at' => $at]);
+        }
+
+        // The response stamps the SLA and reporting read must match the
+        // conversation they were derived from.
+        $ticket->refresh();
+
+        $firstPublicReply = $ticket->comments()
+            ->where('is_internal', false)
+            ->where(fn ($query) => $query->whereNull('user_id')->orWhere('user_id', '!=', $ticket->requester_id))
+            ->orderBy('created_at')
+            ->first();
+
+        if ($firstPublicReply) {
+            $ticket->newQuery()->whereKey($ticket->getKey())->update([
+                'first_response_at' => $firstPublicReply->created_at,
+                'last_public_reply_at' => $firstPublicReply->created_at,
+            ]);
+        }
+
+        $lastEvent = $entries->last();
+
+        if ($lastEvent) {
+            $at = $lastEvent->newQuery()->whereKey($lastEvent->getKey())->value('created_at');
+
+            // Resolution timestamps are derived from the transition that set
+            // them, so the resolution clock is judged against a real moment.
+            $ticket->newQuery()->whereKey($ticket->getKey())->update(array_filter([
+                'resolved_at' => $ticket->resolved_at ? $at : null,
+                'closed_at' => $ticket->closed_at ? $at : null,
+            ]));
+        }
+    }
+
+    /**
+     * Move a ticket's SLA clocks back to when the ticket was actually filed.
+     *
+     * The engine starts a clock at `now()`, which is correct in production and
+     * wrong for fabricated history: a ticket dated a fortnight ago would carry
+     * a deadline a fortnight in the future. The whole clock — start, target and
+     * completion — is shifted by the same interval, so the arithmetic that
+     * decided met or breached still holds.
+     */
+    private function backdateSlaClocks(Ticket $ticket): void
+    {
+        $ticket->refresh()->load('slaTimers.calendar');
+
+        foreach ($ticket->slaTimers as $timer) {
+            $shift = $timer->started_at->diffInSeconds($ticket->created_at, false);
+            $startedAt = $timer->started_at->addSeconds($shift);
+            $dueAt = $timer->due_at->addSeconds($shift);
+
+            // A finished clock is re-dated from the event it measures rather
+            // than shifted with the rest: the first response happened when the
+            // agent actually replied, and whether that beat the target has to
+            // be decided against the real moment, or the demo shows a target
+            // met an hour after a ticket was filed by a reply sent a week later.
+            $completedAt = match ($timer->metric) {
+                'first_response' => $ticket->first_response_at,
+                'resolution' => $ticket->resolved_at ?? $ticket->closed_at,
+                default => null,
+            };
+
+            $update = [
+                'started_at' => $startedAt,
+                'due_at' => $dueAt,
+                'paused_at' => $timer->paused_at?->addSeconds($shift),
+            ];
+
+            if ($timer->completed_at && $completedAt) {
+                $met = $completedAt->lessThanOrEqualTo($dueAt);
+
+                $update += [
+                    'completed_at' => $completedAt,
+                    'breached_at' => $met ? null : $completedAt,
+                    'status' => $met ? SlaTimer::STATUS_MET : SlaTimer::STATUS_BREACHED,
+                ];
+            } else {
+                $update += ['breached_at' => $timer->breached_at?->addSeconds($shift)];
+            }
+
+            $timer->newQuery()->whereKey($timer->getKey())->update($update);
+        }
+
+        $ticket->load('slaTimers');
+        app(SlaEngine::class)->syncTicket($ticket);
     }
 
     /**

@@ -38,6 +38,7 @@ class Ticket extends Model
         'subject', 'description', 'status_id', 'priority_id', 'workflow_id',
         'queue_id', 'request_type_id', 'email_channel_id', 'requester_id',
         'assignee_id', 'team_id', 'organization_id', 'created_by', 'source',
+        'sla_policy_id',
     ];
 
     protected function casts(): array
@@ -50,6 +51,8 @@ class Ticket extends Model
             'last_activity_at' => 'datetime',
             'last_public_reply_at' => 'datetime',
             'last_requester_reply_at' => 'datetime',
+            'sla_due_at' => 'immutable_datetime',
+            'sla_breached' => 'boolean',
             'number' => 'integer',
             'reopen_count' => 'integer',
         ];
@@ -171,6 +174,49 @@ class Ticket extends Model
         return $this->belongsTo(EmailChannel::class, 'email_channel_id');
     }
 
+    /** @return HasMany<SlaTimer, $this> */
+    public function slaTimers(): HasMany
+    {
+        return $this->hasMany(SlaTimer::class);
+    }
+
+    /** @return HasMany<SlaEvent, $this> */
+    public function slaEvents(): HasMany
+    {
+        return $this->hasMany(SlaEvent::class);
+    }
+
+    /** @return BelongsTo<SlaPolicy, $this> */
+    public function slaPolicy(): BelongsTo
+    {
+        return $this->belongsTo(SlaPolicy::class, 'sla_policy_id');
+    }
+
+    /**
+     * The clock that matters right now: the live timer closest to breaching.
+     *
+     * When nothing is still running, a timer that was missed is shown instead.
+     * A ticket the breached filter returns must carry a badge saying so —
+     * otherwise a resolved-but-missed ticket appears in the list with an empty
+     * cell, which reads as a bug rather than as history.
+     */
+    public function primarySlaTimer(): ?SlaTimer
+    {
+        if (! $this->relationLoaded('slaTimers')) {
+            return null;
+        }
+
+        $live = $this->slaTimers
+            ->filter(fn (SlaTimer $timer): bool => $timer->isLive())
+            ->sortBy('due_at')
+            ->first();
+
+        return $live ?? $this->slaTimers
+            ->filter(fn (SlaTimer $timer): bool => $timer->breached_at !== null)
+            ->sortByDesc('breached_at')
+            ->first();
+    }
+
     /** @return HasMany<TicketLink, $this> */
     public function links(): HasMany
     {
@@ -281,6 +327,9 @@ class Ticket extends Model
                 ? $this->labels->map(fn (Label $label) => $label->toSummaryArray())->all()
                 : [],
             'source' => $this->source,
+            'sla' => $this->primarySlaTimer()?->toDisplayArray(),
+            'sla_due_at' => $this->sla_due_at?->toIso8601String(),
+            'sla_breached' => (bool) $this->sla_breached,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
             'last_activity_at' => $this->last_activity_at?->toIso8601String(),

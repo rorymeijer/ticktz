@@ -21,6 +21,7 @@ return [
         'created_at' => 'Created',
         'updated_at' => 'Updated',
         'source' => 'Source',
+        'sla' => 'Service level',
     ],
 
     'fields' => [

@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 
 import { LabelChip, PriorityBadge, StatusBadge } from '@/Components/Tickets/Badges';
+import { SlaBadge } from '@/Components/Tickets/SlaBadge';
 import { Avatar, TBody, TD, TH, THead, TR, Table } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import { formatDateTime, relativeTime } from '@/lib/datetime';
@@ -30,6 +31,7 @@ export function TicketTable({
         priority: 'priority_id',
         created_at: 'created_at',
         updated_at: 'updated_at',
+        sla: 'sla_due_at',
     };
 
     const header = (column: string) => {
@@ -128,6 +130,12 @@ export function TicketTable({
                             <LabelChip key={label.id} label={label} />
                         ))}
                     </div>
+                );
+            case 'sla':
+                return ticket.sla ? (
+                    <SlaBadge timer={ticket.sla} compact />
+                ) : (
+                    <span className="text-xs text-slate-400">—</span>
                 );
             case 'created_at':
                 return (
