@@ -79,7 +79,7 @@ export default function AppLayout({
                 {t('nav.skip_to_content')}
             </a>
 
-            <div className="flex min-h-full bg-slate-50">
+            <div className="flex min-h-screen bg-slate-50">
                 {/* Desktop sidebar */}
                 <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
                     <div className="flex h-14 items-center border-b border-slate-200 px-4">

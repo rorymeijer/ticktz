@@ -6,6 +6,7 @@ return [
     'failed' => 'Deze gegevens komen niet overeen met onze administratie.',
     'password' => 'Het opgegeven wachtwoord is onjuist.',
     'throttle' => 'Te veel inlogpogingen. Probeer het over :seconds seconden opnieuw.',
+    'inactive' => 'Dit account is gedeactiveerd. Neem contact op met een beheerder.',
 
     'login' => [
         'title' => 'Inloggen',

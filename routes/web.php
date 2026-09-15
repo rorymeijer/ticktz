@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\System\HealthController;
 use Illuminate\Support\Facades\Route;
@@ -17,21 +18,41 @@ Route::get('/health', HealthController::class)->name('health');
 
 /*
 |--------------------------------------------------------------------------
-| Application
+| Public
 |--------------------------------------------------------------------------
 */
 
 Route::get('/', function () {
+    // Signed-in people go straight to the surface that matches their role;
+    // anonymous visitors get the landing page.
+    $user = request()->user();
+
+    if ($user) {
+        return redirect()->route($user->isAgent() ? 'dashboard' : 'portal.index');
+    }
+
     return Inertia::render('Welcome');
 })->name('home');
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth'])->name('dashboard');
+/*
+|--------------------------------------------------------------------------
+| Authenticated application
+|--------------------------------------------------------------------------
+*/
 
-Route::middleware('auth')->group(function () {
+Route::middleware('auth')->group(function (): void {
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('/portal', [PortalController::class, 'index'])
+        ->middleware('throttle:portal')
+        ->name('portal.index');
+
+    require __DIR__.'/admin.php';
 });
 
 require __DIR__.'/auth.php';

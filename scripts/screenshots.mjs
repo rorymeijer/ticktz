@@ -1,0 +1,135 @@
+/**
+ * Captures the screenshots used in docs/screenshots.md.
+ *
+ * Usage:
+ *   php artisan migrate:fresh --force && php artisan ticktz:demo
+ *   npm run build
+ *   php artisan serve --port=8123 &
+ *   node scripts/screenshots.mjs [--base http://127.0.0.1:8123] [--only slug]
+ *
+ * Every shot signs in through the real login form, so the screenshots always
+ * reflect what a user with that role actually sees.
+ */
+import { mkdir } from 'node:fs/promises';
+import { chromium } from 'playwright';
+
+const args = process.argv.slice(2);
+const option = (name, fallback) => {
+    const index = args.indexOf(`--${name}`);
+    return index === -1 ? fallback : args[index + 1];
+};
+
+const BASE = option('base', 'http://127.0.0.1:8123').replace(/\/$/, '');
+const ONLY = option('only', null);
+const OUT = option('out', 'docs/screenshots');
+const EXECUTABLE = process.env.PLAYWRIGHT_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+
+const ACCOUNTS = {
+    admin: { email: 'rianne@ticktz.test', password: 'ticktz-demo' },
+    agent: { email: 'joost@ticktz.test', password: 'ticktz-demo' },
+    requester: { email: 'm.visser@zandvliet.test', password: 'ticktz-demo' },
+};
+
+const SHOTS = [
+    { slug: '01-landing', path: '/', as: null },
+    { slug: '02-login', path: '/login', as: null },
+    { slug: '03-login-nl', path: '/login?lang=nl', as: null },
+    { slug: '10-admin-overview', path: '/admin?lang=en', as: 'admin' },
+    { slug: '11-admin-users', path: '/admin/users?lang=en', as: 'admin' },
+    { slug: '12-admin-user-form', path: '/admin/users/create?lang=en', as: 'admin', fullPage: true },
+    { slug: '13-admin-roles', path: '/admin/roles?lang=en', as: 'admin' },
+    { slug: '15-admin-teams', path: '/admin/teams?lang=en', as: 'admin' },
+    { slug: '16-admin-organizations', path: '/admin/organizations?lang=en', as: 'admin' },
+    { slug: '17-admin-directories', path: '/admin/directories?lang=en', as: 'admin' },
+    { slug: '18-admin-settings', path: '/admin/settings?lang=en', as: 'admin', fullPage: true },
+    { slug: '19-admin-audit-log', path: '/admin/audit-log?lang=en', as: 'admin' },
+    { slug: '20-agent-dashboard', path: '/dashboard?lang=en', as: 'agent' },
+    { slug: '30-portal', path: '/portal?lang=en', as: 'requester' },
+    { slug: '31-profile-nl', path: '/profile?lang=nl', as: 'agent' },
+    { slug: '40-mobile-portal', path: '/portal?lang=en', as: 'requester', width: 400, height: 780 },
+];
+
+async function signIn(context, account) {
+    const page = await context.newPage();
+    await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('input[name="email"]', { timeout: 15000 });
+    await page.fill('input[name="email"]', account.email);
+    await page.fill('input[name="password"]', account.password);
+    await Promise.all([
+        page.waitForURL((url) => !url.pathname.endsWith('/login')),
+        page.click('button[type="submit"]'),
+    ]);
+    await page.close();
+}
+
+const shots = ONLY ? SHOTS.filter((shot) => shot.slug.includes(ONLY)) : SHOTS;
+
+await mkdir(OUT, { recursive: true });
+
+const browser = await chromium.launch({ executablePath: EXECUTABLE, args: ['--no-sandbox'] });
+const contexts = new Map();
+
+async function contextFor(role, width, height) {
+    const key = `${role ?? 'guest'}:${width}x${height}`;
+
+    if (!contexts.has(key)) {
+        const context = await browser.newContext({
+            viewport: { width, height },
+            deviceScaleFactor: 2,
+            locale: 'en-GB',
+            timezoneId: 'Europe/Amsterdam',
+            colorScheme: 'light',
+            reducedMotion: 'reduce',
+        });
+
+        if (role) {
+            await signIn(context, ACCOUNTS[role]);
+        }
+
+        contexts.set(key, context);
+    }
+
+    return contexts.get(key);
+}
+
+let failures = 0;
+
+for (const shot of shots) {
+    const width = shot.width ?? 1440;
+    const height = shot.height ?? 900;
+
+    try {
+        const context = await contextFor(shot.as, width, height);
+        const page = await context.newPage();
+
+        await page.goto(`${BASE}${shot.path}`, { waitUntil: 'networkidle' });
+        // Inertia mounts after the module graph resolves, which can be after
+        // the network goes idle — wait for the React tree, not for the socket.
+        await page.waitForSelector('#app > *', { state: 'attached', timeout: 15000 });
+
+        if (shot.prepare) {
+            await shot.prepare(page);
+            await page.waitForLoadState('networkidle');
+        }
+
+        // Let fonts settle so text never renders mid-swap.
+        await page.evaluate(() => document.fonts?.ready);
+        await page.waitForTimeout(400);
+
+        await page.screenshot({ path: `${OUT}/${shot.slug}.png`, fullPage: shot.fullPage ?? false });
+        await page.close();
+
+        console.log(`ok   ${shot.slug} — ${shot.path}`);
+    } catch (error) {
+        failures += 1;
+        console.error(`FAIL ${shot.slug} — ${error.message}`);
+    }
+}
+
+for (const context of contexts.values()) {
+    await context.close();
+}
+
+await browser.close();
+
+process.exit(failures === 0 ? 0 : 1);

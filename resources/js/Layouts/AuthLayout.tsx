@@ -28,7 +28,7 @@ export default function AuthLayout({
             <Head title={title} />
             <FlashMessages />
 
-            <div className="flex min-h-full flex-col bg-slate-100">
+            <div className="flex min-h-screen flex-col bg-slate-100">
                 <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
                     <Link href="/" aria-label={t('nav.dashboard')}>
                         <BrandLockup subtitle={t('portal.landing.tagline')} />

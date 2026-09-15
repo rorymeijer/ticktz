@@ -21,15 +21,20 @@ class SetLocale
     {
         $supported = array_keys(config('ticktz.locales', []));
 
+        $requested = $request->query('lang');
+
         $locale = $this->firstSupported([
+            $requested,
             $request->user()?->locale,
-            $request->query('lang'),
             $request->session()->get('locale'),
             $request->getPreferredLanguage($supported),
         ], $supported) ?? config('app.locale');
 
-        if ($request->query('lang') && in_array($request->query('lang'), $supported, true)) {
-            $request->session()->put('locale', $request->query('lang'));
+        // Remember an explicit choice for guests only. A signed-in user's
+        // profile stays the source of truth: `?lang=` applies to that one
+        // request (an e-mail deep link, a shared URL) and nothing more.
+        if ($requested !== null && in_array($requested, $supported, true) && ! $request->user()) {
+            $request->session()->put('locale', $requested);
         }
 
         app()->setLocale($locale);

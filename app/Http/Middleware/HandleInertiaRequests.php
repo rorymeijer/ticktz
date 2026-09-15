@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use App\Support\UiTranslations;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -53,6 +54,15 @@ class HandleInertiaRequests extends Middleware
                 ->values()
                 ->all(),
             'translations' => fn () => UiTranslations::for($locale),
+
+            // Ziggy's route table plus the current URL. The layouts read
+            // `ziggy.location` to decide which navigation item is active, so
+            // this has to be present on every response, not just where the
+            // `route()` helper is used.
+            'ziggy' => fn () => [
+                ...(new Ziggy)->toArray(),
+                'location' => $request->url(),
+            ],
 
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

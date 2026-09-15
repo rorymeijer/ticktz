@@ -1,18 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Models\Role;
+use App\Models\User;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
+use Database\Seeders\SettingsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-
-/*
-|--------------------------------------------------------------------------
-| Test Case
-|--------------------------------------------------------------------------
-|
-| The closure you provide to your test functions is always bound to a specific PHPUnit test
-| case class. By default, that class is "PHPUnit\Framework\TestCase". Of course, you may
-| need to change it using the "pest()" function to bind a different classes or traits.
-|
-*/
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
@@ -20,31 +16,55 @@ pest()->extend(TestCase::class)
 
 /*
 |--------------------------------------------------------------------------
-| Expectations
+| Helpers
 |--------------------------------------------------------------------------
-|
-| When you're writing tests, you often need to check that values meet certain conditions. The
-| "expect()" function gives you access to a set of "expectations" methods that you can use
-| to assert different things. Of course, you may extend the Expectation API at any time.
-|
 */
 
-expect()->extend('toBeOne', function () {
-    return $this->toBe(1);
-});
-
-/*
-|--------------------------------------------------------------------------
-| Functions
-|--------------------------------------------------------------------------
-|
-| While Pest is very powerful out-of-the-box, you may have some testing code specific to your
-| project that you don't want to repeat in every file. Here you can also expose helpers as
-| global functions to help you to reduce the number of lines of code in your test files.
-|
-*/
-
-function something()
+/**
+ * Seed the permission catalogue, the three system roles and the default
+ * settings. Anything touching RBAC needs this first.
+ */
+function seedRbac(): void
 {
-    // ..
+    app(PermissionSeeder::class)->run();
+    app(RoleSeeder::class)->run();
+    app(SettingsSeeder::class)->run();
+}
+
+function makeAdmin(array $attributes = []): User
+{
+    seedRbac();
+
+    return User::factory()->admin()->create($attributes)->fresh();
+}
+
+function makeAgent(array $attributes = []): User
+{
+    seedRbac();
+
+    return User::factory()->agent()->create($attributes)->fresh();
+}
+
+function makeRequester(array $attributes = []): User
+{
+    seedRbac();
+
+    return User::factory()->requester()->create($attributes)->fresh();
+}
+
+/**
+ * A user holding exactly the given permissions and nothing else — the fastest
+ * way to assert that an endpoint really checks the permission it claims to.
+ */
+function makeUserWithPermissions(string ...$permissions): User
+{
+    seedRbac();
+
+    $role = Role::factory()->create(['scope' => 'agent']);
+    $role->syncPermissionNames($permissions);
+
+    $user = User::factory()->create();
+    $user->roles()->attach($role);
+
+    return $user->fresh();
 }

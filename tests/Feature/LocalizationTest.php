@@ -28,6 +28,17 @@ test('the ui language follows the signed-in user preference', function () {
     expect(app()->getLocale())->toBe('nl');
 });
 
+test('an explicit lang parameter wins over the stored preference for that request', function () {
+    $user = User::factory()->create(['locale' => 'nl']);
+
+    $this->actingAs($user)->get('/dashboard?lang=en')->assertOk();
+    expect(app()->getLocale())->toBe('en');
+
+    // ... but it is not remembered: the profile stays the source of truth.
+    $this->actingAs($user)->get('/dashboard')->assertOk();
+    expect(app()->getLocale())->toBe('nl');
+});
+
 test('a guest can switch language with the lang query parameter', function () {
     $this->get('/?lang=nl')->assertOk();
 

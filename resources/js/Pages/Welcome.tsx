@@ -24,7 +24,7 @@ export default function Welcome(_props: SharedProps) {
         <>
             <Head title={t('portal.landing.tagline')} />
 
-            <div className="min-h-full bg-white">
+            <div className="min-h-screen bg-white">
                 <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
                     <BrandLockup subtitle={t('portal.landing.tagline')} />
                     <nav className="flex items-center gap-2">

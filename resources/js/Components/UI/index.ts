@@ -9,3 +9,7 @@ export { Pagination } from './Pagination';
 export { Modal } from './Modal';
 export { Dropdown, DropdownButton, DropdownDivider, DropdownHeading, DropdownLink } from './Dropdown';
 export { FlashMessages } from './FlashMessages';
+export { Toggle } from './Toggle';
+export { ConfirmDialog } from './ConfirmDialog';
+export { CheckboxGroup, type CheckboxOption } from './CheckboxGroup';
+export { PageHeader } from './PageHeader';
