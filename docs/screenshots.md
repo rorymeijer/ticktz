@@ -85,6 +85,24 @@ and the resolve/reopen windows.
 
 ![Settings](screenshots/18-admin-settings.png)
 
+### Service desk vocabulary
+Statuses, priorities and labels on one screen. A status' *category* is what the
+engine reasons about; the name is yours.
+
+![Service desk configuration](screenshots/14-admin-service-desk.png)
+
+### Workflow editor
+Transitions as a matrix: tick a cell to allow moving from the row status to the
+column status. Thirty possible moves in a six-status process are unreadable as
+a list and obvious as a grid.
+
+![Workflow editor](screenshots/14b-admin-workflow.png)
+
+### Queue editor
+A queue is a saved filter plus the columns it shows.
+
+![Queue editor](screenshots/14c-admin-queue.png)
+
 ### Audit log
 Every mutating action with a before/after diff, filterable by event and actor
 type. Automation, inbound e-mail and API tokens are labelled as such.
@@ -94,9 +112,42 @@ type. Automation, inbound e-mail and API tokens are labelled as such.
 ## Agent & portal
 
 ### Agent dashboard
-The agent shell. It fills up in phase 2, when tickets arrive.
+The agent shell.
 
 ![Agent dashboard](screenshots/20-agent-dashboard.png)
+
+### Ticket list
+Queues along the top are saved filters, so switching one just changes the query
+string — the URL stays shareable. Sorting and filtering happen server-side.
+
+![Ticket list](screenshots/21-agent-tickets.png)
+
+### A queue
+The built-in "Unassigned" queue: open tickets nobody has picked up, oldest
+first.
+
+![Unassigned queue](screenshots/22-agent-tickets-queue.png)
+
+### Queue overview
+Every queue the agent may open, with a live count.
+
+![Queue overview](screenshots/23-agent-queues.png)
+
+### Ticket detail
+The conversation, the system events, and the properties column where every
+control posts immediately — an agent should never hunt for a save button to
+reassign a ticket. The amber frame and lock mark an internal note: the cost of
+mistaking one for a public reply is a note going out to the customer.
+
+![Ticket detail](screenshots/24-agent-ticket-detail.png)
+
+### Creating a ticket
+
+![New ticket](screenshots/25-agent-ticket-create.png)
+
+### The same list, in Dutch
+
+![Ticketlijst](screenshots/26-agent-tickets-nl.png)
 
 ### Customer portal
 Deliberately different chrome from the agent console: no sidebar, and only the
@@ -114,3 +165,5 @@ the interface.
 Every screen is usable at 400px.
 
 ![Portal on a phone](screenshots/40-mobile-portal.png)
+
+![Ticket list on a phone](screenshots/41-mobile-tickets.png)

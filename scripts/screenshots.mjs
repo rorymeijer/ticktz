@@ -44,9 +44,19 @@ const SHOTS = [
     { slug: '18-admin-settings', path: '/admin/settings?lang=en', as: 'admin', fullPage: true },
     { slug: '19-admin-audit-log', path: '/admin/audit-log?lang=en', as: 'admin' },
     { slug: '20-agent-dashboard', path: '/dashboard?lang=en', as: 'agent' },
+    { slug: '21-agent-tickets', path: '/agent/tickets?lang=en', as: 'agent' },
+    { slug: '22-agent-tickets-queue', path: '/agent/tickets?queue_slug=unassigned&lang=en', as: 'agent' },
+    { slug: '23-agent-queues', path: '/agent/queues?lang=en', as: 'agent' },
+    { slug: '24-agent-ticket-detail', path: '/agent/tickets/SUP-1?lang=en', as: 'agent', fullPage: true },
+    { slug: '25-agent-ticket-create', path: '/agent/tickets/create?lang=en', as: 'agent' },
+    { slug: '26-agent-tickets-nl', path: '/agent/tickets?lang=nl', as: 'agent' },
+    { slug: '14-admin-service-desk', path: '/admin/service-desk?lang=en', as: 'admin', fullPage: true },
+    { slug: '14b-admin-workflow', path: '/admin/workflows/1/edit?lang=en', as: 'admin', fullPage: true },
+    { slug: '14c-admin-queue', path: '/admin/queues/1/edit?lang=en', as: 'admin', fullPage: true },
     { slug: '30-portal', path: '/portal?lang=en', as: 'requester' },
     { slug: '31-profile-nl', path: '/profile?lang=nl', as: 'agent' },
     { slug: '40-mobile-portal', path: '/portal?lang=en', as: 'requester', width: 400, height: 780 },
+    { slug: '41-mobile-tickets', path: '/agent/tickets?lang=en', as: 'agent', width: 400, height: 780 },
 ];
 
 async function signIn(context, account) {

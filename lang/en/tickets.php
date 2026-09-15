@@ -1,0 +1,177 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'title' => 'Tickets',
+    'subtitle' => 'Everything the service desk is working on.',
+    'create' => 'New ticket',
+    'ticket' => 'Ticket',
+
+    'columns' => [
+        'key' => 'Key',
+        'subject' => 'Subject',
+        'status' => 'Status',
+        'priority' => 'Priority',
+        'requester' => 'Requester',
+        'assignee' => 'Assignee',
+        'team' => 'Team',
+        'organization' => 'Organisation',
+        'labels' => 'Labels',
+        'created_at' => 'Created',
+        'updated_at' => 'Updated',
+        'source' => 'Source',
+    ],
+
+    'fields' => [
+        'subject' => 'Subject',
+        'description' => 'Description',
+        'requester' => 'Requester',
+        'assignee' => 'Assignee',
+        'priority' => 'Priority',
+        'status' => 'Status',
+        'team' => 'Team',
+        'queue' => 'Queue',
+        'labels' => 'Labels',
+        'attachments' => 'Attachments',
+        'watchers' => 'Watchers',
+        'links' => 'Linked tickets',
+        'workflow' => 'Workflow',
+    ],
+
+    'placeholders' => [
+        'subject' => 'Summarise the problem in one line',
+        'description' => 'What happened, what you expected, and what you already tried',
+        'search' => 'Search by key, subject or description…',
+        'reply' => 'Write a reply to the requester…',
+        'note' => 'Write an internal note — the requester never sees this…',
+    ],
+
+    'filters' => [
+        'title' => 'Filters',
+        'status' => 'Any status',
+        'priority' => 'Any priority',
+        'assignee' => 'Anyone',
+        'unassigned' => 'Unassigned',
+        'assigned_to_me' => 'Assigned to me',
+        'team' => 'Any team',
+        'my_teams' => 'My teams',
+        'label' => 'Any label',
+        'source' => 'Any source',
+        'clear' => 'Clear filters',
+    ],
+
+    'source' => [
+        'portal' => 'Portal',
+        'email' => 'E-mail',
+        'agent' => 'Agent',
+        'api' => 'API',
+        'automation' => 'Automation',
+    ],
+
+    'status_category' => [
+        'new' => 'New',
+        'open' => 'Open',
+        'pending' => 'Waiting',
+        'resolved' => 'Resolved',
+        'closed' => 'Closed',
+    ],
+
+    'actions' => [
+        'reply' => 'Reply',
+        'internal_note' => 'Internal note',
+        'send_reply' => 'Send reply',
+        'save_note' => 'Save note',
+        'assign' => 'Assign',
+        'claim' => 'Assign to me',
+        'unassign' => 'Unassign',
+        'watch' => 'Watch',
+        'unwatch' => 'Stop watching',
+        'add_watcher' => 'Add watcher',
+        'link' => 'Link a ticket',
+        'unlink' => 'Remove link',
+        'change_status' => 'Change status',
+        'attach' => 'Attach files',
+    ],
+
+    'timeline' => [
+        'title' => 'Activity',
+        'system' => 'System',
+        'internal_note' => 'Internal note',
+        'public_reply' => 'Reply',
+        'edited' => 'edited',
+        'no_activity' => 'Nothing has happened yet.',
+        'events' => [
+            'created' => 'created this ticket',
+            'ticket.assigned' => 'changed the assignee',
+            'ticket.unassigned' => 'removed the assignee',
+            'ticket.transitioned' => 'changed the status',
+        ],
+    ],
+
+    'link_types' => [
+        'relates' => 'relates to',
+        'duplicates' => 'duplicates',
+        'duplicated_by' => 'is duplicated by',
+        'blocks' => 'blocks',
+        'blocked_by' => 'is blocked by',
+        'causes' => 'causes',
+        'caused_by' => 'is caused by',
+        'parent' => 'is parent of',
+        'child' => 'is child of',
+    ],
+
+    'detail' => [
+        'properties' => 'Properties',
+        'people' => 'People',
+        'opened_by' => 'Opened by :name',
+        'first_response' => 'First response',
+        'resolved' => 'Resolved',
+        'reopened' => 'Reopened :count time|Reopened :count times',
+        'no_watchers' => 'Nobody is watching this ticket.',
+        'no_links' => 'No linked tickets.',
+        'internal_only' => 'Only agents can see this.',
+    ],
+
+    'queues' => [
+        'title' => 'Queues',
+        'subtitle' => 'Saved filters over the ticket list. A ticket can appear in several at once.',
+        'all_tickets' => 'All tickets',
+        'ticket_count' => ':count ticket|:count tickets',
+        'empty' => 'No queues are available to you.',
+    ],
+
+    'empty' => [
+        'title' => 'No tickets here',
+        'description' => 'Nothing matches the current filters.',
+        'create' => 'Create the first ticket',
+    ],
+
+    'flash' => [
+        'created' => 'Ticket :key created.',
+        'updated' => 'Ticket updated.',
+        'deleted' => 'Ticket deleted.',
+        'replied' => 'Reply sent.',
+        'note_added' => 'Internal note saved.',
+        'assigned' => 'Assignee updated.',
+        'unassigned' => 'Assignee removed.',
+        'claimed' => 'Ticket assigned to you.',
+        'transitioned' => 'Status changed to :status.',
+        'watching' => 'You are now watching this ticket.',
+        'not_watching' => 'You are no longer watching this ticket.',
+        'watcher_added' => 'Watcher added.',
+        'watcher_removed' => 'Watcher removed.',
+        'linked' => 'Linked to :key.',
+        'unlinked' => 'Link removed.',
+        'attachment_deleted' => 'Attachment deleted.',
+    ],
+
+    'errors' => [
+        'illegal_transition' => 'The workflow does not allow moving from :from to :to.',
+        'comment_required' => 'This status change requires a comment.',
+        'assignee_required' => 'Assign the ticket before moving it to this status.',
+        'assignee_not_agent' => 'Only agents can be assigned tickets.',
+        'link_not_found' => 'No ticket with that key.',
+        'link_self' => 'A ticket cannot be linked to itself.',
+    ],
+];

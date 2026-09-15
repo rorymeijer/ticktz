@@ -8,8 +8,8 @@ tracks what is shipped. The phase definitions come from the original brief in
 | --- | --- | --- |
 | 0 | Foundation, Docker stack, i18n plumbing, CI | ✅ Shipped |
 | 1 | Auth, users, roles & permissions, teams, organisations, LDAP, audit log | ✅ Shipped |
-| 2 | Ticket core & agent console | ⏳ Next |
-| 3 | Customer portal & request types | ⏳ Planned |
+| 2 | Ticket core & agent console | ✅ Shipped |
+| 3 | Customer portal & request types | ⏳ Next |
 | 4 | E-mail (SMTP out, IMAP in) | ⏳ Planned |
 | 5 | SLA engine & escalations | ⏳ Planned |
 | 6 | Automation rules | ⏳ Planned |
@@ -61,6 +61,41 @@ tracks what is shipped. The phase definitions come from the original brief in
   self-registration is off by default.
 - **Console.** `php artisan ticktz:admin` bootstraps the first administrator;
   `php artisan ticktz:demo` fills a demo instance.
+
+## Phase 2 — Ticket core & agent console
+
+- **Tickets** with a readable key (`SUP-1042`) handed out by a locked sequence
+  row, so two simultaneous submissions can never claim the same number. The key
+  is the route parameter, which keeps a pasted URL meaningful.
+- **Vocabulary as data.** Statuses, priorities and labels are editable; every
+  status carries a *category* (`new`, `open`, `pending`, `resolved`, `closed`)
+  that the engine reasons about, so renaming "In progress" to "Onderhanden"
+  changes nothing but the label.
+- **Workflows** decide which status changes are legal, edited as a matrix. A
+  transition can require a comment, require an assignee, or demand an extra
+  permission. A ticket keeps the workflow it was created under, so editing one
+  never strands an in-flight ticket.
+- **Queues** are saved filters rather than containers: a ticket appears in every
+  queue whose criteria it matches, which is how a service desk actually works.
+  One `TicketFilter` implementation serves both queues and the filter bar, so
+  the two can never drift.
+- **Conversation.** Public replies and internal notes in one timeline,
+  interleaved with system events from the audit log and ordered by the audit
+  sequence — timestamps only have second precision, and a reply and the status
+  change it triggered routinely share one.
+- **Attachments** are stored outside the web root and streamed through a
+  controller that runs the policy first; a file on an internal note is not
+  downloadable by the requester even with the direct URL.
+- **Watchers, labels and ticket links** (relates / duplicates / blocks / causes
+  / parent), with the inverse relationship derived when rendering.
+- **Visibility** is defined once, in `Ticket::scopeVisibleTo()`, and mirrored by
+  `TicketPolicy::view()`. A test asserts the two agree for every ticket,
+  because a disagreement between the list query and the record check is a data
+  leak.
+- **Domain events** (`TicketCreated`, `TicketUpdated`, `TicketAssigned`,
+  `TicketTransitioned`, `TicketCommented`) are the seam the notification
+  pipeline, the SLA engine and the automation engine hook into later. Nothing
+  writes to `tickets` outside `TicketService`.
 
 ### Not yet wired up
 

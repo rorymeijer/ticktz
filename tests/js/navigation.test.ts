@@ -32,16 +32,25 @@ describe('agentNavigation', () => {
         expect(agentNavigation(user([]), t).map((item) => item.key)).toEqual(['dashboard']);
     });
 
-    it('hides administration from someone without an admin permission', () => {
+    it('adds the ticket destinations only with the ticket permission', () => {
         const keys = agentNavigation(user(['tickets.view']), t).map((item) => item.key);
 
+        expect(keys).toContain('tickets');
+        expect(keys).toContain('queues');
         expect(keys).not.toContain('admin');
+    });
+
+    it('hides the ticket destinations from an administrator without them', () => {
+        const keys = agentNavigation(user(['users.manage']), t).map((item) => item.key);
+
+        expect(keys).toContain('admin');
+        expect(keys).not.toContain('tickets');
     });
 
     it('gives a wildcard holder every destination', () => {
         const keys = agentNavigation(user(['*']), t).map((item) => item.key);
 
-        expect(keys).toEqual(expect.arrayContaining(['dashboard', 'admin']));
+        expect(keys).toEqual(expect.arrayContaining(['dashboard', 'tickets', 'queues', 'admin']));
     });
 
     it('shows administration to someone who may only manage users', () => {

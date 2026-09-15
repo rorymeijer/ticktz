@@ -118,7 +118,11 @@ final class PermissionCatalog
             'admin' => self::all(),
 
             'agent' => [
-                'tickets.view', 'tickets.create', 'tickets.update', 'tickets.assign',
+                // Agents see the whole desk by default: teams scope who *works*
+                // a ticket, not who may read it. Remove `tickets.view.all` from
+                // the role to get strict per-team visibility instead.
+                'tickets.view', 'tickets.view.all',
+                'tickets.create', 'tickets.update', 'tickets.assign',
                 'tickets.transition', 'tickets.comment', 'tickets.comment.internal',
                 'tickets.merge', 'tickets.link', 'tickets.export',
                 'portal.submit',

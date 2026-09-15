@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Models\Priority;
 use App\Models\Role;
+use App\Models\TicketStatus;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingsSeeder;
+use Database\Seeders\TicketWorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -29,6 +32,26 @@ function seedRbac(): void
     app(PermissionSeeder::class)->run();
     app(RoleSeeder::class)->run();
     app(SettingsSeeder::class)->run();
+}
+
+/**
+ * RBAC plus the default ticket process: statuses, priorities, the standard
+ * workflow and the built-in queues.
+ */
+function seedServiceDesk(): void
+{
+    seedRbac();
+    app(TicketWorkflowSeeder::class)->run();
+}
+
+function status(string $slug): TicketStatus
+{
+    return TicketStatus::query()->where('slug', $slug)->sole();
+}
+
+function priority(string $slug): Priority
+{
+    return Priority::query()->where('slug', $slug)->sole();
 }
 
 function makeAdmin(array $attributes = []): User

@@ -4,13 +4,21 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Attachment;
+use App\Models\Comment;
 use App\Models\Organization;
+use App\Models\Queue;
 use App\Models\Role;
 use App\Models\Team;
+use App\Models\Ticket;
 use App\Models\User;
+use App\Policies\AttachmentPolicy;
+use App\Policies\CommentPolicy;
 use App\Policies\OrganizationPolicy;
+use App\Policies\QueuePolicy;
 use App\Policies\RolePolicy;
 use App\Policies\TeamPolicy;
+use App\Policies\TicketPolicy;
 use App\Policies\UserPolicy;
 use App\Support\PermissionCatalog;
 use Illuminate\Support\Facades\Gate;
@@ -42,6 +50,10 @@ class AuthServiceProvider extends ServiceProvider
         Role::class => RolePolicy::class,
         Team::class => TeamPolicy::class,
         Organization::class => OrganizationPolicy::class,
+        Ticket::class => TicketPolicy::class,
+        Comment::class => CommentPolicy::class,
+        Queue::class => QueuePolicy::class,
+        Attachment::class => AttachmentPolicy::class,
     ];
 
     public function boot(): void

@@ -7,7 +7,8 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 
 /**
- * Baseline seed for any Ticktz instance: permissions, roles and settings.
+ * Baseline seed for any Ticktz instance: permissions, roles, settings and the
+ * default ticket process.
  *
  * It is idempotent — running it against a live instance is safe and is in fact
  * how an upgrade picks up new permissions. Demo content lives in
@@ -21,6 +22,7 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             RoleSeeder::class,
             SettingsSeeder::class,
+            TicketWorkflowSeeder::class,
         ]);
     }
 }

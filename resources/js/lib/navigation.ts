@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react';
 
-import { IconCog, IconDashboard } from '@/Components/Icons';
+import { IconCog, IconDashboard, IconInbox, IconTicket } from '@/Components/Icons';
 import type { User } from '@/types';
 
 export interface NavItem {
@@ -30,6 +30,13 @@ export function agentNavigation(user: User | null, t: Translator): NavItem[] {
     // Destinations are added here as each phase ships its routes; an item
     // that has no backing route would be a dead link, which is worse than an
     // absent one.
+
+    if (can('tickets.view')) {
+        items.push(
+            { key: 'tickets', label: t('nav.tickets'), href: '/agent/tickets', icon: IconTicket, match: ['/agent/tickets'] },
+            { key: 'queues', label: t('nav.queues'), href: '/agent/queues', icon: IconInbox, match: ['/agent/queues'] },
+        );
+    }
 
     if (can('settings.manage') || can('users.manage')) {
         items.push({ key: 'admin', label: t('nav.admin'), href: '/admin', icon: IconCog, match: ['/admin'] });

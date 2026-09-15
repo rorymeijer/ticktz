@@ -47,6 +47,27 @@ export default function AdminLayout({
             section: 'identity',
         },
         {
+            key: 'service-desk',
+            href: '/admin/service-desk',
+            label: t('admin.nav.service_desk'),
+            permission: 'settings.manage',
+            section: 'service_desk',
+        },
+        {
+            key: 'workflows',
+            href: '/admin/workflows',
+            label: t('admin.nav.workflows'),
+            permission: 'settings.manage',
+            section: 'service_desk',
+        },
+        {
+            key: 'queues',
+            href: '/admin/queues',
+            label: t('admin.nav.queues'),
+            permission: 'queues.manage',
+            section: 'service_desk',
+        },
+        {
             key: 'directories',
             href: '/admin/directories',
             label: t('admin.nav.directories'),
