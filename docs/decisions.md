@@ -200,3 +200,55 @@ places to look when a ticket does something unexpected.
 The escalations live as JSON on the goal rather than in their own table, because
 an escalation is meaningless without the target it is a fraction of, the list is
 short, and it is always read whole.
+
+## D19 — Conditions are a flat AND/OR list, not a nested expression editor
+
+A rule's conditions are joined by "all" or "any", with no parentheses and no
+nesting. That is a limit, chosen on purpose.
+
+A nested boolean editor is hard to build, harder to read back six months later,
+and the rules people actually write are flat. A desk that genuinely needs
+`(A and B) or (C and D)` is better served by two rules than by one nobody can
+explain — and two rules each have their own line in the execution log, which is
+the thing you will be reading when it misbehaves.
+
+The fields, operators and actions are constants on the model rather than an
+open string. The admin form is generated from them, so a rule the UI can
+express is a rule the engine can run. An unknown field fails *closed*: it
+matches nothing. The worst case of a malformed rule is a rule that does
+nothing, never one that reassigns every ticket on the desk.
+
+## D20 — The loop guard's state travels in the job
+
+A rule that sets a field emits `ticket.updated`, which is a trigger, which can
+run the rule again. Two rules that each undo the other do the same thing more
+slowly. This is the failure mode every automation engine has, and it does not
+announce itself — it looks like a busy worker and an audit log filling up.
+
+Two limits: a rule runs at most once per ticket per cascade, which kills any
+ring however long it is; and a cascade is depth-capped as a backstop.
+
+The part that matters is *where that state lives*. A queued job runs in a fresh
+process, so anything held in a static would reset on every hop and the guard
+would never fire — precisely when it is needed. So the depth and the set of
+pairs already run are constructor arguments on the job, read from the
+request-scoped guard at the moment the rule's own change is made. The listener
+that dispatches is therefore deliberately *not* queued: it only enqueues a job,
+and doing that inline is what keeps the cascade intact.
+
+The depth is also written to each execution row, so a runaway chain is visible
+in the log rather than only in the guard's refusals.
+
+## D21 — Skipped evaluations are logged, with the condition that caused them
+
+`automation_executions` records every evaluation, not just the ones that did
+something. A log of successes cannot answer "why did my rule not fire?", which
+is the only question anybody asks of an automation feature.
+
+The failing condition is stored structurally as well as in words. The sentence
+alone reads "priority is 1", which is not an answer; the structured form lets
+the admin screen print "Priority is Urgent", in the reader's language, using
+the same code that prints the rule itself.
+
+The log is pruned nightly — it grows by rules × ticket events per day, and a
+table nobody trims is a table that eventually makes the page it feeds slow.

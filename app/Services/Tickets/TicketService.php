@@ -114,6 +114,13 @@ class TicketService
             'subject', 'description', 'priority_id', 'queue_id', 'team_id', 'organization_id',
         ]);
 
+        // Loaded rather than assumed: a service method must not depend on how
+        // its caller fetched the model. An automation rule operating on a
+        // ticket it just looked up by id has no relations loaded, and the
+        // lazy load that used to happen here was an N+1 in production and a
+        // hard failure in development.
+        $ticket->loadMissing('assignee');
+
         $previousAssignee = $ticket->assignee;
         $assigneeChanged = array_key_exists('assignee_id', $attributes)
             && (int) $attributes['assignee_id'] !== (int) $ticket->assignee_id;
@@ -163,6 +170,10 @@ class TicketService
 
     public function assign(Ticket $ticket, ?User $assignee, ?User $actor = null): Ticket
     {
+        // Same reason as update(): the caller may have fetched this ticket
+        // without its relations, and this method must work either way.
+        $ticket->loadMissing('assignee');
+
         $previous = $ticket->assignee;
 
         if ((int) $ticket->assignee_id === (int) $assignee?->getKey()) {

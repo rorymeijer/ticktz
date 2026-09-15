@@ -137,6 +137,16 @@ recipient is written to in the language they read.
 
 ![Postbussen](screenshots/1b-admin-email-nl.png)
 
+### Automation
+A rule reads as a sentence: when this happens, and these things are true, do
+that. Underneath, every evaluation the engine has made — including the ones
+that decided to do nothing, and which condition decided it.
+
+![Automation](screenshots/1e-admin-automation.png)
+
+### Automation, in Dutch
+![Automatisering](screenshots/1f-admin-automation-nl.png)
+
 ### Service levels
 Calendars decide when the clock runs; policies decide which tickets are covered;
 targets decide how long they get. A four-hour target on a Friday afternoon

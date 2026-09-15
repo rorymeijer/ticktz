@@ -80,6 +80,25 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Automation
+    |--------------------------------------------------------------------------
+    |
+    | How far a chain of rules reacting to rules may run before it is cut off.
+    | A rule already runs at most once per ticket per cascade, so this is the
+    | backstop rather than the main defence — but a runaway automation is the
+    | one failure mode of this feature that can take an instance down.
+    |
+    */
+
+    'automation' => [
+        'max_depth' => (int) env('TICKTZ_AUTOMATION_MAX_DEPTH', 5),
+        // Executions older than this are pruned nightly. The log is written on
+        // every evaluation, including the skips, so it grows quickly.
+        'log_retention_days' => (int) env('TICKTZ_AUTOMATION_LOG_DAYS', 30),
+    ],
+
     'queues' => [
         'high' => env('TICKTZ_QUEUE_HIGH', 'high'),
         'default' => env('TICKTZ_QUEUE_DEFAULT', 'default'),

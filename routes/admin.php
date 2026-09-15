@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\AutomationRuleController;
 use App\Http\Controllers\Admin\CustomFieldController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EmailChannelController;
@@ -56,6 +57,13 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::post('email/templates', [EmailChannelController::class, 'storeTemplate'])->name('email.templates.store');
     Route::put('email/templates/{template}', [EmailChannelController::class, 'updateTemplate'])->name('email.templates.update');
     Route::delete('email/templates/{template}', [EmailChannelController::class, 'destroyTemplate'])->name('email.templates.destroy');
+
+    Route::get('automation', [AutomationRuleController::class, 'index'])->name('automation.index');
+    Route::post('automation/rules', [AutomationRuleController::class, 'store'])->name('automation.rules.store');
+    Route::put('automation/rules/{rule}', [AutomationRuleController::class, 'update'])->name('automation.rules.update');
+    Route::delete('automation/rules/{rule}', [AutomationRuleController::class, 'destroy'])->name('automation.rules.destroy');
+    Route::patch('automation/rules/{rule}/active', [AutomationRuleController::class, 'toggle'])->name('automation.rules.toggle');
+    Route::post('automation/rules/{rule}/preview', [AutomationRuleController::class, 'preview'])->name('automation.rules.preview');
 
     // Policies and goals resolve by id rather than slug: an administrator
     // renaming a policy must not break the screen they are renaming it on.

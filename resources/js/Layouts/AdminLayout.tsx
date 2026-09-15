@@ -82,6 +82,13 @@ export default function AdminLayout({
             section: 'service_desk',
         },
         {
+            key: 'automation',
+            href: '/admin/automation',
+            label: t('admin.nav.automation'),
+            permission: 'automation.manage',
+            section: 'service_desk',
+        },
+        {
             key: 'sla',
             href: '/admin/sla',
             label: t('admin.nav.sla'),

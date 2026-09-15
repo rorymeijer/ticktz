@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Services\AuditLogger;
+use App\Services\Automation\AutomationGuard;
 use App\Services\SettingsRepository;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -19,6 +20,10 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(SettingsRepository::class);
         $this->app->singleton(AuditLogger::class);
+        // The automation loop guard holds the state of the cascade currently
+        // running. Every collaborator has to see the same instance or a rule
+        // cannot tell that it caused the change it is now reacting to.
+        $this->app->singleton(AutomationGuard::class);
     }
 
     public function boot(): void

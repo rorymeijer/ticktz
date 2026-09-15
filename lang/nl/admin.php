@@ -21,6 +21,7 @@ return [
         'directories' => 'Directories (LDAP)',
         'email' => 'Postbussen',
         'sla' => 'Serviceniveaus',
+        'automation' => 'Automatisering',
         'settings' => 'Instellingen',
         'audit' => 'Audit-log',
         'service_desk' => 'Servicedesk',

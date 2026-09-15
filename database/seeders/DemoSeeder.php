@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Jobs\Sla\SweepSlaTimersJob;
 use App\Models\AuditLogEntry;
+use App\Models\AutomationRule;
 use App\Models\CustomField;
 use App\Models\EmailChannel;
 use App\Models\Label;
@@ -23,6 +24,7 @@ use App\Services\Sla\SlaEngine;
 use App\Services\Sla\SlaEscalator;
 use App\Services\Tickets\TicketService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
@@ -140,7 +142,73 @@ class DemoSeeder extends Seeder
         $this->seedLabels();
         $this->seedPortal();
         $this->seedMailbox($teams['servicedesk']);
+        $this->seedAutomation($teams);
         $this->seedTickets();
+    }
+
+    /**
+     * Three rules that show the shape of the feature without being clever.
+     *
+     * Each is a thing a real desk actually does: route by label, escalate the
+     * customer chasing an urgent ticket, and nudge the ones that have gone
+     * quiet. The third is scheduled, so the demo has one of those too.
+     *
+     * @param  Collection<string, Team>  $teams
+     */
+    private function seedAutomation(Collection $teams): void
+    {
+        $labels = Label::query()->pluck('id', 'slug');
+        $priorities = Priority::query()->pluck('id', 'slug');
+
+        AutomationRule::query()->updateOrCreate(['slug' => 'hardware-to-infrastructure'], [
+            'name' => 'Hardware gaat naar Infrastructuur',
+            'description' => 'Een nieuw ticket met het label Hardware komt bij het juiste team terecht.',
+            'trigger' => AutomationRule::TRIGGER_CREATED,
+            'match_type' => 'all',
+            'conditions' => [
+                ['field' => 'label', 'operator' => 'is', 'value' => $labels['hardware'] ?? 0],
+            ],
+            'actions' => [
+                ['type' => 'assign_team', 'team_id' => $teams['infrastructure']->getKey()],
+            ],
+            'is_active' => true,
+            'position' => 10,
+        ]);
+
+        AutomationRule::query()->updateOrCreate(['slug' => 'requester-chases-urgent'], [
+            'name' => 'Melder rappelleert op een urgent ticket',
+            'description' => 'Een reactie van de melder op een urgent ticket zet het terug op de stapel.',
+            'trigger' => AutomationRule::TRIGGER_COMMENTED,
+            'match_type' => 'all',
+            'conditions' => [
+                ['field' => 'comment_is_internal', 'operator' => 'is_false'],
+                ['field' => 'priority', 'operator' => 'is', 'value' => $priorities['urgent'] ?? 0],
+            ],
+            'actions' => [
+                ['type' => 'add_comment', 'body' => 'Melder heeft gereageerd op {{ ticket.key }} — graag oppakken.', 'internal' => true],
+            ],
+            'is_active' => true,
+            'position' => 20,
+        ]);
+
+        AutomationRule::query()->updateOrCreate(['slug' => 'nudge-quiet-tickets'], [
+            'name' => 'Stille tickets aanstippen',
+            'description' => 'Tickets waar drie dagen niets op gebeurd is krijgen een interne notitie.',
+            'trigger' => AutomationRule::TRIGGER_SCHEDULED,
+            'trigger_config' => ['cron' => '0 8 * * 1-5'],
+            'match_type' => 'all',
+            'conditions' => [
+                ['field' => 'minutes_since_activity', 'operator' => 'greater_than', 'value' => 4320],
+                ['field' => 'is_assigned', 'operator' => 'is_true'],
+            ],
+            'actions' => [
+                ['type' => 'add_comment', 'body' => 'Er is drie dagen niets gebeurd op {{ ticket.key }}.', 'internal' => true],
+            ],
+            // Off by default: a demo that starts commenting on its own tickets
+            // the moment somebody runs the scheduler is a demo that confuses.
+            'is_active' => false,
+            'position' => 30,
+        ]);
     }
 
     /**

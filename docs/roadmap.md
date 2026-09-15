@@ -12,8 +12,8 @@ tracks what is shipped. The phase definitions come from the original brief in
 | 3 | Customer portal & request types | ✅ Shipped |
 | 4 | E-mail (SMTP out, IMAP in) | ✅ Shipped |
 | 5 | SLA engine & escalations | ✅ Shipped |
-| 6 | Automation rules | ⏳ Next |
-| 7 | Knowledge base | ⏳ Planned |
+| 6 | Automation rules | ✅ Shipped |
+| 7 | Knowledge base | ⏳ Next |
 | 8 | Approvals | ⏳ Planned |
 | 9 | Assets / CMDB | ⏳ Planned |
 | 10 | Reporting & dashboards | ⏳ Planned |
@@ -225,6 +225,51 @@ A promise nobody measures is not a promise. This phase measures them.
 A fresh instance ships a working policy: an office-hours calendar with Dutch
 public holidays, targets per priority, and escalations on the two urgent tiers.
 An SLA feature that starts empty is one nobody turns on.
+
+## Phase 6 — Automation rules
+
+When this happens, and these things are true, do that.
+
+- **One trigger per rule**: a ticket created, changed, commented on,
+  transitioned or assigned; an SLA target missed or escalated; or a schedule.
+  A rule that fires on three different things is three rules wearing a
+  trenchcoat, and its execution log is unreadable.
+- **Conditions are a closed vocabulary.** The fields, operators and actions are
+  constants in `AutomationRule`, and the admin form is built from them — so a
+  rule the UI can express is a rule the engine can run, and a rule that
+  silently does nothing is not a state this feature has. An unknown field fails
+  closed: the worst case is a rule that does nothing, not one that reassigns
+  every ticket on the desk.
+- **Flat AND/OR, not a nested expression editor** ([D19](decisions.md)). A desk
+  that genuinely needs parentheses is better served by two rules than by one
+  nobody can explain.
+- **Loops are the failure mode this feature has**, and it does not announce
+  itself — it looks like a busy worker and an audit log filling up. A rule that
+  sets a field emits `ticket.updated`, which is a trigger, which can run the
+  rule again. So a rule runs at most once per ticket per cascade, which kills
+  any ring however long, with a depth cap as a backstop. The cascade state
+  travels *in the job*, because a queued job runs in a fresh process and
+  anything held in memory would reset ([D20](decisions.md)).
+- **Everything goes through `TicketService`**, so an automated assignment is
+  audited, emits its events and respects the workflow exactly as a human's
+  would. A transition the workflow forbids is reported, not forced — a rule
+  that could override the workflow would make the workflow a suggestion.
+- **Automation's changes are attributed to the rule by name**, not to "system".
+  An operator reading the trail of a ticket that reassigned itself at three in
+  the morning can see which rule did it.
+- **Every evaluation is logged, including the skips**, with the condition that
+  decided it — rendered with names and in the reader's language, not as
+  "priority is 1". "Why did my rule not fire?" is unanswerable from a log of
+  successes, and it is the question the log exists to answer
+  ([D21](decisions.md)).
+- **Rules can be tried out** against a real ticket from the admin screen, which
+  evaluates the conditions and changes nothing.
+- **Webhooks** are queued on their own queue with a backoff, https only, and
+  signed with an HMAC of the exact body when the rule carries a secret.
+
+Actions run on a worker, as the brief asks: a rule can call an endpoint on
+somebody else's server, and nothing a customer does in the portal should wait
+on that.
 
 ### Not yet wired up
 
