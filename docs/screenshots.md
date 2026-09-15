@@ -122,6 +122,21 @@ type. Automation, inbound e-mail and API tokens are labelled as such.
 
 ![Audit log](screenshots/19-admin-audit-log.png)
 
+### Mailboxes
+One row per address: what replies are sent from, what is read in, and where
+inbound mail lands. Passwords are encrypted at rest and never reach this page —
+the form shows whether one is stored, not what it is. Below it, the six
+notifications with their packaged defaults, and the log of every message the
+poller has seen including the ones it deliberately ignored.
+
+![Mailboxes](screenshots/1a-admin-email.png)
+
+### Mailboxes, in Dutch
+Notification templates are overridable per mailbox *and* per language, and each
+recipient is written to in the language they read.
+
+![Postbussen](screenshots/1b-admin-email-nl.png)
+
 ## Agent & portal
 
 ### Agent dashboard

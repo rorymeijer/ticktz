@@ -10,8 +10,8 @@ tracks what is shipped. The phase definitions come from the original brief in
 | 1 | Auth, users, roles & permissions, teams, organisations, LDAP, audit log | ✅ Shipped |
 | 2 | Ticket core & agent console | ✅ Shipped |
 | 3 | Customer portal & request types | ✅ Shipped |
-| 4 | E-mail (SMTP out, IMAP in) | ⏳ Next |
-| 5 | SLA engine & escalations | ⏳ Planned |
+| 4 | E-mail (SMTP out, IMAP in) | ✅ Shipped |
+| 5 | SLA engine & escalations | ⏳ Next |
 | 6 | Automation rules | ⏳ Planned |
 | 7 | Knowledge base | ⏳ Planned |
 | 8 | Approvals | ⏳ Planned |
@@ -125,10 +125,62 @@ tracks what is shipped. The phase definitions come from the original brief in
   so their names are data with per-locale overrides and the base name as
   fallback.
 
+## Phase 4 — E-mail
+
+A service desk that only exists in a browser is a service desk half its users
+will not use. This phase makes e-mail a first-class channel in both directions.
+
+- **Mailboxes are data.** An `email_channels` row is one address: what replies
+  are sent from (SMTP), where inbound mail is read (IMAP), and where those
+  messages land (queue, team, request type, priority). Several mailboxes can
+  run side by side — `servicedesk@`, `facilities@` — each routing differently.
+  Passwords are encrypted at rest and reduced to a boolean on the way to the
+  browser; an empty password field on save means "keep the stored one".
+- **Notifications are templates, not code.** Six notifications ship with
+  packaged NL and EN text. An administrator overrides any of them per mailbox
+  and per language. Templates are plain text with `{{ placeholder }}` tokens
+  rather than Blade: they are edited in the UI and stored in the database, so
+  they must never be able to execute — see [D12](decisions.md). An unknown
+  token renders as nothing rather than appearing in a customer's inbox.
+- **Everyone is written to in their own language**, decided by the recipient's
+  locale rather than by whoever triggered the mail.
+- **Threading survives the customer.** Outgoing mail carries a generated
+  Message-ID that embeds the ticket key (`ticktz.SUP-1042.17.9f2a@host`). A
+  reply quotes it in `In-Reply-To`, so the answer lands on the right ticket
+  even when the subject line has been rewritten entirely. Failing that: a
+  `[KEY]` in the subject, then any earlier message in the same thread.
+- **Inbound processing is idempotent.** A mail server *will* hand you the same
+  message twice — a poll that timed out after processing but before flagging, a
+  worker that died mid-job, a mailbox restored from backup. So the
+  `inbound_messages` row is claimed first, inside a transaction, on a unique
+  `(channel, message hash)` index; a second delivery loses the race and stops.
+  The message is only flagged as read on the server *after* the database says
+  it is handled. No ticket is ever created twice — see [D13](decisions.md).
+- **Loops are cut at the door.** Bounce handlers, `no-reply` addresses,
+  `Auto-Submitted` headers, out-of-office replies and bulk precedence never
+  create a ticket. Everything Ticktz sends carries `Auto-Submitted:
+  auto-generated` and `X-Auto-Response-Suppress`, so other systems extend the
+  same courtesy.
+- **Unknown senders become requesters**, with the audit entry attributed to the
+  e-mail channel rather than to a person. Switch auto-provisioning off and mail
+  from an address Ticktz does not know is dropped instead.
+- **A reply reopens a resolved ticket**, bounded by `tickets.reopen_window_days`
+  so a "thanks!" three months later does not revive a closed case.
+- **There is no way to write an internal note by e-mail.** An inbound reply is
+  always a public comment, and an internal note is never mailed to a requester.
+- **Polling** runs every minute from the scheduler as a `ShouldBeUnique` job per
+  mailbox, or on demand from the admin UI. The inbound log shows every message
+  the poller has seen, including the ones it deliberately ignored and why.
+
+The development stack runs [GreenMail](https://greenmail-mail-test.github.io/greenmail/)
+rather than MailHog, because this phase needs both halves: SMTP to catch what
+goes out, and IMAP to read it back in. Its web interface is on
+<http://localhost:8025>; the demo seeder wires a mailbox to it.
+
 ### Not yet wired up
 
-The sidebar only shows destinations that have routes today: Dashboard and
-Administration. Tickets, queues, the knowledge base, assets, approvals and
-reporting appear as their phases land — a menu item without a route is worse
-than an absent one. The permission catalogue already covers them, so roles can
-be configured ahead of the features arriving.
+The sidebar only shows destinations that have routes today: Dashboard, Tickets,
+Queues and Administration. The knowledge base, assets, approvals and reporting
+appear as their phases land — a menu item without a route is worse than an
+absent one. The permission catalogue already covers them, so roles can be
+configured ahead of the features arriving.

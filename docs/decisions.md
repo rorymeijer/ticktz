@@ -105,3 +105,43 @@ parts removed; it constructs its own from scratch, loading only public
 comments and only public custom fields. A view that starts with everything and
 subtracts is one careless edit away from leaking; a view that starts with
 nothing and adds is not.
+
+## D12 — E-mail templates are text with tokens, not Blade
+
+Notification templates are edited by service desk managers in the admin UI and
+stored in the database. Rendering them as Blade would mean user-supplied input
+compiled and executed on the server: one `{{ system('...') }}` away from remote
+code execution, and only an administrator-level permission between an attacker
+and that. So a template is plain text and `{{ token }}` is substituted by a
+lookup in a fixed map. Anything in double braces that is not in the map renders
+as nothing — never echoed back into a customer's inbox, never evaluated.
+
+The cost is that templates cannot loop or branch. Six notifications with a flat
+placeholder list have not needed to.
+
+## D13 — Inbound mail is claimed before it is processed
+
+The `inbound_messages` row is inserted first, inside a transaction, against a
+unique `(email_channel_id, message_hash)` index — before a ticket, a comment or
+a user account exists. A redelivery loses that race and stops; it does not
+create a second ticket.
+
+This ordering also decides what happens when processing dies halfway. The
+message is only marked read (or moved, or deleted) on the IMAP server *after*
+the database says it is handled, so a crash leaves the message on the server to
+be re-fetched — where the claim will refuse it if the work actually completed.
+The failure mode is a message that is never processed twice, at the cost of one
+that may be fetched twice. For a ticketing system that is the right way round.
+
+A message with no Message-ID gets a synthetic one hashed from the channel,
+sender, subject and body, so the same mail arriving twice still deduplicates.
+
+## D14 — GreenMail, not MailHog, in the development stack
+
+The brief allowed either. MailHog is the more familiar SMTP sink, but it has no
+IMAP server, so half of Phase 4 — reading mail back in and turning it into a
+ticket — could not be exercised in the dev stack at all. GreenMail speaks both
+(SMTP on 3025, IMAP on 3143, web interface on 8025) with authentication
+disabled and mailboxes created on first use, so `docker compose up` gives a
+working round trip: reply to a ticket, watch it arrive, reply to that, watch it
+land back on the ticket as a comment.

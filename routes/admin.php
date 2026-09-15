@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CustomFieldController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\EmailChannelController;
 use App\Http\Controllers\Admin\LabelController;
 use App\Http\Controllers\Admin\LdapConfigController;
 use App\Http\Controllers\Admin\OrganizationController;
@@ -43,6 +44,17 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
     Route::get('settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+
+    Route::get('email', [EmailChannelController::class, 'index'])->name('email.index');
+    Route::post('email/channels', [EmailChannelController::class, 'store'])->name('email.channels.store');
+    Route::put('email/channels/{channel}', [EmailChannelController::class, 'update'])->name('email.channels.update');
+    Route::delete('email/channels/{channel}', [EmailChannelController::class, 'destroy'])->name('email.channels.destroy');
+    Route::post('email/channels/{channel}/test', [EmailChannelController::class, 'testSending'])->name('email.channels.test');
+    Route::post('email/channels/{channel}/poll', [EmailChannelController::class, 'poll'])->name('email.channels.poll');
+    Route::post('email/poll', [EmailChannelController::class, 'pollAll'])->name('email.poll');
+    Route::post('email/templates', [EmailChannelController::class, 'storeTemplate'])->name('email.templates.store');
+    Route::put('email/templates/{template}', [EmailChannelController::class, 'updateTemplate'])->name('email.templates.update');
+    Route::delete('email/templates/{template}', [EmailChannelController::class, 'destroyTemplate'])->name('email.templates.destroy');
 
     Route::get('directories', [LdapConfigController::class, 'index'])->name('directories.index');
     Route::post('directories', [LdapConfigController::class, 'store'])->name('directories.store');

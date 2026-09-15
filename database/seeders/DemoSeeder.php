@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Models\CustomField;
+use App\Models\EmailChannel;
 use App\Models\Label;
 use App\Models\Organization;
 use App\Models\PortalCategory;
@@ -72,6 +73,12 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
+        // The demo walks tickets through weeks of history in a few seconds.
+        // Mailing all of it would flood the demo accounts with notifications
+        // for things that "happened" a fortnight ago — and would fail outright
+        // on a machine with no mail server. Collect it in memory instead.
+        config(['mail.default' => 'array']);
+
         $this->call([
             PermissionSeeder::class,
             RoleSeeder::class,
@@ -126,7 +133,46 @@ class DemoSeeder extends Seeder
 
         $this->seedLabels();
         $this->seedPortal();
+        $this->seedMailbox($teams['servicedesk']);
         $this->seedTickets();
+    }
+
+    /**
+     * The demo mailbox, wired to the GreenMail container in the development
+     * stack: mail sent to servicedesk@ticktz.test lands there, and the poller
+     * reads it back over IMAP and turns it into a ticket.
+     *
+     * GreenMail runs with authentication disabled and creates a mailbox on
+     * first use, so the credentials below are placeholders rather than
+     * secrets. Point the host at a real server for anything but a demo.
+     */
+    private function seedMailbox(Team $servicedesk): void
+    {
+        $host = (string) (config('mail.mailers.smtp.host') ?: 'mail');
+
+        EmailChannel::query()->updateOrCreate(['slug' => 'servicedesk'], [
+            'name' => 'Service desk',
+            'address' => 'servicedesk@ticktz.test',
+            'from_name' => 'Gemeente Ticktz — Service desk',
+            'is_active' => true,
+
+            'smtp_host' => $host,
+            'smtp_port' => (int) (config('mail.mailers.smtp.port') ?: 3025),
+            'smtp_encryption' => 'none',
+
+            'imap_enabled' => true,
+            'imap_host' => $host,
+            'imap_port' => 3143,
+            'imap_encryption' => 'none',
+            'imap_validate_cert' => false,
+            'imap_username' => 'servicedesk@ticktz.test',
+            'imap_password' => 'ticktz-demo',
+            'imap_folder' => 'INBOX',
+
+            'team_id' => $servicedesk->getKey(),
+            'auto_provision_requesters' => true,
+            'ignore_senders' => [],
+        ]);
     }
 
     /**

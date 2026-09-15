@@ -36,8 +36,8 @@ class Ticket extends Model
 
     protected $fillable = [
         'subject', 'description', 'status_id', 'priority_id', 'workflow_id',
-        'queue_id', 'request_type_id', 'requester_id', 'assignee_id', 'team_id',
-        'organization_id', 'created_by', 'source',
+        'queue_id', 'request_type_id', 'email_channel_id', 'requester_id',
+        'assignee_id', 'team_id', 'organization_id', 'created_by', 'source',
     ];
 
     protected function casts(): array
@@ -157,6 +157,18 @@ class Ticket extends Model
     public function labels(): BelongsToMany
     {
         return $this->belongsToMany(Label::class, 'ticket_labels');
+    }
+
+    /** @return HasMany<InboundMessage, $this> */
+    public function inboundMessages(): HasMany
+    {
+        return $this->hasMany(InboundMessage::class);
+    }
+
+    /** @return BelongsTo<EmailChannel, $this> */
+    public function emailChannel(): BelongsTo
+    {
+        return $this->belongsTo(EmailChannel::class, 'email_channel_id');
     }
 
     /** @return HasMany<TicketLink, $this> */

@@ -58,6 +58,7 @@ class TicketService
                 'workflow_id' => $workflow->getKey(),
                 'queue_id' => $attributes['queue_id'] ?? null,
                 'request_type_id' => $attributes['request_type_id'] ?? null,
+                'email_channel_id' => $attributes['email_channel_id'] ?? null,
                 'requester_id' => $requester->getKey(),
                 'assignee_id' => $attributes['assignee_id'] ?? null,
                 'team_id' => $attributes['team_id'] ?? null,
@@ -95,7 +96,7 @@ class TicketService
         TicketCreated::dispatch($ticket, $actor);
 
         if ($ticket->assignee_id) {
-            TicketAssigned::dispatch($ticket, $ticket->assignee, null, $actor);
+            TicketAssigned::dispatch($ticket, $ticket->assignee, null, $actor, true);
         }
 
         return $ticket;

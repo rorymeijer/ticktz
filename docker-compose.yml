@@ -4,7 +4,7 @@
 #   docker compose up -d
 #
 # Serves the app on http://localhost:8080 with hot-reloading Vite assets,
-# a MailHog inbox on http://localhost:8025 and a MySQL 8 database.
+# a GreenMail inbox on http://localhost:8025 and a MySQL 8 database.
 # For production use docker-compose.prod.yml instead.
 # ---------------------------------------------------------------------------
 
@@ -123,12 +123,23 @@ services:
       retries: 20
     restart: unless-stopped
 
-  # Development mail sink. Catches every outgoing Mailable and exposes an
-  # IMAP server the email-to-ticket poller can read back (port 1143).
-  mailhog:
-    image: mailhog/mailhog:latest
+  # Development mail server. GreenMail rather than MailHog because Ticktz
+  # needs both halves of the conversation: SMTP to catch what goes out (3025)
+  # and IMAP to read it back in (3143), which is how the email-to-ticket
+  # poller can be exercised without an external mailbox. Authentication is
+  # disabled and mailboxes are created on first use, so any address works.
+  mail:
+    image: greenmail/standalone:2.1.0
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.all
+        -Dgreenmail.hostname=0.0.0.0
+        -Dgreenmail.auth.disabled
+        -Dgreenmail.users.login=email
     ports:
-      - "${TICKTZ_MAILHOG_PORT:-8025}:8025"
+      - "${TICKTZ_MAIL_SMTP_PORT:-3025}:3025"
+      - "${TICKTZ_MAIL_IMAP_PORT:-3143}:3143"
+      - "${TICKTZ_MAIL_UI_PORT:-8025}:8080"
     restart: unless-stopped
 
 volumes:

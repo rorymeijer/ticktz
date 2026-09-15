@@ -5,7 +5,7 @@
  *   php artisan migrate:fresh --force && php artisan ticktz:demo
  *   npm run build
  *   php artisan serve --port=8123 &
- *   node scripts/screenshots.mjs [--base http://127.0.0.1:8123] [--only slug]
+ *   node scripts/screenshots.mjs [--base http://127.0.0.1:8123] [--only slug,slug]
  *
  * Every shot signs in through the real login form, so the screenshots always
  * reflect what a user with that role actually sees.
@@ -43,6 +43,8 @@ const SHOTS = [
     { slug: '17-admin-directories', path: '/admin/directories?lang=en', as: 'admin' },
     { slug: '18-admin-settings', path: '/admin/settings?lang=en', as: 'admin', fullPage: true },
     { slug: '19-admin-audit-log', path: '/admin/audit-log?lang=en', as: 'admin' },
+    { slug: '1a-admin-email', path: '/admin/email?lang=en', as: 'admin', fullPage: true },
+    { slug: '1b-admin-email-nl', path: '/admin/email?lang=nl', as: 'admin' },
     { slug: '20-agent-dashboard', path: '/dashboard?lang=en', as: 'agent' },
     { slug: '21-agent-tickets', path: '/agent/tickets?lang=en', as: 'agent' },
     { slug: '22-agent-tickets-queue', path: '/agent/tickets?queue_slug=unassigned&lang=en', as: 'agent' },
@@ -79,7 +81,15 @@ async function signIn(context, account) {
     await page.close();
 }
 
-const shots = ONLY ? SHOTS.filter((shot) => shot.slug.includes(ONLY)) : SHOTS;
+const patterns = ONLY ? ONLY.split(',').map((part) => part.trim()).filter(Boolean) : [];
+const shots = patterns.length
+    ? SHOTS.filter((shot) => patterns.some((pattern) => shot.slug.includes(pattern)))
+    : SHOTS;
+
+if (shots.length === 0) {
+    console.error(`No shot matches --only ${ONLY}. Known slugs:\n  ${SHOTS.map((shot) => shot.slug).join('\n  ')}`);
+    process.exit(1);
+}
 
 await mkdir(OUT, { recursive: true });
 

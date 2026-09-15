@@ -33,8 +33,9 @@ docker compose up -d --build
 ```
 
 The stack comes up on <http://localhost:8080>. The first boot waits for MySQL,
-generates an application key and runs the migrations. A development mail sink
-is available at <http://localhost:8025>.
+generates an application key and runs the migrations. A development mail server
+(GreenMail: SMTP, IMAP and a web interface) is available at
+<http://localhost:8025> — see [docs/email.md](docs/email.md).
 
 ```bash
 # seed a demo instance (roles, queues, SLAs, sample tickets)
@@ -51,13 +52,16 @@ curl -s http://localhost:8080/health | jq
 
 | Document | What it covers |
 | --- | --- |
-| [Self-hosting guide](docs/self-hosting.md) | Installing, upgrading, backups, scaling, TLS |
-| [Architecture](docs/architecture.md) | How the pieces fit together and why |
-| [Configuration](docs/configuration.md) | Every environment variable |
-| [Data model](docs/data-model.md) | Tables and relationships |
+| [Roadmap](docs/roadmap.md) | What each phase shipped, and what is next |
+| [E-mail](docs/email.md) | Mailboxes, notification templates, email-to-ticket |
 | [Design decisions](docs/decisions.md) | Defaults chosen where the brief left room |
 | [Screenshots](docs/screenshots.md) | What the product looks like |
 | [Contributing](CONTRIBUTING.md) | Local development without Docker, coding standards |
+| [Build brief](docs/PROMPT.md) | The original specification, verbatim |
+
+The consolidated self-hosting guide, architecture overview, configuration
+reference and data-model documentation are written in Phase 12; until then each
+phase documents its own configuration on the pages above.
 
 ## The stack
 
