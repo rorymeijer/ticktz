@@ -15,8 +15,8 @@ tracks what is shipped. The phase definitions come from the original brief in
 | 6 | Automation rules | ✅ Shipped |
 | 7 | Knowledge base | ✅ Shipped |
 | 8 | Approvals | ✅ Shipped |
-| 9 | Assets / CMDB | ⏳ Next |
-| 10 | Reporting & dashboards | ⏳ Planned |
+| 9 | Assets / CMDB | ✅ Shipped |
+| 10 | Reporting & dashboards | ⏳ Next |
 | 11 | Public REST API & webhooks (Sanctum) | ⏳ Planned |
 | 12 | i18n completion, accessibility, docs & release | ⏳ Planned |
 
@@ -354,10 +354,48 @@ a per-transition conditions list in the workflow editor, which is where the
 gate is configured and which incidentally gave `requires_comment` and
 `requires_assignee` a UI for the first time.
 
+## Phase 9 — Assets / CMDB
+
+The things the desk is asked about. Full notes in [`assets.md`](assets.md).
+
+- **The tag is the human key.** `asset_tag` is the sticker on the box: unique,
+  indexed, searchable, and what an import matches on. The next number is
+  derived from the highest existing tag rather than a counter, because assets
+  arrive by import carrying tags somebody else allocated ([D33](decisions.md)).
+- **Custom attributes reuse `custom_fields`.** An asset type declares which
+  fields it wants, exactly as a request type declares its form — one field
+  editor, one validation path.
+- **Relations are stored once, in one direction**, and the inverse is derived
+  when rendering. A row per direction would let the two halves of "installed
+  on" disagree, and in a CMDB that is the bug that makes people stop trusting
+  the whole thing ([D34](decisions.md)).
+- **Assets link to tickets**, which is the half that earns its keep: a register
+  nothing points at answers "what do we own"; one attached to tickets answers
+  "what keeps breaking". The picker is seeded from the requester's own
+  equipment.
+- **Search matches tags and serials with LIKE on both drivers.** A FULLTEXT
+  index tokenises on word boundaries, so `LAP-0042` is two words and a search
+  for `0042` — what somebody types off a worn sticker — finds nothing
+  ([D35](decisions.md)).
+- **Importing is two steps, always.** The upload reports what would happen;
+  only an explicit second request writes. It matches on `asset_tag` so a
+  re-import updates rather than doubles the estate, leaves columns the file
+  does not carry alone, and reports per-row errors rather than rejecting the
+  file ([D36](decisions.md)).
+- **It reads what spreadsheets actually produce**: semicolons as well as
+  commas, a UTF-8 BOM, `31-12-2026` as well as `2026-12-31`, `€ 1.299,00` as
+  well as `1299.00`.
+- **The portal payload is built by naming what may be shown**, not by removing
+  keys from the agent one — a payload built by subtraction leaks the next field
+  somebody adds ([D37](decisions.md)).
+- **The register sits outside the `tickets.view` gate.** In plenty of
+  organisations the CMDB is kept by a procurement team who never touch a
+  ticket.
+
 ### Not yet wired up
 
 The sidebar only shows destinations that have routes today: Dashboard, Tickets,
-Queues, Approvals, the knowledge base and Administration. Assets and reporting
-appear as their phases land — a menu item without a route is worse than an
+Queues, Approvals, Assets, the knowledge base and Administration. Reporting
+appears as its phase lands — a menu item without a route is worse than an
 absent one. The permission catalogue already covers them, so roles can be
 configured ahead of the features arriving.

@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\ApprovalWorkflowController;
+use App\Http\Controllers\Admin\AssetImportController;
+use App\Http\Controllers\Admin\AssetTypeController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\AutomationRuleController;
 use App\Http\Controllers\Admin\CustomFieldController;
@@ -62,6 +64,17 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
     // Articles resolve by id in the admin area: an editor renaming an article
     // must not break the URL of the page they are renaming it on.
+    Route::get('asset-types', [AssetTypeController::class, 'index'])->name('asset-types.index');
+    Route::post('asset-types', [AssetTypeController::class, 'store'])->name('asset-types.store');
+    Route::put('asset-types/{type}', [AssetTypeController::class, 'update'])->name('asset-types.update');
+    Route::delete('asset-types/{type}', [AssetTypeController::class, 'destroy'])->name('asset-types.destroy');
+
+    // Two steps, always: the upload previews and only an explicit second
+    // request writes anything. See AssetImportController.
+    Route::get('assets/import', [AssetImportController::class, 'show'])->name('assets.import');
+    Route::post('assets/import/preview', [AssetImportController::class, 'preview'])->name('assets.import.preview');
+    Route::post('assets/import', [AssetImportController::class, 'store'])->name('assets.import.store');
+
     Route::get('approvals', [ApprovalWorkflowController::class, 'index'])->name('approvals.index');
     Route::post('approvals', [ApprovalWorkflowController::class, 'store'])->name('approvals.store');
     Route::put('approvals/{workflow}', [ApprovalWorkflowController::class, 'update'])->name('approvals.update');

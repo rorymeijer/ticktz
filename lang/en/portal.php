@@ -26,6 +26,7 @@ return [
     'nav' => [
         'browse' => 'Browse requests',
         'my_requests' => 'My requests',
+        'equipment' => 'My equipment',
         'new_request' => 'New request',
     ],
 

@@ -36,6 +36,7 @@ export default function PortalLayout({
         { href: '/portal', label: t('portal.nav.browse') },
         { href: '/portal/kb', label: t('kb.portal_title') },
         { href: '/portal/requests', label: t('portal.nav.my_requests') },
+        { href: '/portal/equipment', label: t('portal.nav.equipment') },
     ];
 
     // Only when something is actually waiting. Most requesters are never asked

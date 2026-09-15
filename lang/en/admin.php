@@ -24,6 +24,8 @@ return [
         'automation' => 'Automation',
         'kb' => 'Knowledge base',
         'approvals' => 'Approvals',
+        'asset_types' => 'Asset types',
+        'asset_import' => 'Import assets',
         'settings' => 'Settings',
         'audit' => 'Audit log',
         'service_desk' => 'Service desk',

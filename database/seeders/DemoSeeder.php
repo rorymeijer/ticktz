@@ -7,6 +7,8 @@ namespace Database\Seeders;
 use App\Jobs\Sla\SweepSlaTimersJob;
 use App\Models\ApprovalStep;
 use App\Models\ApprovalWorkflow;
+use App\Models\Asset;
+use App\Models\AssetType;
 use App\Models\AuditLogEntry;
 use App\Models\AutomationRule;
 use App\Models\CustomField;
@@ -25,6 +27,7 @@ use App\Models\Ticket;
 use App\Models\TicketStatus;
 use App\Models\User;
 use App\Services\Approvals\ApprovalService;
+use App\Services\Assets\AssetService;
 use App\Services\Kb\ArticleService;
 use App\Services\Sla\SlaEngine;
 use App\Services\Sla\SlaEscalator;
@@ -150,9 +153,187 @@ class DemoSeeder extends Seeder
         $this->seedPortal();
         $this->seedMailbox($teams['servicedesk']);
         $this->seedAutomation($teams);
+        $this->seedAssets();
         $this->seedTickets();
         $this->seedKnowledgeBase();
         $this->seedPendingApproval();
+        $this->linkAssetsToTickets();
+    }
+
+    /**
+     * A small estate: two laptops, a phone, a server and the dock one of the
+     * laptops is plugged into.
+     *
+     * Deliberately connected rather than a flat list — a register nothing
+     * points at demonstrates only half the feature, and "which laptop is on
+     * this dock" is the question a CMDB exists to answer.
+     */
+    private function seedAssets(): void
+    {
+        $types = collect([
+            ['slug' => 'laptop', 'name' => 'Laptop', 'nl' => 'Laptop', 'prefix' => 'LAP', 'color' => '#4f46e5', 'position' => 10],
+            ['slug' => 'monitor', 'name' => 'Monitor', 'nl' => 'Beeldscherm', 'prefix' => 'MON', 'color' => '#0891b2', 'position' => 20],
+            ['slug' => 'dock', 'name' => 'Docking station', 'nl' => 'Docking station', 'prefix' => 'DCK', 'color' => '#0d9488', 'position' => 30],
+            ['slug' => 'phone', 'name' => 'Phone', 'nl' => 'Telefoon', 'prefix' => 'TEL', 'color' => '#7c3aed', 'position' => 40],
+            ['slug' => 'server', 'name' => 'Server', 'nl' => 'Server', 'prefix' => 'SRV', 'color' => '#dc2626', 'position' => 50],
+            ['slug' => 'printer', 'name' => 'Printer', 'nl' => 'Printer', 'prefix' => 'PRN', 'color' => '#ca8a04', 'position' => 60],
+        ])->mapWithKeys(fn (array $type) => [
+            $type['slug'] => AssetType::query()->updateOrCreate(['slug' => $type['slug']], [
+                'name' => $type['name'],
+                'name_translations' => ['nl' => $type['nl'], 'en' => $type['name']],
+                'tag_prefix' => $type['prefix'],
+                'color' => $type['color'],
+                'is_active' => true,
+                'position' => $type['position'],
+            ]),
+        ]);
+
+        $service = app(AssetService::class);
+        $users = User::query()->get()->keyBy('email');
+        $organizations = Organization::query()->get()->keyBy('slug');
+        $teams = Team::query()->get()->keyBy('slug');
+
+        foreach ($this->assetBlueprints() as $blueprint) {
+            if (Asset::query()->withTrashed()->where('asset_tag', $blueprint['tag'])->exists()) {
+                continue;
+            }
+
+            $owner = isset($blueprint['owner']) ? $users->get($blueprint['owner']) : null;
+
+            $service->create([
+                'type' => $types[$blueprint['type']],
+                'asset_tag' => $blueprint['tag'],
+                'name' => $blueprint['name'],
+                'serial_number' => $blueprint['serial'] ?? null,
+                'manufacturer' => $blueprint['manufacturer'] ?? null,
+                'model' => $blueprint['model'] ?? null,
+                'status' => $blueprint['status'] ?? Asset::IN_USE,
+                'location' => $blueprint['location'] ?? null,
+                'assigned_to' => $owner?->getKey(),
+                'organization_id' => $owner?->organization_id
+                    ?? $organizations->get($blueprint['organization'] ?? '')?->getKey(),
+                'team_id' => $teams->get($blueprint['team'] ?? '')?->getKey(),
+                'purchased_at' => $blueprint['purchased'] ?? null,
+                'warranty_ends_at' => $blueprint['warranty'] ?? null,
+                'purchase_cost' => $blueprint['cost'] ?? null,
+                'currency' => isset($blueprint['cost']) ? 'EUR' : null,
+                'notes' => $blueprint['notes'] ?? null,
+            ]);
+        }
+
+        $byTag = Asset::query()->get()->keyBy('asset_tag');
+
+        foreach ($this->assetRelationBlueprints() as [$from, $type, $to]) {
+            if ($byTag->has($from) && $byTag->has($to)) {
+                $service->relate($byTag[$from], $byTag[$to], $type);
+            }
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function assetBlueprints(): array
+    {
+        return [
+            [
+                'tag' => 'LAP-0041', 'type' => 'laptop', 'name' => 'Dell Latitude 5440',
+                'serial' => 'DL5440-8827411', 'manufacturer' => 'Dell', 'model' => 'Latitude 5440',
+                'owner' => 'm.visser@zandvliet.test', 'location' => 'Stadhuis, 2e etage',
+                'purchased' => '2024-03-11', 'warranty' => '2027-03-11', 'cost' => 128900,
+            ],
+            [
+                'tag' => 'LAP-0042', 'type' => 'laptop', 'name' => 'Dell Latitude 5440',
+                'serial' => 'DL5440-8827512', 'manufacturer' => 'Dell', 'model' => 'Latitude 5440',
+                'owner' => 'a.bouzid@zandvliet.test', 'location' => 'Stadhuis, 3e etage',
+                // Deliberately out of warranty: the register should be able to
+                // answer "what are we still running that nobody will fix".
+                'purchased' => '2021-06-02', 'warranty' => '2024-06-02', 'cost' => 119900,
+            ],
+            [
+                'tag' => 'DCK-0017', 'type' => 'dock', 'name' => 'Dell WD19S dock',
+                'serial' => 'WD19S-4412098', 'manufacturer' => 'Dell', 'model' => 'WD19S',
+                'owner' => 'a.bouzid@zandvliet.test', 'location' => 'Stadhuis, 3e etage',
+                'purchased' => '2021-06-02', 'warranty' => '2024-06-02', 'cost' => 21900,
+            ],
+            [
+                'tag' => 'MON-0088', 'type' => 'monitor', 'name' => 'Dell U2722DE',
+                'serial' => 'U2722-1190447', 'manufacturer' => 'Dell', 'model' => 'U2722DE',
+                'owner' => 'a.bouzid@zandvliet.test', 'location' => 'Stadhuis, 3e etage',
+                'purchased' => '2021-06-02', 'warranty' => '2026-06-02', 'cost' => 44900,
+            ],
+            [
+                'tag' => 'TEL-0203', 'type' => 'phone', 'name' => 'iPhone 14',
+                'serial' => 'F2LX90ABCD', 'manufacturer' => 'Apple', 'model' => 'iPhone 14',
+                'owner' => 'p.dijkstra@odnoord.test', 'location' => 'Onderweg',
+                'purchased' => '2023-09-20', 'warranty' => '2025-09-20', 'cost' => 89900,
+            ],
+            [
+                'tag' => 'PRN-0004', 'type' => 'printer', 'name' => 'Canon iR-ADV C3826i',
+                'serial' => 'CNX-3826-771', 'manufacturer' => 'Canon', 'model' => 'iR-ADV C3826i',
+                'location' => 'Stadhuis, 3e etage', 'team' => 'servicedesk',
+                'organization' => 'gemeente-zandvliet',
+                'purchased' => '2022-01-18', 'warranty' => '2027-01-18', 'cost' => 349000,
+                'notes' => 'Onderhoudscontract loopt via Canon, contractnummer 8841-B.',
+            ],
+            [
+                'tag' => 'SRV-0002', 'type' => 'server', 'name' => 'zaak-app-01',
+                'serial' => 'PE640-2201884', 'manufacturer' => 'Dell', 'model' => 'PowerEdge R640',
+                'location' => 'Datacenter, rack 4', 'team' => 'applications',
+                'purchased' => '2022-02-14', 'warranty' => '2027-02-14', 'cost' => 745000,
+                'notes' => 'Draait het zaaksysteem. Niet herstarten tijdens kantooruren.',
+            ],
+            [
+                'tag' => 'SRV-0003', 'type' => 'server', 'name' => 'backup-01',
+                'serial' => 'PE640-2201991', 'manufacturer' => 'Dell', 'model' => 'PowerEdge R640',
+                'location' => 'Datacenter, rack 6', 'team' => 'infrastructure',
+                'purchased' => '2022-02-14', 'warranty' => '2027-02-14', 'cost' => 612000,
+            ],
+            [
+                'tag' => 'LAP-0055', 'type' => 'laptop', 'name' => 'Dell Latitude 5450',
+                'serial' => 'DL5450-9910223', 'manufacturer' => 'Dell', 'model' => 'Latitude 5450',
+                'status' => Asset::IN_STOCK, 'location' => 'Magazijn',
+                'purchased' => '2026-08-04', 'warranty' => '2029-08-04', 'cost' => 134900,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, array{0: string, 1: string, 2: string}>
+     */
+    private function assetRelationBlueprints(): array
+    {
+        return [
+            ['LAP-0042', 'connected_to', 'DCK-0017'],
+            ['MON-0088', 'connected_to', 'DCK-0017'],
+            ['SRV-0003', 'backs_up', 'SRV-0002'],
+        ];
+    }
+
+    /**
+     * The register attached to the tickets it explains.
+     *
+     * "What keeps breaking" is the question that changes a purchasing
+     * decision, and it is only answerable once the two halves are joined.
+     */
+    private function linkAssetsToTickets(): void
+    {
+        $service = app(AssetService::class);
+        $assets = Asset::query()->get()->keyBy('asset_tag');
+
+        $pairs = [
+            'Printer 3e etage geeft steeds papierstoring' => 'PRN-0004',
+            'Zaaksysteem is traag bij het openen van grote dossiers' => 'SRV-0002',
+            'Wifi valt weg in vergaderruimte 2.14' => 'LAP-0042',
+        ];
+
+        foreach ($pairs as $subject => $tag) {
+            $ticket = Ticket::query()->where('subject', $subject)->first();
+
+            if ($ticket && $assets->has($tag)) {
+                $service->linkToTicket($assets[$tag], $ticket);
+            }
+        }
     }
 
     /**

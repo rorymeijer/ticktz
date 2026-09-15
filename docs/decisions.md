@@ -475,3 +475,98 @@ So overdue approvals are reported and left open. The reminder cadence is read
 from `notified_at` on each decision row rather than from a "last reminded"
 column on the run, so a reminder that failed to send is retried on the next
 sweep instead of being skipped forever.
+
+## D33 — The next asset tag is derived from the data, not from a counter
+
+`asset_tag` is the human key: the sticker on the box, what somebody types into
+a search when they can read half of it, what an import matches on. It is unique
+and indexed for those reasons rather than because an id was not enough.
+
+Generating the next one asks the table for the highest tag with this prefix and
+adds one, inside a locking transaction. A `ticket_sequences`-style counter
+would be cheaper and would be wrong here: assets arrive in bulk by CSV import
+carrying tags somebody else allocated, so the counter would be behind reality
+from the first import and start handing out tags that already exist.
+
+The lookup includes soft-deleted rows. A tag belonging to a laptop that was
+written off last year must never be reused for a different machine, or every
+historical ticket that mentions it becomes ambiguous.
+
+## D34 — A relation is stored once and read in both directions
+
+`asset_relations` holds one row per relationship. Reading it from the other
+asset's side inverts the label: `installed_on` becomes `hosts`, `depends_on`
+becomes `required_by`, and `connected_to` is its own inverse because a cable
+has no direction.
+
+The alternative — a row per direction — is the obvious implementation and it is
+how a CMDB rots. The two halves are written at different times by different
+people, they drift, and eventually a laptop is both installed on and hosting
+the same dock. Nobody can tell which row is wrong, so they stop trusting the
+data, and a CMDB nobody trusts is worse than no CMDB at all because it is still
+being maintained.
+
+Writing the mirror of a relation that already exists is therefore a no-op
+rather than a second row, and an asset cannot be related to itself.
+
+## D35 — Tags and serials are matched with LIKE, even on MySQL
+
+Everything else about asset search goes through the FULLTEXT index. Tags and
+serial numbers deliberately do not.
+
+A FULLTEXT index tokenises on word boundaries, so `LAP-0042` is stored as `LAP`
+and `0042`, and `DL5440-8827512` as two tokens that neither match a search for
+`8827512` as a prefix nor for `5440-88`. The search somebody actually performs
+is the half of a sticker they can still read, typed into the box — and that
+search returning nothing while the asset is plainly in the register is how a
+register stops being used.
+
+So two indexed-ish LIKE clauses run alongside the index. On a register of tens
+of thousands of rows that is a scan; it is also the difference between a search
+box that works and one that does not, and a CMDB is not the table you paginate
+a million rows out of.
+
+## D36 — An import previews before it writes, and never fails a whole file
+
+Nobody starts a CMDB empty; they start it from a spreadsheet, and that
+spreadsheet is always slightly wrong. Two consequences shaped the importer.
+
+**The upload reports, and a second explicit request writes.** The operator sees
+how many rows create, how many update, and exactly which ones are malformed,
+before anything touches the table. An import that acts on the first click is
+one you have to undo by hand, and nobody has ever undone four hundred rows by
+hand.
+
+**Rows are matched on `asset_tag` and each one is its own transaction.**
+Matching makes the import idempotent — the second run is usually somebody
+re-running it after fixing three rows, and that must update rather than double
+the estate. Per-row transactions mean one bad date on row 400 does not roll
+back the 399 good ones above it. Columns the file does not carry are left
+alone, so a CSV without `location` does not blank the locations somebody typed
+in by hand.
+
+It also reads what spreadsheets actually produce rather than what a
+specification would prefer: semicolons as well as commas, a UTF-8 BOM, headers
+in any capitalisation, `31-12-2026` as well as `2026-12-31`, `€ 1.299,00` as
+well as `1299.00`. A desk that has to reformat its own export before importing
+it will not import it.
+
+The parsed rows sit in the session between the two steps rather than the file
+being written to disk. It is somebody's complete asset register, it is needed
+for about thirty seconds, and a copy on disk is one more thing to protect.
+
+## D37 — The portal payload names what may be shown
+
+`Asset::toPortalArray()` lists the fields a requester may see. It is not
+`toSummaryArray()` with `purchase_cost` and `notes` removed.
+
+The difference matters the next time somebody adds a column. A payload built by
+subtraction leaks every field added after it was written — the supplier
+discount, the internal note about which cupboard the spare key is in — because
+nobody remembers to go back and remove them. A payload built by naming shows
+nothing new until somebody decides it should.
+
+The same reasoning puts the scope for *which* assets a requester sees on the
+model (`visibleToRequester`) rather than in the controller: their own kit, plus
+colleagues' when the organisation shares tickets, and never the desk's own
+stock.

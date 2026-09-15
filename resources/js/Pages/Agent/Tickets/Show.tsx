@@ -6,6 +6,7 @@ import { PriorityBadge, StatusBadge } from '@/Components/Tickets/Badges';
 import { ReplyBox } from '@/Components/Tickets/ReplyBox';
 import { Timeline } from '@/Components/Tickets/Timeline';
 import { ApprovalPanel } from '@/Components/Tickets/ApprovalPanel';
+import { AssetPanel } from '@/Components/Tickets/AssetPanel';
 import { KbPanel } from '@/Components/Tickets/KbPanel';
 import { SlaPanel } from '@/Components/Tickets/SlaPanel';
 import { TicketSidebar } from '@/Components/Tickets/TicketSidebar';
@@ -13,6 +14,7 @@ import { Avatar, Badge, Button, Card, CardBody, CardHeader, Modal, Textarea } fr
 import { useTranslations } from '@/hooks/useTranslations';
 import { formatDateTime } from '@/lib/datetime';
 import type { Approval, ApprovalWorkflowSummary } from '@/types/approvals';
+import type { AssetSummary } from '@/types/assets';
 import type { KbArticleSummary } from '@/types/kb';
 import type { TicketDetail, TicketOptions, TimelineItem, TransitionOption } from '@/types/tickets';
 
@@ -26,6 +28,7 @@ export default function TicketShow({
     kbArticles,
     approvals,
     approvalWorkflows,
+    assets,
 }: {
     ticket: TicketDetail;
     timeline: TimelineItem[];
@@ -36,6 +39,7 @@ export default function TicketShow({
     kbArticles: KbArticleSummary[];
     approvals: Approval[];
     approvalWorkflows: ApprovalWorkflowSummary[];
+    assets: AssetSummary[];
 }) {
     const { t, locale } = useTranslations();
     const [pendingTransition, setPendingTransition] = useState<TransitionOption | null>(null);
@@ -147,6 +151,14 @@ export default function TicketShow({
                         />
                     ) : null}
                     <TicketSidebar ticket={ticket} options={options} can={can} isWatching={isWatching} />
+                    {can.assets ? (
+                        <AssetPanel
+                            ticketKey={ticket.key}
+                            requesterId={ticket.requester?.id ?? null}
+                            assets={assets}
+                            canLink={can.assets && can.update}
+                        />
+                    ) : null}
                     {can.kb ? <KbPanel ticketKey={ticket.key} articles={kbArticles} canLink={can.update} /> : null}
                 </div>
             </div>

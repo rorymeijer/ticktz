@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Portal\EquipmentController;
 use App\Http\Controllers\Portal\KbController;
 use App\Http\Controllers\Portal\PortalController;
 use App\Http\Controllers\Portal\RequestController;
@@ -27,6 +28,10 @@ Route::prefix('portal')->name('portal.')->middleware('throttle:portal')->group(f
 
     // The help centre. `suggest` is called from the request form as the
     // requester types, which is why it is a GET returning JSON.
+    // "What have I got?" — half the tickets about a machine open with the
+    // requester not knowing what the machine is called.
+    Route::get('equipment', [EquipmentController::class, 'index'])->name('equipment.index');
+
     Route::get('kb', [KbController::class, 'index'])->name('kb.index');
     Route::get('kb/suggest', [KbController::class, 'suggest'])->name('kb.suggest');
     Route::get('kb/{slug}', [KbController::class, 'show'])->name('kb.show');

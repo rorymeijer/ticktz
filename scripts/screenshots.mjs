@@ -30,6 +30,8 @@ const ACCOUNTS = {
     requester: { email: 'm.visser@zandvliet.test', password: 'ticktz-demo' },
     // The requester whose ticket is sitting in an approval.
     'requester-handhaving': { email: 's.mulder@zandvliet.test', password: 'ticktz-demo' },
+    // The requester whose laptop, dock and monitor are in the register.
+    'requester-bouzid': { email: 'a.bouzid@zandvliet.test', password: 'ticktz-demo' },
 };
 
 const SHOTS = [
@@ -83,6 +85,13 @@ const SHOTS = [
     { slug: '62-admin-approvals-nl', path: '/admin/approvals?lang=nl', as: 'admin' },
     { slug: '63-agent-ticket-approval', path: '/agent/tickets/SUP-6?lang=en', as: 'agent', fullPage: true },
     { slug: '64-portal-approval', path: '/portal/requests/SUP-6?lang=nl', as: 'requester-handhaving', fullPage: true },
+    { slug: '70-agent-assets', path: '/agent/assets?lang=en', as: 'admin' },
+    { slug: '71-agent-asset-detail', path: '/agent/assets/LAP-0042?lang=en', as: 'admin', fullPage: true },
+    { slug: '72-agent-asset-server', path: '/agent/assets/SRV-0002?lang=en', as: 'admin', fullPage: true },
+    { slug: '73-admin-asset-types', path: '/admin/asset-types?lang=en', as: 'admin' },
+    { slug: '74-admin-asset-import', path: '/admin/assets/import?lang=en', as: 'admin' },
+    { slug: '75-portal-equipment', path: '/portal/equipment?lang=nl', as: 'requester-bouzid' },
+    { slug: '76-agent-assets-nl', path: '/agent/assets?lang=nl', as: 'admin' },
     { slug: '40-mobile-portal', path: '/portal?lang=en', as: 'requester', width: 400, height: 780 },
     { slug: '41-mobile-tickets', path: '/agent/tickets?lang=en', as: 'agent', width: 400, height: 780 },
     { slug: '42-mobile-kb', path: '/portal/kb?lang=en', as: 'requester', width: 400, height: 780 },

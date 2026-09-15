@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasAssets;
 use App\Models\Concerns\HasCustomFields;
 use Database\Factories\TicketFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,7 +31,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Ticket extends Model
 {
     /** @use HasFactory<TicketFactory> */
-    use Auditable, HasCustomFields, HasFactory, SoftDeletes;
+    use Auditable, HasAssets, HasCustomFields, HasFactory, SoftDeletes;
 
     public const SOURCES = ['portal', 'email', 'agent', 'api', 'automation'];
 

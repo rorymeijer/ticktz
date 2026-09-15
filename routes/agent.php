@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Agent\AssetController;
 use App\Http\Controllers\Agent\KbController;
 use App\Http\Controllers\Agent\QueueController;
 use App\Http\Controllers\Agent\TicketActionController;
 use App\Http\Controllers\Agent\TicketApprovalController;
+use App\Http\Controllers\Agent\TicketAssetController;
 use App\Http\Controllers\Agent\TicketCommentController;
 use App\Http\Controllers\Agent\TicketController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +26,31 @@ use Illuminate\Support\Facades\Route;
 | authorises its own policy on top.
 |
 */
+
+/*
+|--------------------------------------------------------------------------
+| The asset register
+|--------------------------------------------------------------------------
+|
+| Inside /agent but outside the ticket gate below, on purpose. In plenty of
+| organisations the CMDB is kept by a procurement or asset team who never
+| touch a ticket, and `assets.view` is a permission in its own right — putting
+| the register behind `tickets.view` would mean giving those people an agent's
+| view of the whole desk to let them update a serial number.
+|
+*/
+
+Route::prefix('agent')->name('agent.')->middleware('can:assets.view')->group(function (): void {
+    Route::get('assets', [AssetController::class, 'index'])->name('assets.index');
+    Route::get('assets/suggest', [AssetController::class, 'suggest'])->name('assets.suggest');
+    Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
+    Route::get('assets/{asset}', [AssetController::class, 'show'])->name('assets.show');
+    Route::put('assets/{asset}', [AssetController::class, 'update'])->name('assets.update');
+    Route::delete('assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
+    Route::post('assets/{asset}/relations', [AssetController::class, 'relate'])->name('assets.relations.store');
+    Route::delete('assets/{asset}/relations/{relation}', [AssetController::class, 'unrelate'])
+        ->name('assets.relations.destroy');
+});
 
 Route::prefix('agent')->name('agent.')->middleware('can:tickets.view')->group(function (): void {
     Route::get('queues', [QueueController::class, 'index'])->name('queues.index');
@@ -56,6 +83,10 @@ Route::prefix('agent')->name('agent.')->middleware('can:tickets.view')->group(fu
     Route::delete('tickets/{ticket}/watchers/{user}', [TicketActionController::class, 'removeWatcher'])->name('tickets.watchers.destroy');
 
     Route::post('tickets/{ticket}/approvals', [TicketApprovalController::class, 'store'])->name('tickets.approvals.store');
+
+    Route::post('tickets/{ticket}/assets', [TicketAssetController::class, 'store'])->name('tickets.assets.store');
+    Route::delete('tickets/{ticket}/assets/{asset}', [TicketAssetController::class, 'destroy'])
+        ->name('tickets.assets.destroy');
 
     Route::post('tickets/{ticket}/links', [TicketActionController::class, 'link'])->name('tickets.links.store');
     Route::delete('tickets/{ticket}/links/{link}', [TicketActionController::class, 'unlink'])->name('tickets.links.destroy');

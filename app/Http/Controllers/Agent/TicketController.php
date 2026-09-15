@@ -10,6 +10,7 @@ use App\Http\Requests\Tickets\UpdateTicketRequest;
 use App\Models\ApprovalDecision;
 use App\Models\ApprovalRequest;
 use App\Models\ApprovalWorkflow;
+use App\Models\Asset;
 use App\Models\AuditLogEntry;
 use App\Models\Comment;
 use App\Models\KbArticle;
@@ -168,6 +169,7 @@ class TicketController extends Controller
             'slaTimers.calendar', 'slaPolicy.calendar',
             'kbArticles.category',
             'approvals.decisions.approver', 'approvals.workflow', 'approvals.requester',
+            'assets.type', 'assets.assignee',
         ]);
 
         $comments = $ticket->comments()
@@ -191,6 +193,7 @@ class TicketController extends Controller
                 'delete' => $user->can('delete', $ticket),
                 'kb' => $user->can('kb.view'),
                 'approve' => $user->can('create', ApprovalRequest::class),
+                'assets' => $user->can('assets.view'),
             ],
             // Filtered through the reader's own scope rather than taken as
             // linked: an article that has since been made internal must stop
@@ -217,6 +220,9 @@ class TicketController extends Controller
             'approvalWorkflows' => $user->can('create', ApprovalRequest::class)
                 ? ApprovalWorkflow::query()->where('is_active', true)->orderBy('name')
                     ->get()->map(fn (ApprovalWorkflow $workflow) => $workflow->toSummaryArray())->all()
+                : [],
+            'assets' => $user->can('assets.view')
+                ? $ticket->assets->map(fn (Asset $asset) => $asset->toSummaryArray())->all()
                 : [],
             'isWatching' => $ticket->watchers->contains('id', $user->getKey()),
         ]);

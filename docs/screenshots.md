@@ -312,6 +312,50 @@ service desk.
 
 ![Goedkeuring op het portaal](screenshots/64-portal-approval.png)
 
+## Assets
+
+### The register
+Scanned rather than read, so the type carries a colour and an expired warranty
+carries a badge. Tags and serials are searchable by any fragment — which is
+what somebody types off a worn sticker.
+
+![Assets](screenshots/70-agent-assets.png)
+
+### An asset
+Whose it is, what it is plugged into, and what has been raised about it. The
+relation on the right is one stored row; the laptop's own page shows the same
+row from the other side.
+
+![Asset detail](screenshots/71-agent-asset-detail.png)
+
+### A relation read from the other side
+`backup-01 backs_up zaak-app-01` is stored once. Here it reads as "backed up
+by", derived rather than duplicated, so the two halves can never disagree.
+
+![Server detail](screenshots/72-agent-asset-server.png)
+
+### Asset types
+The kinds of thing the desk keeps track of, and the extra attributes each one
+carries — chosen from the same custom fields a request type uses.
+
+![Asset types](screenshots/73-admin-asset-types.png)
+
+### Importing a spreadsheet
+Two steps, always: the upload reports what would happen, and only an explicit
+second click writes anything.
+
+![Asset import](screenshots/74-admin-asset-import.png)
+
+### What a requester sees
+The tag is the biggest thing on the card, because half the tickets about a
+machine open with the requester not knowing what the machine is called.
+
+![Mijn apparatuur](screenshots/75-portal-equipment.png)
+
+### The register, in Dutch
+
+![Assets in het Nederlands](screenshots/76-agent-assets-nl.png)
+
 ### Profile, in Dutch
 Language is a per-user preference and applies to notification e-mail as well as
 the interface.

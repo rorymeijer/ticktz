@@ -24,6 +24,8 @@ return [
         'automation' => 'Automatisering',
         'kb' => 'Kennisbank',
         'approvals' => 'Goedkeuringen',
+        'asset_types' => 'Assettypes',
+        'asset_import' => 'Assets importeren',
         'settings' => 'Instellingen',
         'audit' => 'Audit-log',
         'service_desk' => 'Servicedesk',

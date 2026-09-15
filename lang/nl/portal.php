@@ -26,6 +26,7 @@ return [
     'nav' => [
         'browse' => 'Verzoeken bekijken',
         'my_requests' => 'Mijn verzoeken',
+        'equipment' => 'Mijn apparatuur',
         'new_request' => 'Nieuw verzoek',
     ],
 

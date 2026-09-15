@@ -89,6 +89,13 @@ export default function AdminLayout({
             section: 'service_desk',
         },
         {
+            key: 'asset-types',
+            href: '/admin/asset-types',
+            label: t('admin.nav.asset_types'),
+            permission: 'assets.manage',
+            section: 'service_desk',
+        },
+        {
             key: 'approvals',
             href: '/admin/approvals',
             label: t('admin.nav.approvals'),
