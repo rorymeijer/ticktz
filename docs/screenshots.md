@@ -356,6 +356,42 @@ machine open with the requester not knowing what the machine is called.
 
 ![Assets in het Nederlands](screenshots/76-agent-assets-nl.png)
 
+## Reporting
+
+### SLA compliance
+The acceptance criterion, drawn. Met and missed are a judgement, so they wear
+status colours; the headline is a figure rather than a chart, because one
+number is not a plot.
+
+![SLA compliance](screenshots/80-reports-sla.png)
+
+### Compliance, split by queue
+
+![Compliance by queue](screenshots/81-reports-sla-queue.png)
+
+### Ticket volume
+Created against resolved, in categorical colours assigned in fixed order — a
+filter that removes a series never repaints the survivors.
+
+![Ticket volume](screenshots/82-reports-volume.png)
+
+### How long it takes
+Two charts, never one with two y-axes. A first reply is measured in minutes and
+a resolution in hours or days; aligning two scales on one plot invents a
+relationship that is not in the data.
+
+![Cycle time](screenshots/83-reports-cycle-time.png)
+
+### Agent workload
+One series, so one colour for every bar. Shading each bar darker where it is
+bigger would encode the length twice and say nothing new.
+
+![Agent workload](screenshots/84-reports-workload.png)
+
+### The same report, in Dutch
+
+![Rapportage](screenshots/85-reports-nl.png)
+
 ### Profile, in Dutch
 Language is a per-user preference and applies to notification e-mail as well as
 the interface.

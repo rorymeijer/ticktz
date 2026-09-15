@@ -29,9 +29,11 @@ use App\Models\User;
 use App\Services\Approvals\ApprovalService;
 use App\Services\Assets\AssetService;
 use App\Services\Kb\ArticleService;
+use App\Services\Reports\MetricsCollector;
 use App\Services\Sla\SlaEngine;
 use App\Services\Sla\SlaEscalator;
 use App\Services\Tickets\TicketService;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -158,6 +160,26 @@ class DemoSeeder extends Seeder
         $this->seedKnowledgeBase();
         $this->seedPendingApproval();
         $this->linkAssetsToTickets();
+        $this->buildReportMetrics();
+    }
+
+    /**
+     * Fill the rollups from the history the demo just wrote.
+     *
+     * The tickets are backdated across weeks, so the scheduler's "rebuild
+     * today" would leave the reporting screen empty on a fresh demo — the
+     * numbers are all in the past. Rebuilding the whole window once, here, is
+     * the difference between a dashboard that demonstrates the feature and one
+     * that says "nothing measured".
+     */
+    private function buildReportMetrics(): void
+    {
+        $earliest = Ticket::query()->min('created_at');
+
+        app(MetricsCollector::class)->rebuild(
+            $earliest ? CarbonImmutable::parse($earliest)->startOfDay() : CarbonImmutable::today()->subDays(60),
+            CarbonImmutable::today(),
+        );
     }
 
     /**

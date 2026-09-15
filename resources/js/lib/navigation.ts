@@ -2,6 +2,7 @@ import type { ComponentType, SVGProps } from 'react';
 
 import {
     IconBook,
+    IconChart,
     IconCheckCircle,
     IconCog,
     IconDashboard,
@@ -69,6 +70,16 @@ export function agentNavigation(user: User | null, t: Translator): NavItem[] {
 
     if (can('kb.view')) {
         items.push({ key: 'kb', label: t('nav.kb'), href: '/agent/kb', icon: IconBook, match: ['/agent/kb'] });
+    }
+
+    if (can('reports.view')) {
+        items.push({
+            key: 'reports',
+            label: t('nav.reports'),
+            href: '/reports',
+            icon: IconChart,
+            match: ['/reports'],
+        });
     }
 
     if (can('settings.manage') || can('users.manage')) {

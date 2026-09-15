@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Jobs\Approvals\RemindApproversJob;
 use App\Jobs\Automation\RunScheduledRulesJob;
 use App\Jobs\Mail\PollMailboxJob;
+use App\Jobs\Reports\RebuildMetricsJob;
 use App\Jobs\Sla\SweepSlaTimersJob;
 use App\Models\AutomationExecution;
 use App\Models\EmailChannel;
@@ -48,6 +49,34 @@ Schedule::call(function (): void {
 })
     ->name('ticktz:sweep-sla')
     ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::call(function (): void {
+    if (! Schema::hasTable('report_daily_metrics')) {
+        return;
+    }
+
+    // Today only, so the dashboards move during the day. A quarter of an hour
+    // late is a figure people can still work with; a full-table aggregate on
+    // every page load is not.
+    RebuildMetricsJob::forRecentDays(1)->dispatch();
+})
+    ->name('ticktz:rebuild-metrics')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();
+
+Schedule::call(function (): void {
+    if (! Schema::hasTable('report_daily_metrics')) {
+        return;
+    }
+
+    // And the last week overnight, which is what catches a ticket resolved at
+    // 23:59, a backdated edit, or a run the queue dropped. The rebuild is
+    // idempotent, so this costs a query and fixes anything that drifted.
+    RebuildMetricsJob::forRecentDays(7)->dispatch();
+})
+    ->name('ticktz:rebuild-metrics-week')
+    ->dailyAt('03:40')
     ->withoutOverlapping();
 
 Schedule::call(function (): void {

@@ -16,8 +16,8 @@ tracks what is shipped. The phase definitions come from the original brief in
 | 7 | Knowledge base | ✅ Shipped |
 | 8 | Approvals | ✅ Shipped |
 | 9 | Assets / CMDB | ✅ Shipped |
-| 10 | Reporting & dashboards | ⏳ Next |
-| 11 | Public REST API & webhooks (Sanctum) | ⏳ Planned |
+| 10 | Reporting & dashboards | ✅ Shipped |
+| 11 | Public REST API & webhooks (Sanctum) | ⏳ Next |
 | 12 | i18n completion, accessibility, docs & release | ⏳ Planned |
 
 ## Phase 0 — Foundation & Docker
@@ -392,10 +392,43 @@ The things the desk is asked about. Full notes in [`assets.md`](assets.md).
   organisations the CMDB is kept by a procurement team who never touch a
   ticket.
 
+## Phase 10 — Reporting & dashboards
+
+Four questions, one period, and a CSV of whatever is behind them. Full notes in
+[`reporting.md`](reporting.md).
+
+- **A daily rollup, not a live aggregate.** Everything the dashboards draw
+  comes out of `report_daily_metrics`, because a grouped scan of the ticket
+  table behind a screen people leave open all day does not survive contact with
+  a real desk ([D38](decisions.md)).
+- **A day is recomputed, never incremented**, and the rebuild replaces the day
+  rather than upserting into it — so a figure that no longer has anything
+  behind it goes down.
+- **SLA outcomes bucket on the day the clock finished**, so a month's
+  compliance figure stops moving once the month has ([D39](decisions.md)).
+- **A breach is `breached_at`, not `status = 'breached'`.** The engine stamps
+  that column the moment a target passes and leaves the clock running, so
+  counting only the finished ones reported a desk with visibly late tickets at
+  100% ([D40](decisions.md)).
+- **Averages are `sum / count` over the range**, never the mean of the daily
+  averages — which weights a quiet Sunday like a busy Monday.
+- **Two exports**: the figures, and the tickets behind them. Streamed, chunked
+  by id, and BOM-prefixed so Excel does not mangle every Dutch name
+  ([D41](decisions.md)).
+- **A saved report stores its filters, not its figures.** One that cached its
+  numbers would be a screenshot with a date on it.
+- **Hand-drawn SVG charts** against a validated palette: never two y-axes,
+  status colours only where the colour means status, a legend whenever there
+  are two series, and a stat tile wherever the answer is one number
+  ([D42](decisions.md)).
+
+The dashboard became a real screen in this phase too — every figure on it links
+to a list somebody can act on.
+
 ### Not yet wired up
 
 The sidebar only shows destinations that have routes today: Dashboard, Tickets,
-Queues, Approvals, Assets, the knowledge base and Administration. Reporting
-appears as its phase lands — a menu item without a route is worse than an
+Queues, Approvals, Assets, the knowledge base, Reports and Administration. The
+public API appears as its phase lands — a menu item without a route is worse than an
 absent one. The permission catalogue already covers them, so roles can be
 configured ahead of the features arriving.

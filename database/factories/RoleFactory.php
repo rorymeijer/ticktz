@@ -21,7 +21,13 @@ class RoleFactory extends Factory
         $name = fake()->unique()->jobTitle();
 
         return [
-            'name' => Str::slug($name),
+            // The suffix is not decoration. `unique()` guarantees the job
+            // title is unique, but the column stores its *slug*, and two
+            // different titles can slug identically ("Sales Manager" and
+            // "Sales-Manager"). That produced a unique-constraint violation
+            // roughly once in a hundred full-suite runs — the kind of flake
+            // that costs an afternoon in CI months later.
+            'name' => Str::slug($name).'-'.Str::lower(Str::random(4)),
             'display_name' => $name,
             'description' => fake()->sentence(),
             'scope' => 'agent',

@@ -570,3 +570,112 @@ The same reasoning puts the scope for *which* assets a requester sees on the
 model (`visibleToRequester`) rather than in the controller: their own kit, plus
 colleagues' when the organisation shares tickets, and never the desk's own
 stock.
+
+## D38 — Dashboards read a rollup, not the ticket table
+
+Every figure on the reporting screen comes out of `report_daily_metrics`: one
+row per day, per metric, per dimension value.
+
+Aggregating the ticket table on each page load is fine at a thousand tickets
+and unusable at a million, and it puts a full-table scan behind a screen people
+leave open all day and refresh out of habit. The rollup turns that into an
+indexed range read, and the write side is one grouped query per metric per
+dimension per day rather than a walk over rows.
+
+**A day is recomputed, never incremented.** A counter bumped as things happen
+drifts the first time a queued job is retried, a ticket is edited straight in
+the database, or a deploy lands mid-request — and a wrong counter announces
+nothing. A day rebuilt from its source rows is either right or reproducibly
+wrong, and re-running it is always safe, which is what lets the schedule rebuild
+today every quarter of an hour and the last week every night.
+
+The rebuild *replaces* the day rather than upserting into it. A metric that
+produced rows yesterday and none today has to end up with none; an upsert alone
+leaves the old figures standing and the number never goes down.
+
+`dimension_id` is `0` rather than NULL for "no dimension". MySQL treats NULLs as
+distinct in a unique index, so a nullable column would let the same
+`(date, metric, dimension)` be inserted any number of times and the
+replace-then-insert would quietly become an append.
+
+## D39 — An SLA outcome counts on the day its clock finished
+
+Not the day the ticket was raised.
+
+Bucketing by creation date is the intuitive choice and it makes a month's
+compliance figure keep changing for weeks after the month ends — a ticket
+raised on 30 September and breached on 3 October retroactively worsens
+September, over and over, as the tail comes in. Nobody can report a number that
+behaves like that.
+
+An outcome recorded is an outcome. Once a clock has finished, the day it landed
+on is fixed, and a figure that has been reported stays reported.
+
+## D40 — A breach is `breached_at`, not `status = 'breached'`
+
+The SLA engine stamps `breached_at` the moment a target passes and leaves the
+clock **running** until the work is actually done. `status = 'breached'` is
+only reached when a timer finishes late.
+
+So a promise already broken on a ticket somebody is still working has a breach
+date and a `running` status, and the first version of the collector — which
+counted statuses — reported the demo desk at 100% compliance while its ticket
+list was visibly full of late work. That is the precise failure a dashboard
+must never have: not an error, a plausible wrong number.
+
+A timer that breached and was then finished late carries both columns. It is
+one outcome, and it is a breach, counted on the day it broke.
+
+The general lesson is the one worth keeping: when a model has both a status
+enum and a timestamp that means the same thing, the timestamp is usually the
+fact and the status is usually a summary of where the row is in a lifecycle.
+Report on the fact.
+
+## D41 — Two exports, streamed, with a BOM
+
+People want two different things from "export", and giving them one is how a
+report ends up being re-derived in a spreadsheet anyway: the **figures**, which
+is the chart as numbers, and the **tickets behind them**, which is what
+somebody pivots to answer the question the screen did not anticipate.
+
+Both stream rather than being built in memory — a year of tickets is the export
+somebody will ask for, and a desk at this scale has enough of them to exhaust a
+PHP process assembling the string first. The ticket export chunks by id rather
+than by offset, because an offset walk re-scans everything it has already sent.
+
+Both start with a UTF-8 BOM. Excel reads a CSV as the local codepage unless one
+says otherwise, which turns every Dutch name in the file into mojibake; three
+bytes prevent a support ticket about the tool that exists to prevent support
+tickets.
+
+The ticket-level export additionally requires `tickets.export`. Exporting a
+year of tickets is exporting the desk's whole record of who asked for what, and
+that is a different act from reading a compliance percentage.
+
+## D42 — The charts are hand-drawn, and the palette is validated
+
+Inline SVG rather than a charting library. The whole of it is a path and some
+text; a dependency that rendered it would be larger than the rest of the front
+end put together, and the brief asks for a small footprint.
+
+What the charts do follow is a set of rules that are not aesthetic:
+
+- **Never two y-axes.** A first response is minutes and a resolution is days,
+  so they are two charts. Putting them on one plot means choosing an arbitrary
+  alignment between two scales, which invents a correlation that is not in the
+  data — the single most common way a dashboard misleads.
+- **Status colour means status.** Met and missed are a judgement and use the
+  good/critical pair; created and resolved are identities and use categorical
+  slots in fixed order, never cycled, never reassigned by rank.
+- **The palette was run through a validator**, not chosen by eye: colour-vision
+  separation, lightness band, chroma floor and contrast against the white card.
+  The passing figures are recorded in the tokens file so a future change is
+  re-validated rather than nudged.
+- **A legend whenever there are two series**, so identity never rests on colour
+  alone.
+- **An axis whose labels repeat is a broken axis.** Five ticks evenly spaced
+  across a maximum of two round to `2 / 2 / 1 / 1 / 0`, and the reader is left
+  working out which label their value sits against; small integer ranges get
+  one tick per unit instead.
+- **One number is a stat tile.** Compliance, clearance and the averages are
+  figures, not plots; only what varies over time is drawn.

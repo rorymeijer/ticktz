@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Http\Controllers\Approvals\ApprovalController;
 use App\Http\Controllers\Approvals\ApprovalTokenController;
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Reports\ReportController;
 use App\Http\Controllers\System\HealthController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -64,6 +66,17 @@ Route::middleware('throttle:portal')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
+    // Reporting reads the rollups rather than the ticket table, so it is not
+    // behind `tickets.view` — a service owner who reports on the desk without
+    // working it needs `reports.view` and nothing else.
+    Route::middleware('can:reports.view')->group(function (): void {
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+        Route::post('/reports/saved', [ReportController::class, 'store'])->name('reports.saved.store');
+        Route::delete('/reports/saved/{report}', [ReportController::class, 'destroy'])
+            ->name('reports.saved.destroy');
+    });
+
     // Mounted here rather than under /agent or /portal: an approver is very
     // often a budget holder who is not an agent, and one inbox serves both.
     Route::get('/approvals', [ApprovalController::class, 'index'])->name('approvals.index');
@@ -72,9 +85,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/approvals/{approval}/cancel', [ApprovalController::class, 'cancel'])
         ->name('approvals.cancel');
 
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
