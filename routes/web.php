@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\AttachmentController;
-use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\System\HealthController;
 use Illuminate\Support\Facades\Route;
@@ -49,15 +48,12 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
-    Route::get('/portal', [PortalController::class, 'index'])
-        ->middleware('throttle:portal')
-        ->name('portal.index');
-
     // Attachments are streamed through a controller so the ticket policy runs
     // before the file does; they are never on a public disk.
     Route::get('/attachments/{attachment}', [AttachmentController::class, 'show'])->name('attachments.show');
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
+    require __DIR__.'/portal.php';
     require __DIR__.'/agent.php';
     require __DIR__.'/admin.php';
 });

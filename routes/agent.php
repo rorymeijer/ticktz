@@ -14,12 +14,16 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 |
 | Mounted under /agent behind `auth`. Tickets are bound by their readable key
-| (SUP-1042) so a URL pasted into a chat still means something. Every action
-| authorises its own policy.
+| (SUP-1042) so a URL pasted into a chat still means something.
+|
+| The whole console sits behind `tickets.view`: a requester passes the ticket
+| policy for their own ticket, but the agent view of it — internal notes,
+| transitions, the audit timeline — is not theirs to see. Each action then
+| authorises its own policy on top.
 |
 */
 
-Route::prefix('agent')->name('agent.')->group(function (): void {
+Route::prefix('agent')->name('agent.')->middleware('can:tickets.view')->group(function (): void {
     Route::get('queues', [QueueController::class, 'index'])->name('queues.index');
 
     Route::get('tickets', [TicketController::class, 'index'])->name('tickets.index');

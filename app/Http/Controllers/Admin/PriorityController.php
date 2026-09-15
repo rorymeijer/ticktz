@@ -63,8 +63,10 @@ class PriorityController extends Controller
      */
     private function validatePriority(Request $request, ?Priority $priority): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'name_translations' => ['array'],
+            'name_translations.*' => ['nullable', 'string', 'max:255'],
             'slug' => [
                 'required', 'string', 'max:64', 'regex:/^[a-z0-9-]+$/',
                 Rule::unique('priorities', 'slug')->ignore($priority?->getKey()),
@@ -74,6 +76,10 @@ class PriorityController extends Controller
             'is_default' => ['boolean'],
             'is_public' => ['boolean'],
         ]);
+
+        $validated['name_translations'] = array_filter($validated['name_translations'] ?? []);
+
+        return $validated;
     }
 
     private function ensureSingleDefault(Priority $priority): void

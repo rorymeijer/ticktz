@@ -21,25 +21,25 @@ use Illuminate\Database\Seeder;
 class TicketWorkflowSeeder extends Seeder
 {
     /**
-     * @var array<int, array{slug: string, name: string, category: string, color: string, pauses_sla?: bool, is_public?: bool, position: int}>
+     * @var array<int, array{slug: string, name: string, nl: string, category: string, color: string, pauses_sla?: bool, is_public?: bool, position: int}>
      */
     private const STATUSES = [
-        ['slug' => 'new', 'name' => 'New', 'category' => 'new', 'color' => '#2563eb', 'position' => 10],
-        ['slug' => 'open', 'name' => 'In progress', 'category' => 'open', 'color' => '#7c3aed', 'position' => 20],
-        ['slug' => 'waiting-for-requester', 'name' => 'Waiting for requester', 'category' => 'pending', 'color' => '#d97706', 'pauses_sla' => true, 'position' => 30],
-        ['slug' => 'waiting-for-third-party', 'name' => 'Waiting for a third party', 'category' => 'pending', 'color' => '#ca8a04', 'pauses_sla' => true, 'position' => 40],
-        ['slug' => 'resolved', 'name' => 'Resolved', 'category' => 'resolved', 'color' => '#059669', 'position' => 50],
-        ['slug' => 'closed', 'name' => 'Closed', 'category' => 'closed', 'color' => '#475569', 'position' => 60],
+        ['slug' => 'new', 'name' => 'New', 'nl' => 'Nieuw', 'category' => 'new', 'color' => '#2563eb', 'position' => 10],
+        ['slug' => 'open', 'name' => 'In progress', 'nl' => 'In behandeling', 'category' => 'open', 'color' => '#7c3aed', 'position' => 20],
+        ['slug' => 'waiting-for-requester', 'name' => 'Waiting for requester', 'nl' => 'Wacht op melder', 'category' => 'pending', 'color' => '#d97706', 'pauses_sla' => true, 'position' => 30],
+        ['slug' => 'waiting-for-third-party', 'name' => 'Waiting for a third party', 'nl' => 'Wacht op derde partij', 'category' => 'pending', 'color' => '#ca8a04', 'pauses_sla' => true, 'position' => 40],
+        ['slug' => 'resolved', 'name' => 'Resolved', 'nl' => 'Opgelost', 'category' => 'resolved', 'color' => '#059669', 'position' => 50],
+        ['slug' => 'closed', 'name' => 'Closed', 'nl' => 'Gesloten', 'category' => 'closed', 'color' => '#475569', 'position' => 60],
     ];
 
     /**
-     * @var array<int, array{slug: string, name: string, level: int, color: string, is_default?: bool, position: int}>
+     * @var array<int, array{slug: string, name: string, nl: string, level: int, color: string, is_default?: bool, position: int}>
      */
     private const PRIORITIES = [
-        ['slug' => 'urgent', 'name' => 'Urgent', 'level' => 1, 'color' => '#dc2626', 'position' => 10],
-        ['slug' => 'high', 'name' => 'High', 'level' => 2, 'color' => '#ea580c', 'position' => 20],
-        ['slug' => 'normal', 'name' => 'Normal', 'level' => 3, 'color' => '#2563eb', 'is_default' => true, 'position' => 30],
-        ['slug' => 'low', 'name' => 'Low', 'level' => 4, 'color' => '#64748b', 'position' => 40],
+        ['slug' => 'urgent', 'name' => 'Urgent', 'nl' => 'Urgent', 'level' => 1, 'color' => '#dc2626', 'position' => 10],
+        ['slug' => 'high', 'name' => 'High', 'nl' => 'Hoog', 'level' => 2, 'color' => '#ea580c', 'position' => 20],
+        ['slug' => 'normal', 'name' => 'Normal', 'nl' => 'Normaal', 'level' => 3, 'color' => '#2563eb', 'is_default' => true, 'position' => 30],
+        ['slug' => 'low', 'name' => 'Low', 'nl' => 'Laag', 'level' => 4, 'color' => '#64748b', 'position' => 40],
     ];
 
     /**
@@ -63,6 +63,7 @@ class TicketWorkflowSeeder extends Seeder
                 ['slug' => $status['slug']],
                 [
                     'name' => $status['name'],
+                    'name_translations' => ['nl' => $status['nl']],
                     'category' => $status['category'],
                     'color' => $status['color'],
                     'pauses_sla' => $status['pauses_sla'] ?? false,
@@ -76,6 +77,7 @@ class TicketWorkflowSeeder extends Seeder
         foreach (self::PRIORITIES as $priority) {
             Priority::query()->updateOrCreate(['slug' => $priority['slug']], [
                 'name' => $priority['name'],
+                'name_translations' => ['nl' => $priority['nl']],
                 'level' => $priority['level'],
                 'color' => $priority['color'],
                 'is_default' => $priority['is_default'] ?? false,

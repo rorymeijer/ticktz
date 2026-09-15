@@ -57,6 +57,7 @@ class TicketService
                 'priority_id' => $priority->getKey(),
                 'workflow_id' => $workflow->getKey(),
                 'queue_id' => $attributes['queue_id'] ?? null,
+                'request_type_id' => $attributes['request_type_id'] ?? null,
                 'requester_id' => $requester->getKey(),
                 'assignee_id' => $attributes['assignee_id'] ?? null,
                 'team_id' => $attributes['team_id'] ?? null,

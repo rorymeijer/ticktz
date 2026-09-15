@@ -37,6 +37,7 @@ class TicketStatusController extends Controller
                 ->map(fn (TicketStatus $status) => [
                     'id' => $status->id,
                     'name' => $status->name,
+                    'name_translations' => $status->name_translations ?? [],
                     'slug' => $status->slug,
                     'category' => $status->category,
                     'color' => $status->color,
@@ -50,6 +51,7 @@ class TicketStatusController extends Controller
             'priorities' => Priority::query()->orderBy('level')->get()->map(fn (Priority $priority) => [
                 'id' => $priority->id,
                 'name' => $priority->name,
+                'name_translations' => $priority->name_translations ?? [],
                 'slug' => $priority->slug,
                 'level' => $priority->level,
                 'color' => $priority->color,
@@ -60,6 +62,7 @@ class TicketStatusController extends Controller
             'labels' => Label::query()->withCount('tickets')->orderBy('name')->get()->map(fn (Label $label) => [
                 'id' => $label->id,
                 'name' => $label->name,
+                'name_translations' => $label->name_translations ?? [],
                 'slug' => $label->slug,
                 'color' => $label->color,
                 'description' => $label->description,
@@ -121,8 +124,10 @@ class TicketStatusController extends Controller
      */
     private function validateStatus(Request $request, ?TicketStatus $status): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'name_translations' => ['array'],
+            'name_translations.*' => ['nullable', 'string', 'max:255'],
             'slug' => [
                 'required', 'string', 'max:64', 'regex:/^[a-z0-9-]+$/',
                 Rule::unique('ticket_statuses', 'slug')->ignore($status?->getKey()),
@@ -134,5 +139,9 @@ class TicketStatusController extends Controller
             'is_public' => ['boolean'],
             'position' => ['integer', 'min:0', 'max:1000'],
         ]);
+
+        $validated['name_translations'] = array_filter($validated['name_translations'] ?? []);
+
+        return $validated;
     }
 }

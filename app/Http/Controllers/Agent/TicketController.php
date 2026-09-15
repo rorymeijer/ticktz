@@ -49,10 +49,7 @@ class TicketController extends Controller
 
     public function index(Request $request): Response
     {
-        // The agent console is gated on `tickets.view`, not on the broader
-        // TicketPolicy::viewAny() — a requester holding `portal.submit` passes
-        // that one, and belongs in the portal, not here.
-        $this->authorize('tickets.view');
+        // `tickets.view` is enforced for the whole console by the route group.
 
         /** @var User $user */
         $user = $request->user();

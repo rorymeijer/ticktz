@@ -68,6 +68,20 @@ export default function AdminLayout({
             section: 'service_desk',
         },
         {
+            key: 'request-types',
+            href: '/admin/request-types',
+            label: t('admin.nav.request_types'),
+            permission: 'settings.manage',
+            section: 'service_desk',
+        },
+        {
+            key: 'custom-fields',
+            href: '/admin/custom-fields',
+            label: t('admin.nav.custom_fields'),
+            permission: 'settings.manage',
+            section: 'service_desk',
+        },
+        {
             key: 'directories',
             href: '/admin/directories',
             label: t('admin.nav.directories'),

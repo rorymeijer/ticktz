@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasTranslatableName;
 use Database\Factories\TicketStatusFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class TicketStatus extends Model
 {
     /** @use HasFactory<TicketStatusFactory> */
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, HasTranslatableName;
 
     public const CATEGORY_NEW = 'new';
 
@@ -43,13 +44,14 @@ class TicketStatus extends Model
     public const OPEN_CATEGORIES = [self::CATEGORY_NEW, self::CATEGORY_OPEN, self::CATEGORY_PENDING];
 
     protected $fillable = [
-        'name', 'slug', 'category', 'color', 'description',
+        'name', 'name_translations', 'slug', 'category', 'color', 'description',
         'pauses_sla', 'is_public', 'is_system', 'position',
     ];
 
     protected function casts(): array
     {
         return [
+            'name_translations' => 'array',
             'pauses_sla' => 'boolean',
             'is_public' => 'boolean',
             'is_system' => 'boolean',
@@ -83,7 +85,7 @@ class TicketStatus extends Model
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'name' => $this->translatedName(),
             'slug' => $this->slug,
             'category' => $this->category,
             'color' => $this->color,

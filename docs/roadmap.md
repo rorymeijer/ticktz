@@ -9,8 +9,8 @@ tracks what is shipped. The phase definitions come from the original brief in
 | 0 | Foundation, Docker stack, i18n plumbing, CI | ✅ Shipped |
 | 1 | Auth, users, roles & permissions, teams, organisations, LDAP, audit log | ✅ Shipped |
 | 2 | Ticket core & agent console | ✅ Shipped |
-| 3 | Customer portal & request types | ⏳ Next |
-| 4 | E-mail (SMTP out, IMAP in) | ⏳ Planned |
+| 3 | Customer portal & request types | ✅ Shipped |
+| 4 | E-mail (SMTP out, IMAP in) | ⏳ Next |
 | 5 | SLA engine & escalations | ⏳ Planned |
 | 6 | Automation rules | ⏳ Planned |
 | 7 | Knowledge base | ⏳ Planned |
@@ -96,6 +96,34 @@ tracks what is shipped. The phase definitions come from the original brief in
   `TicketTransitioned`, `TicketCommented`) are the seam the notification
   pipeline, the SLA engine and the automation engine hook into later. Nothing
   writes to `tickets` outside `TicketService`.
+
+## Phase 3 — Customer portal & request types
+
+- **Custom fields** are defined once and attached wherever they are needed.
+  Values are stored polymorphically, so adding a field is a form submission
+  rather than a migration — see [D10](decisions.md).
+- **Request types** carry both the form and the routing: which queue, team,
+  workflow and priority a submission lands on. That is what turns "I need a
+  laptop" into a ticket on the right desk without an agent triaging it first.
+  A subject template (`Laptop for :employee_name`) builds the ticket subject
+  from the answers.
+- **Validation is built from the same data as the form**, so whatever an
+  administrator attached is exactly what is required, validated and stored.
+  Answers for fields a request type does not ask for are discarded rather than
+  written — a crafted payload cannot reach an agents-only field.
+- **Visibility** per request type: everyone, chosen organisations, or agents
+  only. A type a requester may not use returns 404, not 403 — the existence of
+  an internal request type is itself information.
+- **The portal builds its own payload** rather than filtering the agent one
+  down; see [D11](decisions.md). It loads only public comments and only public
+  custom fields, and a requester cannot post an internal note whatever the
+  payload says.
+- **Portal categories** group request types; deleting one leaves its types
+  reachable rather than hiding them.
+- **Taxonomy names are translatable.** Statuses, priorities, labels, categories
+  and request types are configured by an administrator but read by requesters,
+  so their names are data with per-locale overrides and the base name as
+  fallback.
 
 ### Not yet wired up
 

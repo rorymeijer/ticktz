@@ -27,8 +27,15 @@ export default function PortalLayout({
     const { app, ziggy } = usePage<SharedProps>().props;
     const pathname = new URL(ziggy.location).pathname;
 
+    // "/portal" must not stay highlighted while you are on "/portal/requests".
+    const isCurrent = (href: string) =>
+        href === '/portal' ? pathname === '/portal' : pathname.startsWith(href);
+
     // Extended per phase as the portal grows; see docs/roadmap.md.
-    const links = [{ href: '/portal', label: t('nav.portal') }];
+    const links = [
+        { href: '/portal', label: t('portal.nav.browse') },
+        { href: '/portal/requests', label: t('portal.nav.my_requests') },
+    ];
 
     return (
         <>
@@ -51,10 +58,10 @@ export default function PortalLayout({
                                 <Link
                                     key={link.href}
                                     href={link.href}
-                                    aria-current={pathname === link.href ? 'page' : undefined}
+                                    aria-current={isCurrent(link.href) ? 'page' : undefined}
                                     className={cn(
                                         'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                                        pathname === link.href
+                                        isCurrent(link.href)
                                             ? 'bg-brand-50 text-brand-700'
                                             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
                                     )}

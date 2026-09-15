@@ -22,4 +22,63 @@ return [
         'feature_privacy_title' => 'Je data blijft van jou',
         'feature_privacy_body' => 'Geen telemetrie, geen third-party trackers, geen cloud lock-in. Eén compose-bestand.',
     ],
+
+    'nav' => [
+        'browse' => 'Verzoeken bekijken',
+        'my_requests' => 'Mijn verzoeken',
+        'new_request' => 'Nieuw verzoek',
+    ],
+
+    'home' => [
+        'categories' => 'Waar kunnen we mee helpen?',
+        'uncategorised' => 'Overige verzoeken',
+        'recent' => 'Je recente verzoeken',
+        'view_all' => 'Alle verzoeken bekijken',
+        'no_request_types' => 'Er zijn nog geen aanvraagtypen gepubliceerd. Neem contact op met de servicedesk.',
+    ],
+
+    'form' => [
+        'submit' => 'Verzoek indienen',
+        'subject' => 'Samenvatting',
+        'subject_placeholder' => 'Eén regel die omschrijft wat je nodig hebt',
+        'description' => 'Toelichting',
+        'description_placeholder' => 'Alles wat helpt om dit sneller op te pakken',
+        'priority' => 'Hoe urgent is dit?',
+        'attachments' => 'Bijlagen',
+        'attachments_help' => 'Schermafbeeldingen of documenten die het verzoek verduidelijken.',
+        'required_hint' => 'Velden met * zijn verplicht.',
+        'select_placeholder' => 'Kies…',
+    ],
+
+    'requests' => [
+        'title' => 'Mijn verzoeken',
+        'subtitle' => 'Alles wat je ons gevraagd hebt, en hoe het ervoor staat.',
+        'filters' => [
+            'all' => 'Alle',
+            'open' => 'Open',
+            'closed' => 'Gesloten',
+        ],
+        'columns' => [
+            'request' => 'Verzoek',
+            'status' => 'Status',
+            'updated' => 'Laatste update',
+        ],
+        'submitted_by' => 'Ingediend door :name',
+        'empty' => 'Je hebt nog geen verzoeken ingediend.',
+        'empty_action' => 'Dien je eerste verzoek in',
+        'opened_on' => 'Geopend op :date',
+        'handled_by' => 'Behandeld door :name',
+        'unassigned' => 'Nog niet opgepakt',
+        'details' => 'Gegevens die je hebt ingevuld',
+        'conversation' => 'Gesprek',
+        'reply_placeholder' => 'Voeg informatie toe of beantwoord een vraag…',
+        'reply' => 'Versturen',
+        'closed_notice' => 'Dit verzoek is gesloten. Reageren heropent het.',
+        'you' => 'Jij',
+    ],
+
+    'flash' => [
+        'submitted' => 'Je verzoek is ingediend als :key.',
+        'replied' => 'Je reactie is toegevoegd.',
+    ],
 ];

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasTranslatableName;
 use Database\Factories\PriorityFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,13 +17,14 @@ use Illuminate\Database\Eloquent\Model;
 class Priority extends Model
 {
     /** @use HasFactory<PriorityFactory> */
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, HasTranslatableName;
 
-    protected $fillable = ['name', 'slug', 'level', 'color', 'is_default', 'is_public', 'position'];
+    protected $fillable = ['name', 'name_translations', 'slug', 'level', 'color', 'is_default', 'is_public', 'position'];
 
     protected function casts(): array
     {
         return [
+            'name_translations' => 'array',
             'level' => 'integer',
             'is_default' => 'boolean',
             'is_public' => 'boolean',
@@ -43,7 +45,7 @@ class Priority extends Model
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'name' => $this->translatedName(),
             'slug' => $this->slug,
             'level' => $this->level,
             'color' => $this->color,

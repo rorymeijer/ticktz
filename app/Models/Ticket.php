@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasCustomFields;
 use Database\Factories\TicketFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -29,14 +30,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Ticket extends Model
 {
     /** @use HasFactory<TicketFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasCustomFields, HasFactory, SoftDeletes;
 
     public const SOURCES = ['portal', 'email', 'agent', 'api', 'automation'];
 
     protected $fillable = [
         'subject', 'description', 'status_id', 'priority_id', 'workflow_id',
-        'queue_id', 'requester_id', 'assignee_id', 'team_id', 'organization_id',
-        'created_by', 'source',
+        'queue_id', 'request_type_id', 'requester_id', 'assignee_id', 'team_id',
+        'organization_id', 'created_by', 'source',
     ];
 
     protected function casts(): array
@@ -88,6 +89,12 @@ class Ticket extends Model
     public function queue(): BelongsTo
     {
         return $this->belongsTo(Queue::class);
+    }
+
+    /** @return BelongsTo<RequestType, $this> */
+    public function requestType(): BelongsTo
+    {
+        return $this->belongsTo(RequestType::class);
     }
 
     /** @return BelongsTo<User, $this> */

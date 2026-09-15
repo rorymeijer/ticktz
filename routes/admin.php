@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\CustomFieldController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LabelController;
 use App\Http\Controllers\Admin\LdapConfigController;
 use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\PriorityController;
 use App\Http\Controllers\Admin\QueueController;
+use App\Http\Controllers\Admin\RequestTypeController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\TeamController;
@@ -61,6 +63,24 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::post('labels', [LabelController::class, 'store'])->name('labels.store');
     Route::put('labels/{label}', [LabelController::class, 'update'])->name('labels.update');
     Route::delete('labels/{label}', [LabelController::class, 'destroy'])->name('labels.destroy');
+
+    Route::get('custom-fields', [CustomFieldController::class, 'index'])->name('custom-fields.index');
+    Route::post('custom-fields', [CustomFieldController::class, 'store'])->name('custom-fields.store');
+    Route::put('custom-fields/{customField}', [CustomFieldController::class, 'update'])->name('custom-fields.update');
+    Route::delete('custom-fields/{customField}', [CustomFieldController::class, 'destroy'])->name('custom-fields.destroy');
+
+    // Bound by id here: RequestType resolves by slug for the public portal
+    // URL, but an administrator editing one needs a stable identifier that
+    // does not change when they rename it.
+    Route::get('request-types', [RequestTypeController::class, 'index'])->name('request-types.index');
+    Route::get('request-types/create', [RequestTypeController::class, 'create'])->name('request-types.create');
+    Route::post('request-types', [RequestTypeController::class, 'store'])->name('request-types.store');
+    Route::get('request-types/{requestType:id}/edit', [RequestTypeController::class, 'edit'])->name('request-types.edit');
+    Route::put('request-types/{requestType:id}', [RequestTypeController::class, 'update'])->name('request-types.update');
+    Route::delete('request-types/{requestType:id}', [RequestTypeController::class, 'destroy'])->name('request-types.destroy');
+    Route::post('portal-categories', [RequestTypeController::class, 'storeCategory'])->name('portal-categories.store');
+    Route::put('portal-categories/{category}', [RequestTypeController::class, 'updateCategory'])->name('portal-categories.update');
+    Route::delete('portal-categories/{category}', [RequestTypeController::class, 'destroyCategory'])->name('portal-categories.destroy');
 
     Route::resource('workflows', WorkflowController::class)->except('show');
     Route::resource('queues', QueueController::class)->except('show');

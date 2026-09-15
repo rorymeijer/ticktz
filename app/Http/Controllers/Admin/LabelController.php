@@ -53,8 +53,10 @@ class LabelController extends Controller
      */
     private function validateLabel(Request $request, ?Label $label): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'name_translations' => ['array'],
+            'name_translations.*' => ['nullable', 'string', 'max:255'],
             'slug' => [
                 'required', 'string', 'max:64', 'regex:/^[a-z0-9-]+$/',
                 Rule::unique('labels', 'slug')->ignore($label?->getKey()),
@@ -62,5 +64,9 @@ class LabelController extends Controller
             'color' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $validated['name_translations'] = array_filter($validated['name_translations'] ?? []);
+
+        return $validated;
     }
 }

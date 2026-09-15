@@ -103,6 +103,19 @@ A queue is a saved filter plus the columns it shows.
 
 ![Queue editor](screenshots/14c-admin-queue.png)
 
+### Request types
+What a requester can ask for, the form that asks it, and where the resulting
+ticket lands.
+
+![Request types](screenshots/14d-admin-request-types.png)
+
+![Request type editor](screenshots/14e-admin-request-type-form.png)
+
+### Custom fields
+Define a field once, attach it to any form.
+
+![Custom fields](screenshots/14f-admin-custom-fields.png)
+
 ### Audit log
 Every mutating action with a before/after diff, filterable by event and actor
 type. Automation, inbound e-mail and API tokens are labelled as such.
@@ -151,9 +164,33 @@ mistaking one for a public reply is a note going out to the customer.
 
 ### Customer portal
 Deliberately different chrome from the agent console: no sidebar, and only the
-destinations a requester needs.
+destinations a requester needs. Request types are grouped by category and
+filtered as you type.
 
 ![Customer portal](screenshots/30-portal.png)
+
+### The same portal, in Dutch
+Request type names, categories *and* ticket statuses follow the reader's
+language — they are configured data, so they carry per-locale overrides rather
+than living in the language files.
+
+![Klantportaal](screenshots/35-portal-nl.png)
+
+### Submitting a request
+The form is defined by data: whichever custom fields an administrator attached
+to this request type are the fields that appear, get validated and get stored.
+
+![Request form](screenshots/32-portal-form.png)
+
+### My requests
+
+![My requests](screenshots/33-portal-requests.png)
+
+### Following a request
+The requester's view of the same ticket an agent sees. The internal note from
+the agent screenshot above is absent from this payload entirely.
+
+![Request detail](screenshots/34-portal-request-detail.png)
 
 ### Profile, in Dutch
 Language is a per-user preference and applies to notification e-mail as well as

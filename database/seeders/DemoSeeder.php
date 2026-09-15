@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\CustomField;
 use App\Models\Label;
 use App\Models\Organization;
+use App\Models\PortalCategory;
 use App\Models\Priority;
+use App\Models\RequestType;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\Ticket;
@@ -122,17 +125,240 @@ class DemoSeeder extends Seeder
         }
 
         $this->seedLabels();
+        $this->seedPortal();
         $this->seedTickets();
+    }
+
+    /**
+     * A small but complete portal catalogue: two categories, four request
+     * types and the custom fields their forms ask for.
+     */
+    private function seedPortal(): void
+    {
+        $fields = [
+            [
+                'key' => 'start_date',
+                'label' => 'Start date',
+                'label_translations' => ['nl' => 'Startdatum'],
+                'type' => 'date',
+                'is_required' => true,
+                'help_text' => 'The first working day of the new colleague.',
+            ],
+            [
+                'key' => 'employee_name',
+                'label' => 'Name of the employee',
+                'label_translations' => ['nl' => 'Naam van de medewerker'],
+                'type' => 'text',
+                'is_required' => true,
+            ],
+            [
+                'key' => 'department',
+                'label' => 'Department',
+                'label_translations' => ['nl' => 'Afdeling'],
+                'type' => 'select',
+                'is_required' => true,
+                'options' => [
+                    ['value' => 'permits', 'label' => 'Permits'],
+                    ['value' => 'enforcement', 'label' => 'Enforcement'],
+                    ['value' => 'civil-affairs', 'label' => 'Civil affairs'],
+                    ['value' => 'communications', 'label' => 'Communications'],
+                ],
+            ],
+            [
+                'key' => 'equipment',
+                'label' => 'Equipment needed',
+                'label_translations' => ['nl' => 'Benodigde apparatuur'],
+                'type' => 'multiselect',
+                'options' => [
+                    ['value' => 'laptop', 'label' => 'Laptop'],
+                    ['value' => 'monitor', 'label' => 'Extra monitor'],
+                    ['value' => 'phone', 'label' => 'Mobile phone'],
+                    ['value' => 'headset', 'label' => 'Headset'],
+                ],
+            ],
+            [
+                'key' => 'system_name',
+                'label' => 'Which system?',
+                'label_translations' => ['nl' => 'Welk systeem?'],
+                'type' => 'select',
+                'is_required' => true,
+                'options' => [
+                    ['value' => 'case-management', 'label' => 'Case management'],
+                    ['value' => 'dms', 'label' => 'Document management'],
+                    ['value' => 'gis', 'label' => 'GIS / map viewer'],
+                    ['value' => 'finance', 'label' => 'Finance package'],
+                ],
+            ],
+            [
+                'key' => 'error_message',
+                'label' => 'Exact error message',
+                'label_translations' => ['nl' => 'Exacte foutmelding'],
+                'type' => 'textarea',
+                'help_text' => 'Copy it literally, or attach a screenshot below.',
+            ],
+            [
+                'key' => 'affects_others',
+                'label' => 'Are colleagues affected too?',
+                'label_translations' => ['nl' => 'Hebben collega’s er ook last van?'],
+                'type' => 'checkbox',
+            ],
+            [
+                'key' => 'cost_centre',
+                'label' => 'Cost centre',
+                'label_translations' => ['nl' => 'Kostenplaats'],
+                'type' => 'text',
+                'is_public' => false,
+                'help_text' => 'Filled in by the service desk for the invoice.',
+            ],
+        ];
+
+        $position = 0;
+
+        foreach ($fields as $field) {
+            $position += 10;
+
+            CustomField::query()->updateOrCreate(['key' => $field['key']], $field + [
+                'entity' => 'ticket',
+                'is_active' => true,
+                'is_public' => $field['is_public'] ?? true,
+                'is_required' => $field['is_required'] ?? false,
+                'position' => $position,
+            ]);
+        }
+
+        $categories = [
+            [
+                'slug' => 'workplace',
+                'name' => 'Workplace',
+                'name_translations' => ['nl' => 'Werkplek'],
+                'description' => 'Hardware, software and everything on your desk.',
+                'description_translations' => ['nl' => 'Hardware, software en alles op je bureau.'],
+                'color' => '#0891b2',
+                'position' => 10,
+            ],
+            [
+                'slug' => 'applications',
+                'name' => 'Applications',
+                'name_translations' => ['nl' => 'Applicaties'],
+                'description' => 'The systems you work in every day.',
+                'description_translations' => ['nl' => 'De systemen waarin je dagelijks werkt.'],
+                'color' => '#7c3aed',
+                'position' => 20,
+            ],
+        ];
+
+        $categoryModels = collect($categories)->mapWithKeys(fn (array $category) => [
+            $category['slug'] => PortalCategory::query()->updateOrCreate(
+                ['slug' => $category['slug']],
+                $category + ['is_active' => true],
+            ),
+        ]);
+
+        $teams = Team::query()->get()->keyBy('slug');
+        $priorities = Priority::query()->get()->keyBy('slug');
+
+        $requestTypes = [
+            [
+                'slug' => 'new-colleague',
+                'category' => 'workplace',
+                'name' => 'Onboard a new colleague',
+                'name_translations' => ['nl' => 'Nieuwe collega aanmelden'],
+                'description' => 'Request a workplace, accounts and equipment for someone starting soon.',
+                'description_translations' => ['nl' => 'Vraag een werkplek, accounts en apparatuur aan voor iemand die binnenkort begint.'],
+                'instructions' => "Please submit this at least five working days before the start date.\n\nWe will create the accounts, prepare the hardware and send a collection time.",
+                'instructions_translations' => ['nl' => "Dien dit minimaal vijf werkdagen voor de startdatum in.\n\nWij maken de accounts aan, zetten de hardware klaar en sturen een ophaalmoment."],
+                'team' => 'infrastructure',
+                'priority' => 'normal',
+                'subject_template' => 'New colleague: :employee_name (:department)',
+                'fields' => ['employee_name', 'start_date', 'department', 'equipment'],
+                'position' => 10,
+            ],
+            [
+                'slug' => 'hardware-problem',
+                'category' => 'workplace',
+                'name' => 'Something is broken',
+                'name_translations' => ['nl' => 'Er is iets kapot'],
+                'description' => 'A laptop, monitor, printer or phone that no longer works.',
+                'description_translations' => ['nl' => 'Een laptop, monitor, printer of telefoon die het niet meer doet.'],
+                'team' => 'servicedesk',
+                'priority' => 'normal',
+                'allow_priority_choice' => true,
+                'fields' => ['error_message', 'affects_others'],
+                'position' => 20,
+            ],
+            [
+                'slug' => 'application-problem',
+                'category' => 'applications',
+                'name' => 'An application is not working',
+                'name_translations' => ['nl' => 'Een applicatie werkt niet'],
+                'description' => 'Report an error, something slow, or behaviour you do not expect.',
+                'description_translations' => ['nl' => 'Meld een foutmelding, traagheid of gedrag dat je niet verwacht.'],
+                'team' => 'applications',
+                'priority' => 'high',
+                'allow_priority_choice' => true,
+                'subject_template' => ':system_name — problem reported',
+                'fields' => ['system_name', 'error_message', 'affects_others'],
+                'position' => 30,
+            ],
+            [
+                'slug' => 'application-access',
+                'category' => 'applications',
+                'name' => 'Request access to an application',
+                'name_translations' => ['nl' => 'Toegang tot een applicatie aanvragen'],
+                'description' => 'Ask for an account or extra rights in a system.',
+                'description_translations' => ['nl' => 'Vraag een account of extra rechten in een systeem aan.'],
+                'instructions' => 'Access requests are checked with your manager before they are granted.',
+                'instructions_translations' => ['nl' => 'Toegangsverzoeken worden met je leidinggevende afgestemd voordat ze worden verleend.'],
+                'team' => 'applications',
+                'priority' => 'normal',
+                'subject_template' => 'Access request: :system_name',
+                'fields' => ['system_name', 'department'],
+                'position' => 40,
+            ],
+        ];
+
+        $allFields = CustomField::query()->get()->keyBy('key');
+
+        foreach ($requestTypes as $definition) {
+            $type = RequestType::query()->updateOrCreate(['slug' => $definition['slug']], [
+                'portal_category_id' => $categoryModels[$definition['category']]->getKey(),
+                'name' => $definition['name'],
+                'name_translations' => $definition['name_translations'],
+                'description' => $definition['description'],
+                'description_translations' => $definition['description_translations'],
+                'instructions' => $definition['instructions'] ?? null,
+                'instructions_translations' => $definition['instructions_translations'] ?? null,
+                'team_id' => isset($definition['team']) ? $teams[$definition['team']]->getKey() : null,
+                'priority_id' => isset($definition['priority']) ? $priorities[$definition['priority']]->getKey() : null,
+                'allow_priority_choice' => $definition['allow_priority_choice'] ?? false,
+                'subject_template' => $definition['subject_template'] ?? null,
+                'visibility' => 'everyone',
+                'is_active' => true,
+                'position' => $definition['position'],
+            ]);
+
+            $fieldPosition = 0;
+
+            $type->fields()->sync(
+                collect($definition['fields'])
+                    ->mapWithKeys(function (string $key) use ($allFields, &$fieldPosition): array {
+                        $fieldPosition += 10;
+
+                        return [$allFields[$key]->getKey() => ['position' => $fieldPosition]];
+                    })
+                    ->all()
+            );
+        }
     }
 
     private function seedLabels(): void
     {
         $labels = [
-            ['name' => 'Hardware', 'slug' => 'hardware', 'color' => '#0891b2'],
-            ['name' => 'Account', 'slug' => 'account', 'color' => '#7c3aed'],
-            ['name' => 'Netwerk', 'slug' => 'netwerk', 'color' => '#059669'],
-            ['name' => 'Zaaksysteem', 'slug' => 'zaaksysteem', 'color' => '#d97706'],
-            ['name' => 'Wet open overheid', 'slug' => 'woo', 'color' => '#dc2626'],
+            ['name' => 'Hardware', 'name_translations' => ['nl' => 'Hardware'], 'slug' => 'hardware', 'color' => '#0891b2'],
+            ['name' => 'Account', 'name_translations' => ['nl' => 'Account'], 'slug' => 'account', 'color' => '#7c3aed'],
+            ['name' => 'Network', 'name_translations' => ['nl' => 'Netwerk'], 'slug' => 'netwerk', 'color' => '#059669'],
+            ['name' => 'Case management', 'name_translations' => ['nl' => 'Zaaksysteem'], 'slug' => 'zaaksysteem', 'color' => '#d97706'],
+            ['name' => 'Freedom of information', 'name_translations' => ['nl' => 'Wet open overheid'], 'slug' => 'woo', 'color' => '#dc2626'],
         ];
 
         foreach ($labels as $label) {

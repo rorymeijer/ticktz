@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\Label;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Support\UiTranslations;
 
@@ -49,4 +51,40 @@ test('an unsupported language falls back to the default', function () {
     $this->get('/?lang=klingon')->assertOk();
 
     expect(app()->getLocale())->toBe(config('app.locale'));
+});
+
+test('statuses, priorities and labels follow the reader language', function () {
+    seedServiceDesk();
+
+    app()->setLocale('nl');
+
+    expect(status('open')->translatedName())->toBe('In behandeling')
+        ->and(priority('high')->translatedName())->toBe('Hoog')
+        ->and(status('open')->toSummaryArray()['name'])->toBe('In behandeling');
+
+    app()->setLocale('en');
+
+    expect(status('open')->translatedName())->toBe('In progress')
+        ->and(priority('high')->translatedName())->toBe('High');
+});
+
+test('a taxonomy name without a translation falls back to the base name', function () {
+    seedServiceDesk();
+
+    $label = Label::factory()->create(['name' => 'Hardware', 'name_translations' => null]);
+
+    app()->setLocale('nl');
+
+    expect($label->translatedName())->toBe('Hardware');
+});
+
+test('the portal renders ticket statuses in the requester language', function () {
+    seedServiceDesk();
+
+    $requester = User::factory()->requester()->create(['locale' => 'nl']);
+    $ticket = Ticket::factory()->forRequester($requester)->create();
+
+    $this->actingAs($requester->fresh())
+        ->get("/portal/requests/{$ticket->key}")
+        ->assertInertia(fn ($page) => $page->where('request.status.name', 'Nieuw'));
 });

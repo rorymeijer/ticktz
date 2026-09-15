@@ -17,12 +17,14 @@ import {
     TextInput,
     Toggle,
 } from '@/Components/UI';
+import { TranslationsField } from '@/Components/Admin/TranslationsField';
 import { useTranslations } from '@/hooks/useTranslations';
 import { slugify } from '@/lib/slug';
 
 interface StatusRow {
     id: number;
     name: string;
+    name_translations: Record<string, string>;
     slug: string;
     category: string;
     color: string;
@@ -37,6 +39,7 @@ interface StatusRow {
 interface PriorityRow {
     id: number;
     name: string;
+    name_translations: Record<string, string>;
     slug: string;
     level: number;
     color: string;
@@ -48,6 +51,7 @@ interface PriorityRow {
 interface LabelRow {
     id: number;
     name: string;
+    name_translations: Record<string, string>;
     slug: string;
     color: string;
     description: string | null;
@@ -273,6 +277,7 @@ function StatusDialog({ status, onClose }: { status: StatusRow | null; onClose: 
 
     const form = useForm({
         name: status?.name ?? '',
+        name_translations: status?.name_translations ?? {},
         slug: status?.slug ?? '',
         category: status?.category ?? 'open',
         color: status?.color ?? '#64748b',
@@ -332,6 +337,12 @@ function StatusDialog({ status, onClose }: { status: StatusRow | null; onClose: 
                     )}
                 </Field>
 
+                <TranslationsField
+                    label={t('admin.custom_fields.fields.label_translations')}
+                    values={form.data.name_translations}
+                    onChange={(values) => form.setData('name_translations', values)}
+                />
+
                 <Field label={t('admin.service_desk.statuses.category')} error={form.errors.category} required>
                     {(props) => (
                         <Select
@@ -377,6 +388,7 @@ function PriorityDialog({ priority, onClose }: { priority: PriorityRow | null; o
 
     const form = useForm({
         name: priority?.name ?? '',
+        name_translations: priority?.name_translations ?? {},
         slug: priority?.slug ?? '',
         level: priority?.level ?? 3,
         color: priority?.color ?? '#2563eb',
@@ -433,6 +445,12 @@ function PriorityDialog({ priority, onClose }: { priority: PriorityRow | null; o
                     )}
                 </Field>
 
+                <TranslationsField
+                    label={t('admin.custom_fields.fields.label_translations')}
+                    values={form.data.name_translations}
+                    onChange={(values) => form.setData('name_translations', values)}
+                />
+
                 <Field label={t('admin.service_desk.priorities.level')} error={form.errors.level} required>
                     {(props) => (
                         <TextInput
@@ -474,6 +492,7 @@ function LabelDialog({ label, onClose }: { label: LabelRow | null; onClose: () =
 
     const form = useForm({
         name: label?.name ?? '',
+        name_translations: label?.name_translations ?? {},
         slug: label?.slug ?? '',
         color: label?.color ?? '#64748b',
         description: label?.description ?? '',
@@ -541,6 +560,12 @@ function LabelDialog({ label, onClose }: { label: LabelRow | null; onClose: () =
                         />
                     )}
                 </Field>
+
+                <TranslationsField
+                    label={t('admin.custom_fields.fields.label_translations')}
+                    values={form.data.name_translations}
+                    onChange={(values) => form.setData('name_translations', values)}
+                />
 
                 <ColorField
                     label={t('admin.settings.fields.primary_color')}

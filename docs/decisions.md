@@ -76,3 +76,32 @@ seconds on a laptop with no services. CI additionally runs migrations and the
 full suite against MySQL 8, because that is what production uses and because
 index/collation mistakes only surface there. Migrations therefore avoid
 MySQL-only DDL unless it is guarded by a driver check.
+
+## D9 — Custom field choices are single-language
+
+A custom field's *label* is translatable per locale; the individual choices of
+a select are not. Translating them would mean either a second nested
+translation editor in the field dialog or a separate translation table, and in
+practice choice values ("Laptop", "GIS") are either proper nouns or already
+shared between both languages.
+
+The storage shape (`options` as `[{value, label}]`) leaves room for a
+`label_translations` key if that turns out to be wrong; nothing needs a
+migration to add it.
+
+## D10 — Custom field values are stored polymorphically
+
+`custom_field_values` keys on `(field, entity_type, entity_id)` rather than
+adding a column per field. Reads cost a join; writes cost nothing; and an
+administrator can add a field on a Friday afternoon without a migration and
+without an `ALTER TABLE` on a table with a million rows. The alternative — a
+JSON column on `tickets` — would have made "every ticket where cost_centre =
+9999" unindexable, which is exactly the query reporting needs.
+
+## D11 — The portal builds its own payload
+
+`Portal\RequestController` does not reuse the agent payload with the sensitive
+parts removed; it constructs its own from scratch, loading only public
+comments and only public custom fields. A view that starts with everything and
+subtracts is one careless edit away from leaking; a view that starts with
+nothing and adds is not.

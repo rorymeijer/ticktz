@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasTranslatableName;
 use Database\Factories\LabelFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,9 +17,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Label extends Model
 {
     /** @use HasFactory<LabelFactory> */
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, HasTranslatableName;
 
-    protected $fillable = ['name', 'slug', 'color', 'description'];
+    protected $fillable = ['name', 'name_translations', 'slug', 'color', 'description'];
+
+    protected function casts(): array
+    {
+        return ['name_translations' => 'array'];
+    }
 
     /**
      * @return BelongsToMany<Ticket, $this>
@@ -35,7 +41,7 @@ class Label extends Model
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'name' => $this->translatedName(),
             'slug' => $this->slug,
             'color' => $this->color,
         ];
