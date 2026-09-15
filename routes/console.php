@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Jobs\Approvals\RemindApproversJob;
 use App\Jobs\Automation\RunScheduledRulesJob;
 use App\Jobs\Mail\PollMailboxJob;
 use App\Jobs\Sla\SweepSlaTimersJob;
@@ -47,6 +48,20 @@ Schedule::call(function (): void {
 })
     ->name('ticktz:sweep-sla')
     ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::call(function (): void {
+    if (! Schema::hasTable('approval_requests')) {
+        return;
+    }
+
+    // Hourly rather than per-minute: the cadence is measured in hours and a
+    // reminder that goes out at 09:00 instead of 09:00:30 is the same
+    // reminder. Nothing here decides an approval — see the job.
+    RemindApproversJob::dispatch();
+})
+    ->name('ticktz:remind-approvers')
+    ->hourly()
     ->withoutOverlapping();
 
 Schedule::call(function (): void {

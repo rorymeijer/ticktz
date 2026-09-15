@@ -73,6 +73,7 @@ class WorkflowController extends Controller
                     'to_status_id' => $transition->to_status_id,
                     'requires_comment' => $transition->requires_comment,
                     'requires_assignee' => $transition->requires_assignee,
+                    'requires_approval' => $transition->requires_approval,
                     'required_permission' => $transition->required_permission,
                 ])->all(),
             ],
@@ -200,6 +201,7 @@ class WorkflowController extends Controller
                 'to_status_id' => (int) $transition['to_status_id'],
                 'requires_comment' => (bool) ($transition['requires_comment'] ?? false),
                 'requires_assignee' => (bool) ($transition['requires_assignee'] ?? false),
+                'requires_approval' => (bool) ($transition['requires_approval'] ?? false),
                 'required_permission' => $transition['required_permission'] ?? null,
                 'position' => $position,
             ]);
@@ -232,6 +234,7 @@ class WorkflowController extends Controller
             'transitions.*.to_status_id' => ['required', 'integer', Rule::exists('ticket_statuses', 'id')],
             'transitions.*.requires_comment' => ['boolean'],
             'transitions.*.requires_assignee' => ['boolean'],
+            'transitions.*.requires_approval' => ['boolean'],
             'transitions.*.required_permission' => ['nullable', 'string', Rule::in(PermissionCatalog::all())],
         ]);
     }

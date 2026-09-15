@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -46,6 +47,7 @@ class User extends Authenticatable
         'password',
         'locale',
         'organization_id',
+        'manager_id',
         'directory',
         'ldap_dn',
         'ldap_guid',
@@ -91,6 +93,29 @@ class User extends Authenticatable
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Who signs this person's requests off.
+     *
+     * Self-referential and optional: most people have a manager, the person at
+     * the top does not, and a directory sync can fill it in. An approval step
+     * of type `manager` reads it, and says so plainly when it is empty rather
+     * than quietly asking nobody.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    /**
+     * @return HasMany<User, $this>
+     */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(User::class, 'manager_id');
     }
 
     /**

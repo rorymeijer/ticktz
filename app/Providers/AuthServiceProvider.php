@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\ApprovalDecision;
+use App\Models\ApprovalRequest;
 use App\Models\Attachment;
 use App\Models\Comment;
 use App\Models\Organization;
@@ -12,6 +14,8 @@ use App\Models\Role;
 use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Policies\ApprovalDecisionPolicy;
+use App\Policies\ApprovalRequestPolicy;
 use App\Policies\AttachmentPolicy;
 use App\Policies\CommentPolicy;
 use App\Policies\OrganizationPolicy;
@@ -51,6 +55,8 @@ class AuthServiceProvider extends ServiceProvider
         Team::class => TeamPolicy::class,
         Organization::class => OrganizationPolicy::class,
         Ticket::class => TicketPolicy::class,
+        ApprovalRequest::class => ApprovalRequestPolicy::class,
+        ApprovalDecision::class => ApprovalDecisionPolicy::class,
         Comment::class => CommentPolicy::class,
         Queue::class => QueuePolicy::class,
         Attachment::class => AttachmentPolicy::class,
@@ -77,6 +83,15 @@ class AuthServiceProvider extends ServiceProvider
             $subject = $arguments[0] ?? null;
 
             if ($subject instanceof User && $user->is($subject) && in_array($ability, self::SELF_PROTECTED, true)) {
+                return null;
+            }
+
+            // Answering an approval is not a permission and never has been. A
+            // super-admin can read every approval and cancel any of them, but
+            // only the person who was asked may say yes — an approval an
+            // administrator could have given on somebody's behalf is worth
+            // nothing as evidence, which is the entire point of the feature.
+            if ($subject instanceof ApprovalDecision && $ability === 'decide') {
                 return null;
             }
 

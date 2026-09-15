@@ -14,8 +14,8 @@ tracks what is shipped. The phase definitions come from the original brief in
 | 5 | SLA engine & escalations | ✅ Shipped |
 | 6 | Automation rules | ✅ Shipped |
 | 7 | Knowledge base | ✅ Shipped |
-| 8 | Approvals | ⏳ Next |
-| 9 | Assets / CMDB | ⏳ Planned |
+| 8 | Approvals | ✅ Shipped |
+| 9 | Assets / CMDB | ⏳ Next |
 | 10 | Reporting & dashboards | ⏳ Planned |
 | 11 | Public REST API & webhooks (Sanctum) | ⏳ Planned |
 | 12 | i18n completion, accessibility, docs & release | ⏳ Planned |
@@ -312,10 +312,52 @@ The answers the desk gives most often, written down once. Full notes in
   because somebody read it, or the knowledge base reorders itself by who
   happened to click what.
 
+## Phase 8 — Approvals
+
+Somebody with the authority to say yes has to say it. Full notes in
+[`approvals.md`](approvals.md).
+
+- **Single, parallel and sequential are one mechanism, not three.** A workflow
+  is an ordered list of steps; the approvers inside a step are asked at once
+  and its `mode` says whether one of them is enough; more than one step makes
+  it sequential ([D27](decisions.md)).
+- **Who was asked is a fact, not a query.** Approvers are resolved when a step
+  opens and written into decision rows, so a team gaining a member tomorrow
+  does not change who was asked today, and an `all` step cannot grow a new
+  blocker halfway through ([D28](decisions.md)).
+- **One refusal ends the whole approval**, whatever the mode. An approval a
+  majority can override is not an approval.
+- **The requester is never asked to approve their own request**, and a step
+  that resolves to nobody is skipped and recorded rather than left blocking
+  forever. A ticket held by an approval addressed to nobody is worse than one
+  that was never held.
+- **The gate lives in `TicketService::transition()`**, so an agent's click, an
+  automation rule and an inbound e-mail all meet the same wall — and it fails
+  closed: a ticket with no approval has not been approved ([D29](decisions.md)).
+- **Only the person who was asked may answer.** Not a permission, and not
+  something a super-admin can do either: `Gate::before` explicitly stands down
+  for this one check, because an approval an administrator could have given is
+  worth nothing as evidence ([D30](decisions.md)).
+- **Approvers can answer from their inbox** without signing in. The link is a
+  GET that decides nothing and only renders a page; the decision is a POST from
+  it. The token is hashed at rest, single-use, expiring, minted inside the mail
+  job so it never sits in a queue payload — and switchable off entirely
+  ([D31](decisions.md)).
+- **The inbox is at `/approvals`**, outside both `/agent` and `/portal`,
+  because an approver is very often a budget holder who is not an agent.
+- **A deadline reports; it never decides.** Overdue approvals are chased
+  hourly and left open ([D32](decisions.md)).
+
+Also in this phase: `users.manager_id`, so the commonest approval of all —
+"my manager has to sign this off" — has somewhere to read the answer from; and
+a per-transition conditions list in the workflow editor, which is where the
+gate is configured and which incidentally gave `requires_comment` and
+`requires_assignee` a UI for the first time.
+
 ### Not yet wired up
 
 The sidebar only shows destinations that have routes today: Dashboard, Tickets,
-Queues, the knowledge base and Administration. Assets, approvals and reporting
+Queues, Approvals, the knowledge base and Administration. Assets and reporting
 appear as their phases land — a menu item without a route is worse than an
 absent one. The permission catalogue already covers them, so roles can be
 configured ahead of the features arriving.

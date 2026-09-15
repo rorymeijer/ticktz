@@ -9,6 +9,7 @@ import {
     CardBody,
     CardFooter,
     CardHeader,
+    Checkbox,
     CheckboxGroup,
     Field,
     PageHeader,
@@ -26,6 +27,7 @@ interface TransitionRow {
     to_status_id: number;
     requires_comment: boolean;
     requires_assignee: boolean;
+    requires_approval: boolean;
     required_permission: string | null;
 }
 
@@ -81,6 +83,13 @@ export default function WorkflowForm({
         [statuses, form.data.status_ids],
     );
 
+    // NULL means "from any status" — the universal transitions a workflow can
+    // carry, such as a Close that works from anywhere.
+    const nameOf = (id: number | null) =>
+        id === null
+            ? t('common.labels.all')
+            : (statuses.find((status) => status.id === id)?.name ?? String(id));
+
     const has = (from: number, to: number) =>
         form.data.transitions.some(
             (transition) => transition.from_status_id === from && transition.to_status_id === to,
@@ -100,6 +109,7 @@ export default function WorkflowForm({
                           to_status_id: to,
                           requires_comment: false,
                           requires_assignee: false,
+                          requires_approval: false,
                           required_permission: null,
                       },
                   ],
@@ -298,6 +308,76 @@ export default function WorkflowForm({
                             </div>
                         )}
                     </CardBody>
+
+                    {/* The matrix says which moves are legal; this says what
+                        each of them demands first. Kept as a list under the
+                        grid rather than as more columns in it — a matrix with
+                        three checkboxes per cell is unreadable at six
+                        statuses, which is the size a real workflow starts at. */}
+                    {form.data.transitions.length > 0 ? (
+                        <CardBody className="border-t border-slate-200">
+                            <p className="text-sm font-medium text-slate-800">
+                                {t('admin.workflows.fields.conditions')}
+                            </p>
+                            <p className="mb-3 text-xs text-slate-500">
+                                {t('admin.workflows.fields.conditions_help')}
+                            </p>
+
+                            <ul className="divide-y divide-slate-100">
+                                {form.data.transitions.map((transition, index) => (
+                                    <li
+                                        key={`${transition.from_status_id}-${transition.to_status_id}`}
+                                        className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-2"
+                                    >
+                                        <span className="min-w-48 flex-1 text-sm text-slate-700">
+                                            {nameOf(transition.from_status_id)}
+                                            <span aria-hidden="true" className="mx-1.5 text-slate-300">
+                                                →
+                                            </span>
+                                            {nameOf(transition.to_status_id)}
+                                        </span>
+
+                                        {(
+                                            [
+                                                ['requires_comment', 'requires_comment'],
+                                                ['requires_assignee', 'requires_assignee'],
+                                                ['requires_approval', 'requires_approval'],
+                                            ] as const
+                                        ).map(([field, label]) => (
+                                            <label
+                                                key={field}
+                                                className="inline-flex items-center gap-1.5 text-xs text-slate-600"
+                                            >
+                                                <Checkbox
+                                                    checked={transition[field]}
+                                                    onChange={(event) =>
+                                                        form.setData(
+                                                            'transitions',
+                                                            form.data.transitions.map((row, i) =>
+                                                                i === index
+                                                                    ? { ...row, [field]: event.target.checked }
+                                                                    : row,
+                                                            ),
+                                                        )
+                                                    }
+                                                />
+                                                {t(
+                                                    label === 'requires_approval'
+                                                        ? 'approvals.fields.requires_approval'
+                                                        : `admin.workflows.fields.${label}`,
+                                                )}
+                                            </label>
+                                        ))}
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <p className="mt-2 text-xs text-slate-500">
+                                {t('approvals.fields.requires_approval_help')}
+                            </p>
+                        </CardBody>
+                    ) : null}
+
                     <CardFooter>
                         <ButtonLink href="/admin/workflows" variant="secondary">
                             {t('common.actions.cancel')}

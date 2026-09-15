@@ -34,6 +34,7 @@ interface UserPayload {
     username: string | null;
     locale: string | null;
     organization_id: number | null;
+    manager_id: number | null;
     job_title: string | null;
     phone: string | null;
     signature: string | null;
@@ -48,12 +49,14 @@ export default function UserForm({
     roles,
     teams,
     organizations,
+    managers,
     canAssignRoles,
 }: {
     user: UserPayload | null;
     roles: RoleOption[];
     teams: { id: number; name: string }[];
     organizations: { id: number; name: string }[];
+    managers: { id: number; name: string; email: string }[];
     canAssignRoles: boolean;
 }) {
     const { t, locales } = useTranslations();
@@ -68,6 +71,7 @@ export default function UserForm({
         password_confirmation: '',
         locale: user?.locale ?? '',
         organization_id: user?.organization_id ?? '',
+        manager_id: user?.manager_id ?? '',
         job_title: user?.job_title ?? '',
         phone: user?.phone ?? '',
         signature: user?.signature ?? '',
@@ -253,6 +257,34 @@ export default function UserForm({
                                                     {organization.name}
                                                 </option>
                                             ))}
+                                        </Select>
+                                    )}
+                                </Field>
+
+                                <Field
+                                    label={t('approvals.fields.manager')}
+                                    error={form.errors.manager_id}
+                                    help={t('approvals.fields.manager_help')}
+                                >
+                                    {(props) => (
+                                        <Select
+                                            {...props}
+                                            value={String(form.data.manager_id ?? '')}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'manager_id',
+                                                    event.target.value ? Number(event.target.value) : '',
+                                                )
+                                            }
+                                        >
+                                            <option value="">{t('approvals.fields.manager_none')}</option>
+                                            {managers
+                                                .filter((candidate) => candidate.id !== user?.id)
+                                                .map((candidate) => (
+                                                    <option key={candidate.id} value={candidate.id}>
+                                                        {candidate.name}
+                                                    </option>
+                                                ))}
                                         </Select>
                                     )}
                                 </Field>

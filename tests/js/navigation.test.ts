@@ -29,7 +29,17 @@ describe('agentNavigation', () => {
     });
 
     it('always includes the dashboard for a signed-in user', () => {
-        expect(agentNavigation(user([]), t).map((item) => item.key)).toEqual(['dashboard']);
+        expect(agentNavigation(user([]), t).map((item) => item.key)).toContain('dashboard');
+    });
+
+    /**
+     * Every other destination is behind a permission. Approvals is not, and
+     * deliberately: being asked to approve something is not a permission, so
+     * an agent who was asked needs somewhere to answer it whether or not
+     * anybody has granted them `approvals.view`.
+     */
+    it('gives every signed-in agent the approvals inbox', () => {
+        expect(agentNavigation(user([]), t).map((item) => item.key)).toContain('approvals');
     });
 
     it('adds the ticket destinations only with the ticket permission', () => {

@@ -24,7 +24,7 @@ export default function PortalLayout({
 }) {
     const { t } = useTranslations();
     const { user } = useAuth();
-    const { app, ziggy } = usePage<SharedProps>().props;
+    const { app, ziggy, approvals_waiting: approvalsWaiting } = usePage<SharedProps>().props;
     const pathname = new URL(ziggy.location).pathname;
 
     // "/portal" must not stay highlighted while you are on "/portal/requests".
@@ -37,6 +37,13 @@ export default function PortalLayout({
         { href: '/portal/kb', label: t('kb.portal_title') },
         { href: '/portal/requests', label: t('portal.nav.my_requests') },
     ];
+
+    // Only when something is actually waiting. Most requesters are never asked
+    // to approve anything, and a permanent link to an empty inbox is clutter
+    // on the one screen that has to stay obvious.
+    if (approvalsWaiting > 0) {
+        links.push({ href: '/approvals', label: `${t('nav.approvals')} (${approvalsWaiting})` });
+    }
 
     return (
         <>

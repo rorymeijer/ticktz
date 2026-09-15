@@ -99,6 +99,30 @@ return [
         'log_retention_days' => (int) env('TICKTZ_AUTOMATION_LOG_DAYS', 30),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Approvals
+    |--------------------------------------------------------------------------
+    |
+    | An approver can answer from their inbox without signing in. The link they
+    | click carries a bearer token, so it is hashed at rest, single-use, and
+    | expires — an approve link that works forever is a key sitting in an inbox
+    | forever. Shorten this on an instance where mailboxes are shared.
+    |
+    | `decide_by_email` turns the links off entirely: the notification then
+    | says what is waiting and links to the portal, where the approver signs
+    | in. That is the right setting for a desk approving things that matter.
+    |
+    */
+
+    'approvals' => [
+        'decide_by_email' => (bool) env('TICKTZ_APPROVAL_EMAIL_LINKS', true),
+        'token_days' => (int) env('TICKTZ_APPROVAL_TOKEN_DAYS', 30),
+        // Reminder cadence for an approval nobody has answered, in hours.
+        // Zero switches reminders off.
+        'reminder_hours' => (int) env('TICKTZ_APPROVAL_REMINDER_HOURS', 24),
+    ],
+
     'queues' => [
         'high' => env('TICKTZ_QUEUE_HIGH', 'high'),
         'default' => env('TICKTZ_QUEUE_DEFAULT', 'default'),

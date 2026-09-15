@@ -50,6 +50,7 @@ interface RequestTypePayload {
     queue_id: number | null;
     team_id: number | null;
     workflow_id: number | null;
+    approval_workflow_id: number | null;
     priority_id: number | null;
     allow_priority_choice: boolean;
     subject_template: string | null;
@@ -71,6 +72,7 @@ export default function RequestTypeForm({
     queues,
     teams,
     workflows,
+    approvalWorkflows,
     priorities,
     organizations,
     customFields,
@@ -80,6 +82,7 @@ export default function RequestTypeForm({
     queues: NamedOption[];
     teams: NamedOption[];
     workflows: NamedOption[];
+    approvalWorkflows: NamedOption[];
     priorities: PrioritySummary[];
     organizations: NamedOption[];
     customFields: CustomFieldOption[];
@@ -99,6 +102,7 @@ export default function RequestTypeForm({
         queue_id: string;
         team_id: string;
         workflow_id: string;
+        approval_workflow_id: string;
         priority_id: string;
         allow_priority_choice: boolean;
         subject_template: string;
@@ -119,6 +123,9 @@ export default function RequestTypeForm({
         queue_id: requestType?.queue_id ? String(requestType.queue_id) : '',
         team_id: requestType?.team_id ? String(requestType.team_id) : '',
         workflow_id: requestType?.workflow_id ? String(requestType.workflow_id) : '',
+        approval_workflow_id: requestType?.approval_workflow_id
+            ? String(requestType.approval_workflow_id)
+            : '',
         priority_id: requestType?.priority_id ? String(requestType.priority_id) : '',
         allow_priority_choice: requestType?.allow_priority_choice ?? false,
         subject_template: requestType?.subject_template ?? '',
@@ -351,6 +358,29 @@ export default function RequestTypeForm({
                                         >
                                             <option value="">{t('common.labels.default')}</option>
                                             {workflows.map((workflow) => (
+                                                <option key={workflow.id} value={workflow.id}>
+                                                    {workflow.name}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    )}
+                                </Field>
+
+                                <Field
+                                    label={t('approvals.fields.workflow')}
+                                    error={form.errors.approval_workflow_id}
+                                    help={t('admin.request_types.fields.approval_help')}
+                                >
+                                    {(props) => (
+                                        <Select
+                                            {...props}
+                                            value={form.data.approval_workflow_id}
+                                            onChange={(event) =>
+                                                form.setData('approval_workflow_id', event.target.value)
+                                            }
+                                        >
+                                            <option value="">{t('common.labels.none')}</option>
+                                            {approvalWorkflows.map((workflow) => (
                                                 <option key={workflow.id} value={workflow.id}>
                                                     {workflow.name}
                                                 </option>

@@ -278,6 +278,40 @@ beside it.
 
 ![Kennisbank](screenshots/56-admin-kb-nl.png)
 
+## Approvals
+
+### The approval inbox
+One URL for everybody. An approver is very often a budget holder who is not an
+agent, so this page picks the shell that matches its reader rather than living
+inside the agent console or the portal.
+
+![Approvals](screenshots/60-approvals-inbox.png)
+
+### Approval workflows
+A workflow is an ordered list of steps. One step with one person is a single
+approval; one step with several is parallel; several steps run one after
+another. The label is derived from the steps, never stored.
+
+![Approval workflows](screenshots/61-admin-approvals.png)
+
+### The same screen, in Dutch
+
+![Goedkeuringsworkflows](screenshots/62-admin-approvals-nl.png)
+
+### An approval on a ticket
+Above the properties, because when a ticket is held by an approval that is the
+first thing an agent needs to know about it. The panel says so out loud rather
+than letting them discover it from a refused transition.
+
+![Approval on a ticket](screenshots/63-agent-ticket-approval.png)
+
+### What the requester sees
+"Nothing has happened" and "your manager has not answered yet" are very
+different messages, and only one of them produces a chase-up e-mail to the
+service desk.
+
+![Goedkeuring op het portaal](screenshots/64-portal-approval.png)
+
 ### Profile, in Dutch
 Language is a per-user preference and applies to notification e-mail as well as
 the interface.

@@ -45,6 +45,22 @@ return [
             'subject' => '[{{ ticket.key }}] Resolved: {{ ticket.subject }}',
             'body' => "Hello {{ requester.first_name }},\n\nYour request {{ ticket.key }} has been marked as resolved.\n\n{{ comment.body }}\n\nIf the problem is not solved, reply to this e-mail and the request reopens.",
         ],
+        'approval.requested' => [
+            'subject' => '[{{ ticket.key }}] Approval needed: {{ approval.subject }}',
+            'body' => "Hello {{ recipient.first_name }},\n\nYour approval is needed on {{ ticket.key }}.\n\n{{ approval.subject }}\n{{ approval.reason }}\n\nRequested by: {{ requester.name }}\n\n{{ approval.decide_url }}\n\nOr sign in and answer it there: {{ approval.url }}",
+        ],
+        'approval.reminder' => [
+            'subject' => '[{{ ticket.key }}] Reminder: approval needed',
+            'body' => "Hello {{ recipient.first_name }},\n\n{{ ticket.key }} is still waiting on your approval.\n\n{{ approval.subject }}\n\n{{ approval.decide_url }}\n\nOr sign in and answer it there: {{ approval.url }}",
+        ],
+        'approval.approved' => [
+            'subject' => '[{{ ticket.key }}] Approved: {{ approval.subject }}',
+            'body' => "Hello {{ recipient.first_name }},\n\n{{ approval.subject }} has been approved, so {{ ticket.key }} can go ahead.\n\n{{ ticket.portal_url }}",
+        ],
+        'approval.rejected' => [
+            'subject' => '[{{ ticket.key }}] Not approved: {{ approval.subject }}',
+            'body' => "Hello {{ recipient.first_name }},\n\n{{ approval.subject }} was not approved, so {{ ticket.key }} will not go ahead.\n\n{{ ticket.portal_url }}",
+        ],
     ],
 
 ];

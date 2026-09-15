@@ -28,6 +28,7 @@ class StoreUserRequest extends FormRequest
             'password' => ['required', 'string', 'confirmed', Password::defaults()],
             'locale' => ['nullable', Rule::in(array_keys(config('ticktz.locales')))],
             'organization_id' => ['nullable', 'integer', Rule::exists('organizations', 'id')],
+            'manager_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'job_title' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'is_active' => ['boolean'],

@@ -38,6 +38,15 @@ class UpdateUserRequest extends FormRequest
             'password' => ['nullable', 'string', 'confirmed', Password::defaults()],
             'locale' => ['nullable', Rule::in(array_keys(config('ticktz.locales')))],
             'organization_id' => ['nullable', 'integer', Rule::exists('organizations', 'id')],
+            // Nobody is their own manager. The approval step would drop them
+            // anyway — an approver who is also the requester is filtered out —
+            // but the step would then resolve to nobody and the approval would
+            // quietly not happen, which is a worse way to find out.
+            'manager_id' => [
+                'nullable', 'integer',
+                Rule::exists('users', 'id'),
+                Rule::notIn([$this->route('user')?->getKey()]),
+            ],
             'job_title' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'signature' => ['nullable', 'string', 'max:2000'],

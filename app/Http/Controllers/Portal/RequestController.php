@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Models\ApprovalRequest;
 use App\Models\Comment;
 use App\Models\Ticket;
 use App\Models\TicketStatus;
@@ -76,7 +77,10 @@ class RequestController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $ticket->load(['status', 'priority', 'requestType', 'assignee', 'customFieldValues.field']);
+        $ticket->load([
+            'status', 'priority', 'requestType', 'assignee', 'customFieldValues.field',
+            'approvals.decisions.approver',
+        ]);
 
         // Only public comments are ever loaded here. The portal has no concept
         // of an internal note.
@@ -118,6 +122,14 @@ class RequestController extends Controller
                     ->all(),
             ],
             'comments' => $comments,
+            // A requester waiting on somebody's signature should be able to
+            // see that, and see who it is waiting on — "nothing has happened"
+            // and "your manager has not answered yet" are very different
+            // messages, and only one of them leads to a chase-up e-mail to the
+            // service desk.
+            'approvals' => $ticket->approvals
+                ->map(fn (ApprovalRequest $approval) => $approval->toDetailArray())
+                ->all(),
             'canComment' => $user->can('comment', $ticket),
         ]);
     }

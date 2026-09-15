@@ -7,6 +7,9 @@ namespace App\Http\Controllers\Agent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tickets\StoreTicketRequest;
 use App\Http\Requests\Tickets\UpdateTicketRequest;
+use App\Models\ApprovalDecision;
+use App\Models\ApprovalRequest;
+use App\Models\ApprovalWorkflow;
 use App\Models\AuditLogEntry;
 use App\Models\Comment;
 use App\Models\KbArticle;
@@ -164,6 +167,7 @@ class TicketController extends Controller
             'links.relatedTicket.status', 'inverseLinks.ticket.status',
             'slaTimers.calendar', 'slaPolicy.calendar',
             'kbArticles.category',
+            'approvals.decisions.approver', 'approvals.workflow', 'approvals.requester',
         ]);
 
         $comments = $ticket->comments()
@@ -186,6 +190,7 @@ class TicketController extends Controller
                 'link' => $user->can('link', $ticket),
                 'delete' => $user->can('delete', $ticket),
                 'kb' => $user->can('kb.view'),
+                'approve' => $user->can('create', ApprovalRequest::class),
             ],
             // Filtered through the reader's own scope rather than taken as
             // linked: an article that has since been made internal must stop
@@ -197,6 +202,22 @@ class TicketController extends Controller
                 ->map(fn (KbArticle $article) => $article->toSummaryArray())
                 ->values()
                 ->all(),
+            'approvals' => $ticket->approvals
+                ->map(fn (ApprovalRequest $approval) => $approval->toDetailArray() + [
+                    // The row this reader may answer, if any. Worked out here
+                    // rather than in the browser so the page never has to
+                    // decide who is allowed to press a button.
+                    'my_decision_id' => $approval->decisions
+                        ->where('approver_id', $user->getKey())
+                        ->where('position', $approval->current_position)
+                        ->firstWhere('decision', ApprovalDecision::PENDING)?->getKey(),
+                    'can_cancel' => $user->can('cancel', $approval),
+                ])
+                ->all(),
+            'approvalWorkflows' => $user->can('create', ApprovalRequest::class)
+                ? ApprovalWorkflow::query()->where('is_active', true)->orderBy('name')
+                    ->get()->map(fn (ApprovalWorkflow $workflow) => $workflow->toSummaryArray())->all()
+                : [],
             'isWatching' => $ticket->watchers->contains('id', $user->getKey()),
         ]);
     }

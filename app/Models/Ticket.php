@@ -182,6 +182,31 @@ class Ticket extends Model
             ->withTimestamps();
     }
 
+    /** @return HasMany<ApprovalRequest, $this> */
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(ApprovalRequest::class)->latest('id');
+    }
+
+    /**
+     * The approval that decides whether this ticket may move.
+     *
+     * The most recent one, whatever its outcome: re-raising an approval after
+     * a rejection is how a desk gets a second opinion, and the second answer
+     * is the one that counts.
+     */
+    public function currentApproval(): ?ApprovalRequest
+    {
+        return $this->relationLoaded('approvals')
+            ? $this->approvals->first()
+            : $this->approvals()->first();
+    }
+
+    public function awaitsApproval(): bool
+    {
+        return $this->approval_state === ApprovalRequest::PENDING;
+    }
+
     /** @return HasMany<SlaTimer, $this> */
     public function slaTimers(): HasMany
     {
@@ -338,6 +363,7 @@ class Ticket extends Model
             'sla' => $this->primarySlaTimer()?->toDisplayArray(),
             'sla_due_at' => $this->sla_due_at?->toIso8601String(),
             'sla_breached' => (bool) $this->sla_breached,
+            'approval_state' => $this->approval_state,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
             'last_activity_at' => $this->last_activity_at?->toIso8601String(),

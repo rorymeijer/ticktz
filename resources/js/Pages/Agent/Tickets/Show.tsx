@@ -5,12 +5,14 @@ import AppLayout from '@/Layouts/AppLayout';
 import { PriorityBadge, StatusBadge } from '@/Components/Tickets/Badges';
 import { ReplyBox } from '@/Components/Tickets/ReplyBox';
 import { Timeline } from '@/Components/Tickets/Timeline';
+import { ApprovalPanel } from '@/Components/Tickets/ApprovalPanel';
 import { KbPanel } from '@/Components/Tickets/KbPanel';
 import { SlaPanel } from '@/Components/Tickets/SlaPanel';
 import { TicketSidebar } from '@/Components/Tickets/TicketSidebar';
 import { Avatar, Badge, Button, Card, CardBody, CardHeader, Modal, Textarea } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import { formatDateTime } from '@/lib/datetime';
+import type { Approval, ApprovalWorkflowSummary } from '@/types/approvals';
 import type { KbArticleSummary } from '@/types/kb';
 import type { TicketDetail, TicketOptions, TimelineItem, TransitionOption } from '@/types/tickets';
 
@@ -22,6 +24,8 @@ export default function TicketShow({
     can,
     isWatching,
     kbArticles,
+    approvals,
+    approvalWorkflows,
 }: {
     ticket: TicketDetail;
     timeline: TimelineItem[];
@@ -30,6 +34,8 @@ export default function TicketShow({
     can: Record<string, boolean>;
     isWatching: boolean;
     kbArticles: KbArticleSummary[];
+    approvals: Approval[];
+    approvalWorkflows: ApprovalWorkflowSummary[];
 }) {
     const { t, locale } = useTranslations();
     const [pendingTransition, setPendingTransition] = useState<TransitionOption | null>(null);
@@ -128,6 +134,18 @@ export default function TicketShow({
 
                 <div className="space-y-4">
                     <SlaPanel ticket={ticket} />
+                    {/* Above the properties: when a ticket is held by an
+                        approval, that is the first thing an agent needs to
+                        know about it. */}
+                    {approvals.length > 0 || can.approve ? (
+                        <ApprovalPanel
+                            ticketKey={ticket.key}
+                            approvals={approvals}
+                            workflows={approvalWorkflows}
+                            assignees={options.assignees ?? []}
+                            canRequest={can.approve && can.update}
+                        />
+                    ) : null}
                     <TicketSidebar ticket={ticket} options={options} can={can} isWatching={isWatching} />
                     {can.kb ? <KbPanel ticketKey={ticket.key} articles={kbArticles} canLink={can.update} /> : null}
                 </div>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Agent\KbController;
 use App\Http\Controllers\Agent\QueueController;
 use App\Http\Controllers\Agent\TicketActionController;
+use App\Http\Controllers\Agent\TicketApprovalController;
 use App\Http\Controllers\Agent\TicketCommentController;
 use App\Http\Controllers\Agent\TicketController;
 use Illuminate\Support\Facades\Route;
@@ -53,6 +54,8 @@ Route::prefix('agent')->name('agent.')->middleware('can:tickets.view')->group(fu
     Route::delete('tickets/{ticket}/watch', [TicketActionController::class, 'unwatch'])->name('tickets.unwatch');
     Route::post('tickets/{ticket}/watchers', [TicketActionController::class, 'addWatcher'])->name('tickets.watchers.store');
     Route::delete('tickets/{ticket}/watchers/{user}', [TicketActionController::class, 'removeWatcher'])->name('tickets.watchers.destroy');
+
+    Route::post('tickets/{ticket}/approvals', [TicketApprovalController::class, 'store'])->name('tickets.approvals.store');
 
     Route::post('tickets/{ticket}/links', [TicketActionController::class, 'link'])->name('tickets.links.store');
     Route::delete('tickets/{ticket}/links/{link}', [TicketActionController::class, 'unlink'])->name('tickets.links.destroy');

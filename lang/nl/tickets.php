@@ -169,6 +169,7 @@ return [
 
     'errors' => [
         'illegal_transition' => 'De workflow staat de stap van :from naar :to niet toe.',
+        'approval_required' => 'Voor deze stap is eerst goedkeuring nodig, en die is er niet.',
         'comment_required' => 'Deze statuswijziging vereist een toelichting.',
         'assignee_required' => 'Wijs het ticket toe voordat je naar deze status gaat.',
         'assignee_not_agent' => 'Alleen agents kunnen tickets toegewezen krijgen.',

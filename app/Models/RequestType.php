@@ -29,7 +29,7 @@ class RequestType extends Model
     protected $fillable = [
         'portal_category_id', 'name', 'name_translations', 'slug', 'description',
         'description_translations', 'instructions', 'instructions_translations', 'icon',
-        'queue_id', 'team_id', 'workflow_id', 'priority_id', 'allow_priority_choice',
+        'queue_id', 'team_id', 'workflow_id', 'approval_workflow_id', 'priority_id', 'allow_priority_choice',
         'subject_template', 'visibility', 'organization_ids', 'is_active', 'position',
     ];
 
@@ -67,6 +67,16 @@ class RequestType extends Model
         return $this->belongsToMany(CustomField::class, 'request_type_fields')
             ->withPivot(['is_required', 'help_text', 'position'])
             ->orderBy('request_type_fields.position');
+    }
+
+    /**
+     * The approval this request type opens on every ticket filed from it.
+     *
+     * @return BelongsTo<ApprovalWorkflow, $this>
+     */
+    public function approvalWorkflow(): BelongsTo
+    {
+        return $this->belongsTo(ApprovalWorkflow::class, 'approval_workflow_id');
     }
 
     /**

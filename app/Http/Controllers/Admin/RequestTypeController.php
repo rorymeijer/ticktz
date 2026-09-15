@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ApprovalWorkflow;
 use App\Models\CustomField;
 use App\Models\Organization;
 use App\Models\PortalCategory;
@@ -253,6 +254,8 @@ class RequestTypeController extends Controller
             'queues' => Queue::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])->all(),
             'teams' => Team::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])->all(),
             'workflows' => Workflow::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])->all(),
+            'approvalWorkflows' => ApprovalWorkflow::query()->where('is_active', true)->orderBy('name')
+                ->get(['id', 'name'])->all(),
             'priorities' => Priority::query()->orderBy('level')->get()
                 ->map(fn (Priority $priority) => $priority->toSummaryArray())->all(),
             'organizations' => Organization::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])->all(),
@@ -296,6 +299,7 @@ class RequestTypeController extends Controller
             'queue_id' => ['nullable', 'integer', Rule::exists('queues', 'id')],
             'team_id' => ['nullable', 'integer', Rule::exists('teams', 'id')],
             'workflow_id' => ['nullable', 'integer', Rule::exists('workflows', 'id')],
+            'approval_workflow_id' => ['nullable', 'integer', Rule::exists('approval_workflows', 'id')],
             'priority_id' => ['nullable', 'integer', Rule::exists('priorities', 'id')],
             'allow_priority_choice' => ['boolean'],
             'subject_template' => ['nullable', 'string', 'max:255'],

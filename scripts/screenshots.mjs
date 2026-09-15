@@ -28,6 +28,8 @@ const ACCOUNTS = {
     admin: { email: 'rianne@ticktz.test', password: 'ticktz-demo' },
     agent: { email: 'joost@ticktz.test', password: 'ticktz-demo' },
     requester: { email: 'm.visser@zandvliet.test', password: 'ticktz-demo' },
+    // The requester whose ticket is sitting in an approval.
+    'requester-handhaving': { email: 's.mulder@zandvliet.test', password: 'ticktz-demo' },
 };
 
 const SHOTS = [
@@ -76,6 +78,11 @@ const SHOTS = [
     { slug: '54-admin-kb', path: '/admin/kb?lang=en', as: 'admin', fullPage: true },
     { slug: '55-admin-kb-edit', path: '/admin/kb/papierstoring-verhelpen-bij-de-canon-printers/edit?lang=en', as: 'admin', fullPage: true },
     { slug: '56-admin-kb-nl', path: '/admin/kb?lang=nl', as: 'admin' },
+    { slug: '60-approvals-inbox', path: '/approvals?lang=en', as: 'admin' },
+    { slug: '61-admin-approvals', path: '/admin/approvals?lang=en', as: 'admin', fullPage: true },
+    { slug: '62-admin-approvals-nl', path: '/admin/approvals?lang=nl', as: 'admin' },
+    { slug: '63-agent-ticket-approval', path: '/agent/tickets/SUP-6?lang=en', as: 'agent', fullPage: true },
+    { slug: '64-portal-approval', path: '/portal/requests/SUP-6?lang=nl', as: 'requester-handhaving', fullPage: true },
     { slug: '40-mobile-portal', path: '/portal?lang=en', as: 'requester', width: 400, height: 780 },
     { slug: '41-mobile-tickets', path: '/agent/tickets?lang=en', as: 'agent', width: 400, height: 780 },
     { slug: '42-mobile-kb', path: '/portal/kb?lang=en', as: 'requester', width: 400, height: 780 },

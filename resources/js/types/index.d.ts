@@ -48,6 +48,8 @@ export type SharedProps = {
     locales: LocaleOption[];
     translations: Record<string, string>;
     flash: Flash;
+    /** Approvals waiting on the signed-in user, for the nav badge. */
+    approvals_waiting: number;
     ziggy: ZiggyConfig & { location: string };
     errors: Record<string, string>;
 };

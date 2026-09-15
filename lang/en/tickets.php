@@ -169,6 +169,7 @@ return [
 
     'errors' => [
         'illegal_transition' => 'The workflow does not allow moving from :from to :to.',
+        'approval_required' => 'This step needs an approval first, and none has been granted.',
         'comment_required' => 'This status change requires a comment.',
         'assignee_required' => 'Assign the ticket before moving it to this status.',
         'assignee_not_agent' => 'Only agents can be assigned tickets.',

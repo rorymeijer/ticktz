@@ -41,6 +41,26 @@ export function relativeTime(
 }
 
 /**
+ * A deadline, in words: "2d 4h remaining" or "overdue by 3h".
+ *
+ * `relativeTime` cannot do this — it measures how long ago something was, so
+ * every future moment comes back as "just now", which on a due date reads as
+ * "answer it immediately" when the truth is "you have two days".
+ */
+export function deadline(
+    value: string | null | undefined,
+    t: (key: string, replacements?: Record<string, string | number>) => string,
+): string {
+    if (!value) return '—';
+
+    const seconds = (new Date(value).getTime() - Date.now()) / 1000;
+
+    return seconds < 0
+        ? t('common.time.overdue_by', { duration: formatDuration(seconds) })
+        : t('common.time.remaining', { duration: formatDuration(seconds) });
+}
+
+/**
  * Compact duration such as "2d 4h" or "12m". Negative input is rendered
  * without a sign — callers decide how to label an overrun.
  */

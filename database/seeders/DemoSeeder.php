@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Jobs\Sla\SweepSlaTimersJob;
+use App\Models\ApprovalStep;
+use App\Models\ApprovalWorkflow;
 use App\Models\AuditLogEntry;
 use App\Models\AutomationRule;
 use App\Models\CustomField;
@@ -22,6 +24,7 @@ use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\TicketStatus;
 use App\Models\User;
+use App\Services\Approvals\ApprovalService;
 use App\Services\Kb\ArticleService;
 use App\Services\Sla\SlaEngine;
 use App\Services\Sla\SlaEscalator;
@@ -143,11 +146,106 @@ class DemoSeeder extends Seeder
         }
 
         $this->seedLabels();
+        $this->seedApprovals();
         $this->seedPortal();
         $this->seedMailbox($teams['servicedesk']);
         $this->seedAutomation($teams);
         $this->seedTickets();
         $this->seedKnowledgeBase();
+        $this->seedPendingApproval();
+    }
+
+    /**
+     * Two approval workflows and the org chart they read.
+     *
+     * The first is the shape every desk has: the requester's manager signs it
+     * off. The second is sequential — the manager, then the team that owns the
+     * budget — which is the case a single flag cannot express and the reason
+     * steps exist at all.
+     */
+    private function seedApprovals(): void
+    {
+        // The manager step reads `users.manager_id`, so the demo needs an org
+        // chart or the step resolves to nobody and quietly skips itself.
+        $lead = User::query()->where('email', 'rianne@ticktz.test')->first();
+
+        if ($lead) {
+            User::query()
+                ->whereNot('id', $lead->getKey())
+                ->whereNull('manager_id')
+                ->update(['manager_id' => $lead->getKey()]);
+        }
+
+        $managerSignOff = ApprovalWorkflow::query()->updateOrCreate(['slug' => 'manager-sign-off'], [
+            'name' => 'Manager sign-off',
+            'name_translations' => ['nl' => 'Akkoord leidinggevende', 'en' => 'Manager sign-off'],
+            'description' => 'The requester’s own manager agrees before the desk starts work.',
+            'instructions' => 'Your colleague has asked for access. Approve it if the rights fit their role.',
+            'is_active' => true,
+        ]);
+
+        $this->replaceSteps($managerSignOff, [
+            ['mode' => ApprovalStep::ANY, 'approver_type' => 'manager', 'due_hours' => 48],
+        ]);
+
+        $budget = ApprovalWorkflow::query()->updateOrCreate(['slug' => 'manager-and-infrastructure'], [
+            'name' => 'Manager, then Infrastructure',
+            'name_translations' => ['nl' => 'Leidinggevende, dan Infrastructuur', 'en' => 'Manager, then Infrastructure'],
+            'description' => 'Two steps, in order: the manager agrees, then the team that pays for it.',
+            'instructions' => 'A workplace has been requested. Check the start date and the budget line.',
+            'is_active' => true,
+        ]);
+
+        $infrastructure = Team::query()->where('slug', 'infrastructure')->first();
+
+        $this->replaceSteps($budget, [
+            ['name' => 'Leidinggevende', 'mode' => ApprovalStep::ANY, 'approver_type' => 'manager', 'due_hours' => 48],
+            [
+                'name' => 'Infrastructuur',
+                'mode' => ApprovalStep::ANY,
+                'approver_type' => 'team',
+                'approver_ids' => $infrastructure ? [$infrastructure->getKey()] : [],
+                'due_hours' => 72,
+            ],
+        ]);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $steps
+     */
+    private function replaceSteps(ApprovalWorkflow $workflow, array $steps): void
+    {
+        $workflow->steps()->delete();
+
+        foreach ($steps as $position => $step) {
+            $workflow->steps()->create($step + ['position' => $position]);
+        }
+
+        $workflow->unsetRelation('steps');
+    }
+
+    /**
+     * One ticket sitting in an approval, so a fresh demo shows the feature
+     * doing its job rather than an empty inbox.
+     */
+    private function seedPendingApproval(): void
+    {
+        $ticket = Ticket::query()->where('subject', 'Verzoek: extra mailbox voor team Handhaving')->first();
+
+        if ($ticket === null || $ticket->approvals()->exists()) {
+            return;
+        }
+
+        $workflow = ApprovalWorkflow::query()->where('slug', 'manager-sign-off')->first();
+
+        if ($workflow === null) {
+            return;
+        }
+
+        app(ApprovalService::class)->open($ticket, $workflow, [
+            'subject' => 'Extra mailbox voor team Handhaving',
+            'reason' => 'Een gedeelde mailbox kost een licentie. Graag akkoord van de leidinggevende.',
+        ], $ticket->requester);
     }
 
     /**
@@ -597,6 +695,7 @@ class DemoSeeder extends Seeder
                 'priority' => 'normal',
                 'subject_template' => 'New colleague: :employee_name (:department)',
                 'fields' => ['employee_name', 'start_date', 'department', 'equipment'],
+                'approval' => 'manager-and-infrastructure',
                 'position' => 10,
             ],
             [
@@ -639,11 +738,13 @@ class DemoSeeder extends Seeder
                 'priority' => 'normal',
                 'subject_template' => 'Access request: :system_name',
                 'fields' => ['system_name', 'department'],
+                'approval' => 'manager-sign-off',
                 'position' => 40,
             ],
         ];
 
         $allFields = CustomField::query()->get()->keyBy('key');
+        $approvals = ApprovalWorkflow::query()->get()->keyBy('slug');
 
         foreach ($requestTypes as $definition) {
             $type = RequestType::query()->updateOrCreate(['slug' => $definition['slug']], [
@@ -658,6 +759,9 @@ class DemoSeeder extends Seeder
                 'priority_id' => isset($definition['priority']) ? $priorities[$definition['priority']]->getKey() : null,
                 'allow_priority_choice' => $definition['allow_priority_choice'] ?? false,
                 'subject_template' => $definition['subject_template'] ?? null,
+                'approval_workflow_id' => isset($definition['approval'])
+                    ? $approvals[$definition['approval']]->getKey()
+                    : null,
                 'visibility' => 'everyone',
                 'is_active' => true,
                 'position' => $definition['position'],

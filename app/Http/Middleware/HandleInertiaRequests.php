@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\ApprovalDecision;
+use App\Models\ApprovalRequest;
 use App\Support\UiTranslations;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -63,6 +65,21 @@ class HandleInertiaRequests extends Middleware
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
+
+            // How many approvals are waiting on this person, so the nav can
+            // show a count and the portal can hide the link entirely from the
+            // majority who are never asked to approve anything. A closure, so
+            // Inertia only resolves it for full page loads — and an indexed
+            // count on (approver_id, decision), not a join.
+            'approvals_waiting' => fn () => $request->user()
+                ? ApprovalDecision::query()
+                    ->where('approver_id', $request->user()->getKey())
+                    ->where('decision', ApprovalDecision::PENDING)
+                    ->whereHas('request', fn ($approval) => $approval
+                        ->where('status', ApprovalRequest::PENDING)
+                        ->whereColumn('approval_requests.current_position', 'approval_decisions.position'))
+                    ->count()
+                : 0,
 
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

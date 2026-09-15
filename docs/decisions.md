@@ -352,3 +352,126 @@ An article does not become newer because somebody read it. Without this, the
 admin list sorted by "recently updated" would reorder itself by whoever
 happened to click what, and "Updated just now" would appear under an article
 nobody has touched in a year.
+
+## D27 — One approval mechanism, not three
+
+The brief asks for single, parallel and sequential approval. Building those as
+three code paths would mean three sets of settling rules, three sets of bugs,
+and an admin screen that asks the operator to pick a shape before it can ask
+them anything useful.
+
+They are one thing. A workflow is an ordered list of **steps**; the approvers
+inside a step are asked at the same time and its `mode` says whether one of
+them is enough or all of them are; more than one step makes it sequential,
+because step two does not open until step one is settled. Single approval is
+one step, one person, `any`.
+
+The label the admin screen prints is *derived* from the steps rather than
+stored alongside them. A workflow whose label and steps could disagree is a
+workflow whose label is a lie, and it would disagree the first time somebody
+added a second step.
+
+## D28 — Approvers are resolved once, when the step opens
+
+The names go into `approval_decisions` at that moment, and everything
+afterwards reads those rows rather than re-running the query.
+
+A team gaining a member tomorrow must not quietly change who was asked today.
+An `all` step must not grow a new blocker halfway through. And a decision row
+that exists from the moment somebody is asked is what makes "who was asked,
+and when" answerable for the approvals nobody ever answers — the half of the
+audit trail a decisions-only table loses.
+
+The cost is that fixing a wrongly-configured step means cancelling the run and
+starting again. That is the right way round: an approval that silently changed
+its mind about who it was asking would be worth nothing as evidence.
+
+Three people are always dropped — anybody inactive, anybody without an e-mail
+address, and the requester themselves, because approving your own request is
+not an approval. When that empties a step it is skipped and the skip is
+recorded; when it empties the whole approval nothing is opened and the caller
+is told, because a ticket held forever by an approval addressed to nobody is
+worse than one that was never held.
+
+## D29 — The gate is in the service, and it fails closed
+
+`requires_approval` is checked in `TicketService::transition()`, not in a
+controller. An agent's click, an automation rule and a reply arriving by
+e-mail all go through that method, and a gate the API can walk around is not a
+gate.
+
+It fails closed: a ticket with **no** approval at all has not been approved, so
+a gated transition refuses it. The alternative reading — only block when an
+approval exists and is pending — is the one that feels friendlier and is
+useless, because any ticket that reached the workflow by another route (an
+e-mail, an agent filing it by hand) would walk straight past the control. The
+way forward for such a ticket is to raise an approval on it, which the panel on
+the ticket page does in two clicks.
+
+`tickets.approval_state` caches the newest run's status so a ticket list does
+not become a subquery per row — the same bargain `sla_breached` makes. It is
+written *before* `ApprovalCompleted` is dispatched, because a rule listening for
+"approved" will try to transition the ticket, and the gate it runs into reads
+that column. A listener catching up afterwards would be a race the desk would
+experience as "sometimes the rule works".
+
+## D30 — Answering is not a permission, and a super-admin cannot do it either
+
+`approvals.decide` says somebody may take part in approvals at all. The only
+person who may answer a given decision is the person that decision names,
+while it is still open — enforced on `ApprovalDecision` by its own policy,
+which ignores every permission in the system.
+
+Including super-admin. `Gate::before` short-circuits every other check in
+Ticktz and is made to stand down for this one. An approval an administrator
+could have given on somebody's behalf is worth nothing as evidence, and the
+audit entry recording it would be a record of a permission rather than of a
+decision. "The budget holder approved this" has to mean the budget holder.
+
+There is a legitimate need to unstick an approval whose named approver has
+left or was never the right person. That is a cancel and a new run, which is
+recorded as exactly that rather than as somebody's approval.
+
+## D31 — The e-mail link opens a page; the page decides
+
+An approver answering from their inbox is the difference between an approval
+that takes an hour and one that takes a week. It is also the only
+unauthenticated route in Ticktz that changes anything.
+
+So the link is a `GET` that renders a page and decides nothing; the buttons on
+that page `POST`. A link that decided on GET would be answered by the first
+mail scanner, corporate link-rewriter or browser prefetcher that touched the
+message — silently, and indistinguishable from a real approval. That is the
+worst failure this feature could have, and it is the default behaviour if you
+put the decision in the URL.
+
+The token is a bearer credential and is treated as one: 48 random characters,
+stored only as a SHA-256 hash (indexed equality lookup, exactly like a password
+reset), cleared the moment the decision lands so a forwarded mail cannot be
+replayed, and expiring. It is minted **inside the mail job** rather than at the
+call site, because minting it earlier would put a working credential into a
+queue payload, where it sits in Redis in the clear and is written to
+`failed_jobs` if delivery goes wrong.
+
+A dead link gets one page for "expired", "already answered" and "never
+existed": which of the three it was is information about somebody else's
+approval, and the holder of a dead link cannot act on any of them anyway.
+
+`TICKTZ_APPROVAL_EMAIL_LINKS=false` turns the whole thing off — no link, no
+token minted at all — for a desk approving things where signing in first is the
+right trade.
+
+## D32 — A deadline reports; it never decides
+
+A step can carry `due_hours`, and passing it marks the approval overdue,
+chases the people who have not answered, and nothing else.
+
+Auto-approving on expiry would make every approval in the system a statement
+about how long somebody waited rather than about what they agreed to — and the
+ones that mattered most would be exactly the ones nobody read. Auto-rejecting
+would refuse things nobody refused. Both turn an audit trail into noise.
+
+So overdue approvals are reported and left open. The reminder cadence is read
+from `notified_at` on each decision row rather than from a "last reminded"
+column on the run, so a reminder that failed to send is retried on the next
+sweep instead of being skipped forever.

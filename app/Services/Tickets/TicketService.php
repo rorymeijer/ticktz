@@ -9,6 +9,7 @@ use App\Events\Tickets\TicketCommented;
 use App\Events\Tickets\TicketCreated;
 use App\Events\Tickets\TicketTransitioned;
 use App\Events\Tickets\TicketUpdated;
+use App\Models\ApprovalRequest;
 use App\Models\Comment;
 use App\Models\Priority;
 use App\Models\Ticket;
@@ -223,11 +224,22 @@ class TicketService
 
         $allowed = $ticket->workflow
             ->transitionsFrom($from)
-            ->contains(fn ($transition) => $transition->to_status_id === $target->getKey());
+            ->first(fn ($transition) => $transition->to_status_id === $target->getKey());
 
-        if (! $allowed) {
+        if ($allowed === null) {
             throw new RuntimeException(__('tickets.errors.illegal_transition', [
                 'from' => $from->name,
+                'to' => $target->name,
+            ]));
+        }
+
+        // The approval gate. Enforced here rather than in the controller so an
+        // automation rule, an inbound e-mail and an agent's click all meet the
+        // same wall — a gate the API can walk around is not a gate. The state
+        // is a cached column on the ticket, maintained by ApprovalService, so
+        // this costs nothing on a transition that is not gated.
+        if ($allowed->requires_approval && $ticket->approval_state !== ApprovalRequest::APPROVED) {
+            throw new RuntimeException(__('tickets.errors.approval_required', [
                 'to' => $target->name,
             ]));
         }

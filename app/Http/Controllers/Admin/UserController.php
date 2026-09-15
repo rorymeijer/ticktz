@@ -87,6 +87,7 @@ class UserController extends Controller
             'password' => $data['password'],
             'locale' => $data['locale'] ?? config('app.locale'),
             'organization_id' => $data['organization_id'] ?? null,
+            'manager_id' => $data['manager_id'] ?? null,
             'job_title' => $data['job_title'] ?? null,
             'phone' => $data['phone'] ?? null,
             'is_active' => $data['is_active'] ?? true,
@@ -116,6 +117,7 @@ class UserController extends Controller
                 'username' => $user->username,
                 'locale' => $user->locale,
                 'organization_id' => $user->organization_id,
+                'manager_id' => $user->manager_id,
                 'job_title' => $user->job_title,
                 'phone' => $user->phone,
                 'signature' => $user->signature,
@@ -213,6 +215,10 @@ class UserController extends Controller
             'roles' => Role::query()->orderBy('position')->get(['id', 'name', 'display_name', 'description', 'scope']),
             'teams' => Team::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'organizations' => Organization::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            // Candidate managers, for approval steps that ask for "the
+            // requester's manager". Agents only: somebody who cannot sign in
+            // to answer an approval is not a useful answer to that question.
+            'managers' => User::query()->active()->agents()->orderBy('name')->get(['id', 'name', 'email']),
             'canAssignRoles' => request()->user()->hasPermission('roles.manage'),
         ];
     }

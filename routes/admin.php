@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Admin\ApprovalWorkflowController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\AutomationRuleController;
 use App\Http\Controllers\Admin\CustomFieldController;
@@ -61,6 +62,11 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
     // Articles resolve by id in the admin area: an editor renaming an article
     // must not break the URL of the page they are renaming it on.
+    Route::get('approvals', [ApprovalWorkflowController::class, 'index'])->name('approvals.index');
+    Route::post('approvals', [ApprovalWorkflowController::class, 'store'])->name('approvals.store');
+    Route::put('approvals/{workflow}', [ApprovalWorkflowController::class, 'update'])->name('approvals.update');
+    Route::delete('approvals/{workflow}', [ApprovalWorkflowController::class, 'destroy'])->name('approvals.destroy');
+
     Route::get('kb', [KbArticleController::class, 'index'])->name('kb.index');
     Route::post('kb', [KbArticleController::class, 'store'])->name('kb.store');
     Route::get('kb/{article}/edit', [KbArticleController::class, 'edit'])->name('kb.edit');

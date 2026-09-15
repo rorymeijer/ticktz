@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Approvals\ApprovalController;
+use App\Http\Controllers\Approvals\ApprovalTokenController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\System\HealthController;
@@ -40,7 +42,36 @@ Route::get('/', function () {
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| Deciding an approval from an e-mail
+|--------------------------------------------------------------------------
+|
+| The only unauthenticated route in Ticktz that changes anything, so: the link
+| in the mail is a GET that decides nothing and only renders the page, the
+| decision is a POST from that page, and the whole thing is throttled. See
+| ApprovalTokenController for why each of those matters.
+|
+*/
+
+Route::middleware('throttle:portal')->group(function (): void {
+    Route::get('/approvals/decide/{token}', [ApprovalTokenController::class, 'show'])
+        ->name('approvals.token.show');
+    Route::post('/approvals/decide/{token}', [ApprovalTokenController::class, 'decide'])
+        ->name('approvals.token.decide');
+    Route::get('/approvals/decided/{outcome}', [ApprovalTokenController::class, 'done'])
+        ->name('approvals.token.done');
+});
+
 Route::middleware('auth')->group(function (): void {
+    // Mounted here rather than under /agent or /portal: an approver is very
+    // often a budget holder who is not an agent, and one inbox serves both.
+    Route::get('/approvals', [ApprovalController::class, 'index'])->name('approvals.index');
+    Route::post('/approvals/decisions/{decision}', [ApprovalController::class, 'decide'])
+        ->name('approvals.decide');
+    Route::post('/approvals/{approval}/cancel', [ApprovalController::class, 'cancel'])
+        ->name('approvals.cancel');
+
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');

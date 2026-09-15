@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react';
 
-import { IconBook, IconCog, IconDashboard, IconInbox, IconTicket } from '@/Components/Icons';
+import { IconBook, IconCheckCircle, IconCog, IconDashboard, IconInbox, IconTicket } from '@/Components/Icons';
 import type { User } from '@/types';
 
 export interface NavItem {
@@ -37,6 +37,17 @@ export function agentNavigation(user: User | null, t: Translator): NavItem[] {
             { key: 'queues', label: t('nav.queues'), href: '/agent/queues', icon: IconInbox, match: ['/agent/queues'] },
         );
     }
+
+    // Every agent gets the approvals inbox, permission or not: being asked to
+    // approve something is not a permission, and an agent who was asked needs
+    // somewhere to answer it.
+    items.push({
+        key: 'approvals',
+        label: t('nav.approvals'),
+        href: '/approvals',
+        icon: IconCheckCircle,
+        match: ['/approvals'],
+    });
 
     if (can('kb.view')) {
         items.push({ key: 'kb', label: t('nav.kb'), href: '/agent/kb', icon: IconBook, match: ['/agent/kb'] });

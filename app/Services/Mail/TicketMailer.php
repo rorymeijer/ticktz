@@ -29,6 +29,10 @@ class TicketMailer
 {
     /**
      * Send one notification to one person.
+     *
+     * @param  array<string, string>  $extra  additional placeholders for this
+     *                                        notification — an approval's
+     *                                        subject and decision links, say
      */
     public function send(
         string $templateKey,
@@ -36,6 +40,7 @@ class TicketMailer
         User $recipient,
         ?Comment $comment = null,
         ?EmailChannel $channel = null,
+        array $extra = [],
     ): void {
         if (blank($recipient->email) || ! $recipient->is_active) {
             return;
@@ -44,7 +49,7 @@ class TicketMailer
         $channel ??= $this->channelFor($ticket);
         $locale = $recipient->locale ?: (string) config('app.locale');
 
-        [$subject, $body] = $this->render($templateKey, $ticket, $recipient, $comment, $channel, $locale);
+        [$subject, $body] = $this->render($templateKey, $ticket, $recipient, $comment, $channel, $locale, $extra);
 
         $mailable = new TicketNotification(
             ticket: $ticket,
@@ -93,6 +98,7 @@ class TicketMailer
      * Resolve the template (configured override, else the packaged default)
      * and fill in its placeholders.
      *
+     * @param  array<string, string>  $extra
      * @return array{0: string, 1: string}
      */
     public function render(
@@ -102,7 +108,9 @@ class TicketMailer
         ?Comment $comment,
         ?EmailChannel $channel,
         string $locale,
+        array $extra = [],
     ): array {
+        /** @var array<string, string> $extra */
         $template = EmailTemplate::resolve($templateKey, $channel, $locale);
 
         $packaged = $this->packagedTemplate($templateKey, $locale);
@@ -110,7 +118,9 @@ class TicketMailer
         $subject = $template?->subject ?? $packaged['subject'];
         $body = $template?->body ?? $packaged['body'];
 
-        $values = $this->placeholders($ticket, $recipient, $comment, $locale);
+        // Feature placeholders win over the ticket ones: a notification that
+        // has an `approval.subject` means that one, not the ticket's.
+        $values = array_merge($this->placeholders($ticket, $recipient, $comment, $locale), $extra);
 
         return [
             EmailTemplate::render($subject, $values),

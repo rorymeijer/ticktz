@@ -2,11 +2,14 @@ import { Link, useForm } from '@inertiajs/react';
 import { useRef, type FormEventHandler } from 'react';
 
 import PortalLayout from '@/Layouts/PortalLayout';
+import { ApprovalBadge } from '@/Components/Approvals/ApprovalBadge';
+import { ApprovalSteps } from '@/Components/Approvals/ApprovalSteps';
 import { AttachmentList } from '@/Components/Tickets/Timeline';
 import { StatusBadge } from '@/Components/Tickets/Badges';
 import { IconPaperclip, IconX } from '@/Components/Icons';
 import { Avatar, Button, Card, CardBody, CardHeader, Textarea } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
+import type { Approval } from '@/types/approvals';
 import { cn } from '@/lib/cn';
 import { formatDate, formatDateTime } from '@/lib/datetime';
 import type { AttachmentSummary, StatusSummary, UserSummary } from '@/types/tickets';
@@ -37,10 +40,12 @@ interface PortalRequest {
 export default function PortalRequestShow({
     request,
     comments,
+    approvals,
     canComment,
 }: {
     request: PortalRequest;
     comments: PortalComment[];
+    approvals: Approval[];
     canComment: boolean;
 }) {
     const { t, locale } = useTranslations();
@@ -102,6 +107,36 @@ export default function PortalRequestShow({
                         <Card>
                             <CardBody>
                                 <AttachmentList files={request.attachments} />
+                            </CardBody>
+                        </Card>
+                    ) : null}
+
+                    {/* A requester waiting on a signature should be able to see
+                        that, and see whose. "Nothing has happened" and "your
+                        manager has not answered yet" are very different
+                        messages, and only one of them produces a chase-up
+                        e-mail to the service desk. */}
+                    {approvals.length > 0 ? (
+                        <Card>
+                            <CardHeader title={t('approvals.portal.title')} />
+                            <CardBody className="space-y-3">
+                                {approvals.slice(0, 1).map((approval) => (
+                                    <div key={approval.id} className="space-y-3">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <ApprovalBadge status={approval.status} />
+                                            <span className="text-sm text-slate-600">
+                                                {t(
+                                                    approval.status === 'approved'
+                                                        ? 'approvals.portal.approved'
+                                                        : approval.status === 'rejected'
+                                                          ? 'approvals.portal.rejected'
+                                                          : 'approvals.portal.pending',
+                                                )}
+                                            </span>
+                                        </div>
+                                        <ApprovalSteps steps={approval.steps} />
+                                    </div>
+                                ))}
                             </CardBody>
                         </Card>
                     ) : null}

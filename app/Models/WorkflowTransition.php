@@ -25,7 +25,7 @@ class WorkflowTransition extends Model
 
     protected $fillable = [
         'workflow_id', 'from_status_id', 'to_status_id', 'name',
-        'requires_comment', 'requires_assignee', 'required_permission', 'position',
+        'requires_comment', 'requires_assignee', 'requires_approval', 'required_permission', 'position',
     ];
 
     protected function casts(): array
@@ -33,6 +33,7 @@ class WorkflowTransition extends Model
         return [
             'requires_comment' => 'boolean',
             'requires_assignee' => 'boolean',
+            'requires_approval' => 'boolean',
             'position' => 'integer',
         ];
     }
@@ -78,6 +79,7 @@ class WorkflowTransition extends Model
             'to_status' => $this->toStatus?->toSummaryArray(),
             'requires_comment' => $this->requires_comment,
             'requires_assignee' => $this->requires_assignee,
+            'requires_approval' => $this->requires_approval,
         ];
     }
 }

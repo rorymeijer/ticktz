@@ -89,6 +89,13 @@ export default function AdminLayout({
             section: 'service_desk',
         },
         {
+            key: 'approvals',
+            href: '/admin/approvals',
+            label: t('admin.nav.approvals'),
+            permission: 'approvals.manage',
+            section: 'service_desk',
+        },
+        {
             key: 'kb',
             href: '/admin/kb',
             label: t('admin.nav.kb'),
