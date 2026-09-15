@@ -26,6 +26,9 @@ use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\TicketStatus;
 use App\Models\User;
+use App\Models\WebhookDelivery;
+use App\Models\WebhookSubscription;
+use App\Services\Api\WebhookPayload;
 use App\Services\Approvals\ApprovalService;
 use App\Services\Assets\AssetService;
 use App\Services\Kb\ArticleService;
@@ -160,7 +163,80 @@ class DemoSeeder extends Seeder
         $this->seedKnowledgeBase();
         $this->seedPendingApproval();
         $this->linkAssetsToTickets();
+        $this->seedIntegrations();
         $this->buildReportMetrics();
+    }
+
+    /**
+     * A webhook subscription and its delivery log.
+     *
+     * Deliberately not a live endpoint: the demo must not make outbound
+     * requests to somebody else's server, and `example.com` is reserved by the
+     * IETF precisely so a placeholder cannot accidentally resolve to a real
+     * one. The rows are written directly, so the admin screen shows what a
+     * working integration and a failing one look like without anything being
+     * sent anywhere.
+     *
+     * No API token is seeded. A demo instance that ships with a working
+     * credential in the database is a demo instance that gets deployed, and
+     * then that credential is a production key everybody knows. Minting one
+     * through the UI is two clicks and is itself part of the walkthrough.
+     */
+    private function seedIntegrations(): void
+    {
+        $admin = User::query()->where('email', self::STAFF[0]['email'])->first();
+
+        $subscription = WebhookSubscription::query()->updateOrCreate(
+            ['name' => 'Monitoring platform'],
+            [
+                'description' => 'Forwards new tickets and SLA breaches to the NOC dashboard.',
+                'url' => 'https://example.com/ticktz/events',
+                'events' => ['ticket.created', 'ticket.transitioned', 'sla.breached'],
+                'secret' => Str::random(48),
+                'is_active' => true,
+                'created_by' => $admin?->getKey(),
+                'last_delivered_at' => now()->subMinutes(12),
+                'consecutive_failures' => 0,
+            ],
+        );
+
+        // A second endpoint that has been failing, because the delivery log is
+        // the reason anyone opens that screen and an empty one demonstrates
+        // nothing.
+        $failing = WebhookSubscription::query()->updateOrCreate(
+            ['name' => 'Legacy CMDB bridge'],
+            [
+                'description' => 'Retired internal service — kept to show a failing endpoint.',
+                'url' => 'https://example.com/legacy/hook',
+                'events' => ['ticket.created'],
+                'secret' => Str::random(48),
+                'is_active' => true,
+                'created_by' => $admin?->getKey(),
+                'last_failed_at' => now()->subHours(3),
+                'consecutive_failures' => 4,
+            ],
+        );
+
+        $tickets = Ticket::query()->with(['status', 'priority', 'requester'])->latest('id')->limit(6)->get();
+
+        foreach ($tickets as $index => $ticket) {
+            $failed = $index % 4 === 3;
+
+            WebhookDelivery::query()->create([
+                'webhook_subscription_id' => ($failed ? $failing : $subscription)->getKey(),
+                'event' => 'ticket.created',
+                'payload' => WebhookPayload::created($ticket, $ticket->requester),
+                'status' => $failed ? WebhookDelivery::STATUS_FAILED : WebhookDelivery::STATUS_DELIVERED,
+                'attempts' => $failed ? 4 : 1,
+                'response_status' => $failed ? 502 : 200,
+                'response_body' => $failed ? '<html><head><title>502 Bad Gateway</title></head>' : '{"ok":true}',
+                'error' => $failed ? __('api.webhooks.http_error', ['status' => 502]) : null,
+                'duration_ms' => $failed ? 15_002 : random_int(60, 340),
+                'delivered_at' => $failed ? null : now()->subMinutes(12 + $index * 7),
+                'created_at' => now()->subMinutes(12 + $index * 7),
+                'updated_at' => now()->subMinutes(12 + $index * 7),
+            ]);
+        }
     }
 
     /**

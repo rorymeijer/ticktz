@@ -23,6 +23,7 @@ return [
     ],
 
     'fields' => [
+        'slug' => 'Slug',
         'status' => 'Status',
         'status_category' => 'Status category',
         'priority' => 'Priority',

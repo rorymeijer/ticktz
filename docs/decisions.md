@@ -679,3 +679,140 @@ What the charts do follow is a set of rules that are not aesthetic:
   one tick per unit instead.
 - **One number is a stat tile.** Compliance, clearance and the averages are
   figures, not plots; only what varies over time is drawn.
+
+## D43 — A token is the intersection of its scopes and its owner's permissions
+
+Every API scope names the permissions its holder must already have, and the
+middleware requires both: the scope was issued *and* the owner still holds
+something behind it.
+
+The alternative — a token that simply carries its own abilities — makes a token
+a snapshot of yesterday's access that keeps working after the account it
+belongs to has been demoted. Checking both means a token can never be an
+escalation (ask for every scope in the catalogue and a requester's token still
+reaches only what a requester reaches), and that removing somebody's role
+narrows every token they ever minted, including the ones everybody has
+forgotten about. Nobody has to go hunting.
+
+The same check runs at issue time, so the UI offers only the scopes the person
+could actually exercise. A checkbox that mints a token which then 403s is a bug
+report waiting to happen.
+
+`comments.write` accepts `portal.submit` as well as `tickets.comment`, which
+looks like a hole and is not: a requester replying to their own ticket holds no
+`tickets.comment` permission — the policy lets them through as a participant.
+Leaving it out would refuse the most ordinary integration there is, a portal or
+chat bot posting a customer's reply, and the per-record policy still runs.
+
+## D44 — One error shape, with codes we own
+
+Laravel's defaults are sensible per exception type and inconsistent taken
+together: `{errors:…}` for a 422, `{message:…}` for a 404, something else for a
+403. A caller then writes three handlers, or, more often, one that works until
+it meets the second shape. Everything under `/api` comes back as
+`{"error": {"code", "message"}}`, with `fields` added for validation.
+
+`code` is a stable string chosen by us, never an exception class name —
+renaming a class must not break somebody's integration.
+
+Two consequences worth naming:
+
+- **A record you may not see answers 404, never 403.** Telling them apart is a
+  way to enumerate the key space: `SUP-1` through `SUP-9999` is a short loop and
+  the answer is a map of the desk's volume. So visibility is checked first and
+  answers 404; the policy then decides whether the *action* is allowed, which is
+  a genuine 403.
+- **A 500 says nothing.** The message goes to the log, where the operator can
+  see it and the caller cannot — except in debug mode, where no external caller
+  is watching.
+
+`/api/*` answers JSON even without an `Accept` header. An integration that
+forgets the header should not get an HTML error page it cannot parse.
+
+## D45 — The API writes through the services, and stamps its own source
+
+No API controller writes to a ticket. Everything goes through `TicketService`,
+the same path the console and the mail poller use, so numbering, watchers,
+lifecycle timestamps, the audit trail, the SLA clocks and the approval gate are
+identical whichever door the change came in through. An API that reimplements
+any of that is an API that drifts from the UI, and then people stop trusting
+whichever one they are not looking at.
+
+Two things a caller does not get to decide. `source` is always `api` — where
+work comes from is a number the desk reports on, and a caller that can claim to
+be the portal makes it meaningless. And the opening status comes from the
+workflow, not the request, or a ticket can be created already resolved with no
+clock and no trace of why.
+
+Status changes are their own endpoint rather than a field on `PATCH`, because
+they are not a field edit: the workflow decides which moves are legal and an
+approval can stand in the way. Both refusals are `422` with the reason — the
+move is not allowed *yet*, which is a different thing from a malformed request.
+
+## D46 — Rate limiting is per token, not per account
+
+Two integrations owned by the same service account are two callers. An
+instance-wide limit cannot tell them apart, so one of them polling in a loop
+locks the other out and the only fix is to lower the limit for everyone. Each
+token carries an optional ceiling and gets its own bucket, keyed by token id —
+which also means revoking a token frees its counter rather than leaving an
+exhausted one behind for its replacement to inherit.
+
+## D47 — A delivery row is written before the request, not after
+
+An event that was accepted but whose queue never ran it still leaves a
+`pending` row, so "we never got it" has an answer. Writing the row inside the
+job would mean the deliveries that vanish are exactly the ones with no trace.
+
+One job per subscription, not per event: a slow endpoint never holds up a fast
+one, and a retry against a dead host never re-delivers to the three that
+already succeeded. After twenty consecutive failures a subscription switches
+itself off — an endpoint gone all week is not coming back inside a backoff, and
+every attempt is a queue slot somebody else could have used. It stays in the
+list, disabled and with its count, because deleting it would lose the reason.
+
+On the `sync` driver a failing delivery is reported and dropped rather than
+thrown. It would otherwise travel back up through the listener into whatever
+raised the event, and a ticket that cannot be filed because somebody else's
+server is down is a far worse failure than a webhook nobody received. (The same
+trap as the approval mailer in D31, met again in a different place.)
+
+## D48 — The webhook payload names what may leave the building
+
+Built field by field, never by handing over a model — the same rule as the API
+resources, and for the same reason: a column added next year must not start
+appearing on an external endpoint because nobody remembered to exclude it.
+
+Two deliberate omissions. **Internal notes** carry `is_internal` and no body: a
+receiver has no policy to run and no user to check, so the only safe assumption
+is that whoever operates the endpoint is not entitled to the agent's side of the
+conversation. And **`ticket.updated` names the fields that changed, not their
+new values** — anything more is a ticket export over a webhook.
+
+Slugs are sent, never display names. A receiver keying off "In behandeling"
+breaks the moment somebody renames a status; the point of a slug is that it
+does not move.
+
+The signature covers the exact bytes of the body rather than the fields, so the
+receiver's check is one line and cannot drift from what was actually sent. The
+event id is in the body and is reused across retries and across endpoints,
+which is what lets a receiver be idempotent — at-least-once is what a retrying
+sender gives you.
+
+## D49 — Documentation and secrets are checked mechanically, not by eye
+
+Two guards added this phase, both because the failure mode is silence.
+
+**`docs/openapi.yaml` is tested against the route table**, in both directions.
+A hand-written spec drifts the moment somebody adds a route and forgets the
+docs, and a spec that is wrong is worse than none: an integrator trusts it,
+writes against an endpoint that does not exist, and blames their own code.
+
+**Every literal `t('...')` key in the frontend is checked to resolve.** A
+missing key does not throw — it renders its own name, so a button reads
+`common.close` and survives a typecheck, a build and a full test run until a
+person notices. Adding the test immediately turned up two labels that had been
+rendering raw keys on the SLA and automation screens since phases 5 and 6.
+
+Both are cheap, and both catch a class of bug that no amount of care catches
+reliably.

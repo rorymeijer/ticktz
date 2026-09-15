@@ -35,13 +35,21 @@ test('an administrator sees the user list', function () {
 
 test('the user list can be filtered by search term, role and status', function () {
     $admin = makeAdmin();
-    User::factory()->create(['name' => 'Wouter Hendriks', 'email' => 'wouter@example.org']);
+
+    // The search term has to be one Faker cannot produce for the two accounts
+    // created alongside it. "Wouter" is in Faker's own en_US name pool — about
+    // one generated name in three hundred contains it — so searching for it
+    // failed roughly once in a hundred and fifty full-suite runs, which is
+    // exactly the kind of flake that gets a real failure dismissed later.
+    $needle = 'Zzyzxdottir';
+
+    User::factory()->create(['name' => "Wouter {$needle}", 'email' => 'wouter@example.org']);
     User::factory()->inactive()->create(['name' => 'Inactive Person']);
 
     $this->actingAs($admin)
-        ->get('/admin/users?search=wouter')
+        ->get('/admin/users?search='.$needle)
         ->assertInertia(fn ($page) => $page->has('users.data', 1)
-            ->where('users.data.0.name', 'Wouter Hendriks'));
+            ->where('users.data.0.name', "Wouter {$needle}"));
 
     $this->actingAs($admin)
         ->get('/admin/users?status=inactive')

@@ -27,6 +27,7 @@ return [
         'asset_types' => 'Asset types',
         'asset_import' => 'Import assets',
         'settings' => 'Settings',
+        'webhooks' => 'Webhooks',
         'audit' => 'Audit log',
         'service_desk' => 'Service desk',
         'workflows' => 'Workflows',

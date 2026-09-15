@@ -60,6 +60,8 @@ curl -s http://localhost:8080/health | jq
 | [Approvals](docs/approvals.md) | Workflows, steps, the transition gate, deciding by e-mail |
 | [Assets](docs/assets.md) | The register, relations, linking to tickets, CSV import |
 | [Reporting](docs/reporting.md) | The metrics pipeline, the four reports, export |
+| [API & webhooks](docs/api.md) | Scoped tokens, the endpoints, outgoing webhooks |
+| [OpenAPI spec](docs/openapi.yaml) | The machine-readable contract |
 | [Design decisions](docs/decisions.md) | Defaults chosen where the brief left room |
 | [Screenshots](docs/screenshots.md) | What the product looks like |
 | [Contributing](CONTRIBUTING.md) | Local development without Docker, coding standards |

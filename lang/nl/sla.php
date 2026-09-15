@@ -82,6 +82,7 @@ return [
     ],
 
     'policies' => [
+        'slug' => 'Slug',
         'title' => 'Beleid',
         'description' => 'Een ticket krijgt het eerste beleid waarvan de voorwaarden kloppen, op volgorde gecontroleerd. De standaard vangt de rest op.',
         'add' => 'Beleid toevoegen',

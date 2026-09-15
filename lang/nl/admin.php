@@ -27,6 +27,7 @@ return [
         'asset_types' => 'Assettypes',
         'asset_import' => 'Assets importeren',
         'settings' => 'Instellingen',
+        'webhooks' => 'Webhooks',
         'audit' => 'Audit-log',
         'service_desk' => 'Servicedesk',
         'workflows' => 'Workflows',

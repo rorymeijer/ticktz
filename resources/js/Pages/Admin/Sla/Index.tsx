@@ -658,7 +658,7 @@ function PolicyDialog({
                         )}
                     </Field>
 
-                    <Field label={t('admin.fields.slug')} error={form.errors.slug} required>
+                    <Field label={t('sla.policies.slug')} error={form.errors.slug} required>
                         {(props) => (
                             <TextInput
                                 {...props}

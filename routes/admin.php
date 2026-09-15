@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\SlaPolicyController;
 use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\TicketStatusController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\WebhookController;
 use App\Http\Controllers\Admin\WorkflowController;
 use Illuminate\Support\Facades\Route;
 
@@ -153,6 +154,17 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
     Route::resource('workflows', WorkflowController::class)->except('show');
     Route::resource('queues', QueueController::class)->except('show');
+
+    // Outgoing webhooks. `webhooks.manage` rather than `settings.manage`: an
+    // integrator who wires up a middleware platform needs these screens and
+    // nothing else on this prefix.
+    Route::middleware('can:webhooks.manage')->group(function (): void {
+        Route::get('webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
+        Route::post('webhooks', [WebhookController::class, 'store'])->name('webhooks.store');
+        Route::put('webhooks/{webhook}', [WebhookController::class, 'update'])->name('webhooks.update');
+        Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
+        Route::post('webhooks/{webhook}/test', [WebhookController::class, 'test'])->name('webhooks.test');
+    });
 
     Route::get('audit-log', [AuditLogController::class, 'index'])->name('audit.index');
 });

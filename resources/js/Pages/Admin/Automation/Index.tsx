@@ -678,7 +678,7 @@ function RuleDialog({ rule, options, onClose }: { rule: Rule | null; options: Op
                         )}
                     </Field>
 
-                    <Field label={t('admin.fields.slug')} error={form.errors.slug} required>
+                    <Field label={t('automation.fields.slug')} error={form.errors.slug} required>
                         {(props) => (
                             <TextInput
                                 {...props}

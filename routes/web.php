@@ -8,6 +8,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Reports\ReportController;
+use App\Http\Controllers\Settings\ApiTokenController;
 use App\Http\Controllers\System\HealthController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -89,6 +90,16 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    // A person's own API tokens. Not under /admin: a token acts as its owner
+    // and carries their permissions, so it is theirs to mint and theirs to
+    // revoke. `api.tokens.manage` decides who may use the API at all.
+    Route::middleware('can:api.tokens.manage')->group(function (): void {
+        Route::get('/settings/api-tokens', [ApiTokenController::class, 'index'])->name('settings.tokens.index');
+        Route::post('/settings/api-tokens', [ApiTokenController::class, 'store'])->name('settings.tokens.store');
+        Route::delete('/settings/api-tokens/{token}', [ApiTokenController::class, 'destroy'])
+            ->name('settings.tokens.destroy');
+    });
 
     // Attachments are streamed through a controller so the ticket policy runs
     // before the file does; they are never on a public disk.

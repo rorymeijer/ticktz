@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\ApiToken;
 use App\Services\AuditLogger;
 use App\Services\Automation\AutomationGuard;
 use App\Services\SettingsRepository;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,6 +31,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        // Our token model adds a per-token rate limit and a description, so
+        // Sanctum has to mint and resolve that class rather than its own.
+        Sanctum::usePersonalAccessTokenModel(ApiToken::class);
 
         // Catch the two mistakes that actually cost us: an N+1 hiding behind a
         // lazy-loaded relation, and a mass-assignment that silently drops a
@@ -63,5 +69,28 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(
             (int) config('ticktz.rate_limits.api')
         )->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
+
+        // The public API throttles per *token*, not per user. Two integrations
+        // owned by the same service account are two callers, and one of them
+        // polling in a loop must not be able to lock the other out. A token may
+        // carry its own ceiling; without one it gets the instance default.
+        //
+        // Keying by token id also means revoking a token frees its bucket,
+        // rather than leaving an exhausted counter behind under a user id that
+        // the replacement token would inherit.
+        RateLimiter::for('api-token', function (Request $request): Limit {
+            $token = $request->user()?->currentAccessToken();
+
+            if ($token === null) {
+                // No token — an unauthenticated request on its way to a 401,
+                // or the UI calling its own API with a session. Throttle by IP
+                // so a token-guessing loop still meets a wall.
+                return Limit::perMinute((int) config('ticktz.rate_limits.api'))->by($request->ip());
+            }
+
+            $perMinute = $token->rate_limit ?? (int) config('ticktz.rate_limits.api');
+
+            return Limit::perMinute(max(1, (int) $perMinute))->by('token:'.$token->getKey());
+        });
     }
 }

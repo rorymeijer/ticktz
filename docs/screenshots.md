@@ -392,6 +392,46 @@ bigger would encode the length twice and say nothing new.
 
 ![Rapportage](screenshots/85-reports-nl.png)
 
+## API & webhooks
+
+### API tokens
+A person's own tokens. The scopes on offer are only the ones they could
+actually exercise — a checkbox that mints a token which then 403s is a bug
+report waiting to happen.
+
+![API tokens](screenshots/90-settings-api-tokens.png)
+
+### The one showing of the plaintext
+Shown once, in the dialog that follows creation. Only a SHA-256 hash is stored,
+so this genuinely cannot be recovered; the honest alternative to "show me that
+again" is minting a new one.
+
+![A token, just created](screenshots/91-api-token-created.png)
+
+The token in that image is real but worthless: it was minted against a
+throwaway demo database that `php artisan migrate:fresh` drops every time these
+screenshots are regenerated, and it grants nothing anywhere.
+
+### Webhooks
+The list is the configuration; the delivery log underneath is why anyone opens
+this page. Nobody comes here to admire a list of URLs — they come because
+somebody's system did not hear about a ticket, and what they need is the last
+attempt, the status that came back and the error text, without a database
+client.
+
+The failure counters live on the subscription rather than being aggregated out
+of the log, so this screen is one query instead of one per row. A subscription
+that has failed twenty times in a row switches itself off and says so.
+
+![Webhooks](screenshots/92-admin-webhooks.png)
+
+### The same screen, in Dutch
+The delivery errors stay in the language they were recorded in. A log entry is
+history, and the field also holds exception text from libraries that have no
+translation — re-translating it later would be inventing a record.
+
+![Webhooks](screenshots/93-admin-webhooks-nl.png)
+
 ### Profile, in Dutch
 Language is a per-user preference and applies to notification e-mail as well as
 the interface.

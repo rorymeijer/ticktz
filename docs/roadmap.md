@@ -425,10 +425,48 @@ Four questions, one period, and a CSV of whatever is behind them. Full notes in
 The dashboard became a real screen in this phase too — every figure on it links
 to a list somebody can act on.
 
+## Phase 11 — Public REST API & webhooks
+
+A documented way in for everything that surrounds a desk, and a way out for the
+things that happen in it. Full notes in [`api.md`](api.md); the contract is
+[`openapi.yaml`](openapi.yaml).
+
+- **A token is the intersection of its scopes and its owner's permissions.**
+  Every scope names the permissions behind it and both are checked on every
+  request, so a token can never be an escalation — and removing somebody's role
+  narrows every token they ever minted, including the forgotten ones
+  ([D43](decisions.md)).
+- **One error shape for the whole API**, with stable string codes we own rather
+  than exception class names. A record you may not see answers 404, never 403:
+  telling them apart makes the ticket key space enumerable
+  ([D44](decisions.md)).
+- **The API writes through the services**, so a ticket filed by a script gets
+  the same numbering, watchers, SLA clocks, audit trail and approval gate as one
+  filed by hand. `source` is stamped `api` and the opening status comes from the
+  workflow — neither is the caller's to choose ([D45](decisions.md)).
+- **Rate limiting is per token, not per account.** Two integrations owned by one
+  service account are two callers, and an instance-wide limit cannot tell them
+  apart ([D46](decisions.md)).
+- **A delivery row is written before the request, not after**, so an event whose
+  queue never ran it still leaves a trace. One job per subscription, a growing
+  backoff, and a subscription that switches itself off after twenty consecutive
+  failures rather than burning queue slots on a host that is gone
+  ([D47](decisions.md)).
+- **The webhook payload names what may leave the building.** Internal note
+  bodies never go out, `ticket.updated` carries field names rather than values,
+  and statuses are sent as slugs so a rename does not break a receiver. The
+  HMAC covers the exact bytes sent ([D48](decisions.md)).
+- **Two things are now checked mechanically**: the OpenAPI spec against the real
+  route table, and every literal `t('…')` key against the translation files.
+  Both catch failures that are otherwise silent — the second turned up two
+  labels that had been rendering raw keys since phases 5 and 6
+  ([D49](decisions.md)).
+
 ### Not yet wired up
 
 The sidebar only shows destinations that have routes today: Dashboard, Tickets,
-Queues, Approvals, Assets, the knowledge base, Reports and Administration. The
-public API appears as its phase lands — a menu item without a route is worse than an
-absent one. The permission catalogue already covers them, so roles can be
+Queues, Approvals, Assets, the knowledge base, Reports and Administration. API
+tokens live in the user menu and webhooks under Administration, because both
+belong to the person or the instance rather than to the daily work. The
+permission catalogue already covers what is still to come, so roles can be
 configured ahead of the features arriving.

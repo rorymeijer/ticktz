@@ -130,6 +130,13 @@ export default function AdminLayout({
             permission: 'directory.manage',
             section: 'system',
         },
+        {
+            key: 'webhooks',
+            href: '/admin/webhooks',
+            label: t('admin.nav.webhooks'),
+            permission: 'webhooks.manage',
+            section: 'system',
+        },
         { key: 'settings', href: '/admin/settings', label: t('admin.nav.settings'), permission: 'settings.manage', section: 'system' },
         { key: 'audit', href: '/admin/audit-log', label: t('admin.nav.audit'), permission: 'audit.view', section: 'system' },
     ] satisfies AdminNavItem[]).filter((item) => can(item.permission));

@@ -29,7 +29,7 @@ export default function AppLayout({
     fullWidth?: boolean;
 }) {
     const { t } = useTranslations();
-    const { user } = useAuth();
+    const { user, can } = useAuth();
     const { app, ziggy } = usePage<SharedProps>().props;
     const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -157,6 +157,11 @@ export default function AppLayout({
                                     </div>
                                     <DropdownDivider />
                                     <DropdownLink href="/profile">{t('nav.profile')}</DropdownLink>
+                                    {can('api.tokens.manage') ? (
+                                        <DropdownLink href="/settings/api-tokens">
+                                            {t('api.tokens.title')}
+                                        </DropdownLink>
+                                    ) : null}
                                     <DropdownLink href="/portal">{t('nav.portal')}</DropdownLink>
                                     <DropdownDivider />
                                     <DropdownLink href="/logout" method="post" as="button" danger>

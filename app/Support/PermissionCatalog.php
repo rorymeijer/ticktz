@@ -130,6 +130,10 @@ final class PermissionCatalog
                 'assets.view',
                 'approvals.view',
                 'reports.view',
+                // An agent may mint tokens for themselves. The token can never
+                // exceed the permissions above, so this grants reach — a
+                // script that works the desk on their behalf — not privilege.
+                'api.tokens.manage',
             ],
 
             'requester' => [

@@ -82,6 +82,7 @@ return [
     ],
 
     'policies' => [
+        'slug' => 'Slug',
         'title' => 'Policies',
         'description' => 'A ticket takes the first policy whose conditions it matches, checked in order. The default catches everything else.',
         'add' => 'Add policy',

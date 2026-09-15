@@ -98,6 +98,30 @@ const SHOTS = [
     { slug: '83-reports-cycle-time', path: '/reports?report=cycle_time&from=2026-08-17&lang=en', as: 'admin', fullPage: true },
     { slug: '84-reports-workload', path: '/reports?report=workload&from=2026-08-17&lang=en', as: 'admin' },
     { slug: '85-reports-nl', path: '/reports?report=sla&from=2026-08-17&lang=nl', as: 'admin' },
+    { slug: '90-settings-api-tokens', path: '/settings/api-tokens?lang=en', as: 'admin' },
+    {
+        slug: '91-api-token-created',
+        path: '/settings/api-tokens?lang=en',
+        as: 'admin',
+        // Walks the real form, because the one-time plaintext dialog is the
+        // whole point of the screen and it cannot be reached by URL.
+        prepare: async (page) => {
+            await page.getByRole('button', { name: 'New token' }).click();
+
+            // Scoped to the dialog: a scope name also appears as a badge on
+            // any token already in the list behind it, and an unscoped
+            // selector matches both.
+            const dialog = page.getByRole('dialog');
+            await dialog.getByLabel('Name').fill('Monitoring bot');
+            await dialog.getByLabel('Description').fill('Files a ticket when a check goes red');
+            await dialog.getByText('tickets.write', { exact: true }).click();
+            await dialog.getByText('comments.write', { exact: true }).click();
+            await dialog.getByRole('button', { name: 'New token' }).click();
+            await page.waitForSelector('code');
+        },
+    },
+    { slug: '92-admin-webhooks', path: '/admin/webhooks?lang=en', as: 'admin', fullPage: true },
+    { slug: '93-admin-webhooks-nl', path: '/admin/webhooks?lang=nl', as: 'admin' },
     { slug: '40-mobile-portal', path: '/portal?lang=en', as: 'requester', width: 400, height: 780 },
     { slug: '41-mobile-tickets', path: '/agent/tickets?lang=en', as: 'agent', width: 400, height: 780 },
     { slug: '42-mobile-kb', path: '/portal/kb?lang=en', as: 'requester', width: 400, height: 780 },
