@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use App\Models\TicketStatus;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\RichText\RichTextSanitizer;
 use App\Services\SettingsRepository;
 use App\Services\Tickets\TicketService;
 use Illuminate\Support\Arr;
@@ -34,6 +35,8 @@ class InboundMessageProcessor
     public function __construct(
         private readonly TicketService $tickets,
         private readonly AuditLogger $audit,
+        private readonly InboundHtmlBody $html,
+        private readonly RichTextSanitizer $sanitizer,
     ) {}
 
     /**
@@ -143,7 +146,7 @@ class InboundMessageProcessor
             return $this->ignore($record, 'Automated message (auto-reply or bounce)');
         }
 
-        $body = $this->plainBody($message);
+        $body = $this->body($message);
 
         if (trim($body) === '' && blank($record->subject)) {
             return $this->ignore($record, 'Empty message');
@@ -364,9 +367,46 @@ class InboundMessageProcessor
     }
 
     /**
-     * Prefer the plain-text part. Converting HTML here keeps quoted history
-     * readable and strips anything that could execute if a body were ever
-     * rendered as markup.
+     * What the person actually wrote, as rich text.
+     *
+     * The HTML part first, because that is where the formatting is: a customer
+     * who sent a numbered list should arrive with a numbered list rather than
+     * four lines that start with digits.
+     *
+     * The text part is the fallback, and not a rare one — plenty of mail is
+     * sent as text, and some HTML mail turns out to be nothing but a quoted
+     * thread once the reply has been taken out of it. Either way the result is
+     * the same shape as anything typed into the editor.
+     *
+     * Nothing here is what makes the body safe. Both paths go through
+     * RichTextSanitizer on the way into the database, which is also what drops
+     * the remote images a mail signature carries — those are tracking pixels
+     * pointed at whoever opens the ticket.
+     *
+     * @param  array<string, mixed>  $message
+     */
+    private function body(array $message): string
+    {
+        $html = trim((string) ($message['html'] ?? ''));
+
+        if ($html !== '') {
+            $reply = $this->html->extract($html);
+
+            if ($this->sanitizer->clean($reply, images: true) !== '') {
+                return $reply;
+            }
+        }
+
+        return $this->sanitizer->fromPlainText($this->plainBody($message));
+    }
+
+    /**
+     * The same, flattened, for the mail that has no HTML part — and for one
+     * whose HTML part turns out to hold nothing.
+     *
+     * Converting the HTML here rather than keeping it is deliberate: this path
+     * exists for a body the rich one could not use, and a second attempt at
+     * the same markup would fail the same way.
      *
      * @param  array<string, mixed>  $message
      */

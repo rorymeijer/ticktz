@@ -30,6 +30,11 @@ x-app-base: &app-base
   volumes:
     - .:/var/www/html
     - vendor:/var/www/html/vendor
+    # Development overrides for the production-tuned php.ini baked into the
+    # image. Without this, opcache.validate_timestamps=0 means the container
+    # never re-reads a file it has already served — so a `git pull` changes
+    # nothing until you restart, and says nothing about why.
+    - ./docker/php/php.dev.ini:/usr/local/etc/php/conf.d/zz-ticktz-dev.ini:ro
   depends_on:
     mysql: { condition: service_healthy }
     redis: { condition: service_healthy }

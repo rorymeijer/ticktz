@@ -377,6 +377,48 @@ exist`. On a stack with no data worth keeping, `docker compose down -v` throws
 the volume away and the next `up` initialises cleanly. On one with data, restore
 the backup into a fresh volume instead.
 
+**`Trait "App\…" not found`, or any class that is plainly on disk.** The image
+builds its autoloader as a classmap, and the development stack bind-mounts a
+newer tree over it: a class added since the image was built is right there and
+absent from the map. Two things made that permanent — the map was built
+`--classmap-authoritative`, which means "not in the map, does not exist, do not
+look", and the `vendor` volume kept it, because Docker only fills a named
+volume from the image while it is still empty. So rebuilding the image did not
+help either.
+
+Both are fixed: the map is no longer authoritative, and the entrypoint rebuilds
+it on every non-production boot. An older container needs its volume dropped
+once — and `-v` alone would take the database with it:
+
+```bash
+docker compose down
+docker volume rm ticktz_vendor
+docker compose up --build
+```
+
+**A change you pulled has no effect, and the symptoms point elsewhere.** The
+image in the development stack carries a production-tuned `php.ini`, and
+production means `opcache.validate_timestamps = 0`: PHP reads each file once
+and never looks at it again, which is correct for a deploy that replaces an
+image and restarts, and wrong for a bind-mounted source tree.
+
+The failures it produces do not mention caching. A route added five minutes ago
+returns 404 — while `php artisan route:list` lists it happily, because the CLI
+runs with opcache off and reads the real file. A config value stays at its old
+number, so anything keyed on it keeps serving what it cached: translations
+added in the same commit come out as raw keys like `editor.image.failed`.
+
+`docker-compose.yml` mounts `docker/php/php.dev.ini` over it, which turns
+revalidation back on. If you have an older checkout, or a container started
+before that mount existed:
+
+```bash
+docker compose exec app php -r 'echo ini_get("opcache.validate_timestamps"), "\n";'
+```
+
+`0` means the container is serving whatever it read when it started. `docker
+compose up -d --force-recreate app worker` picks the mount up.
+
 **A white page at http://localhost:8080, and nothing in any log.** The
 development stack serves its JavaScript from the Vite container, and the URL
 the browser is told to fetch it from is written into `public/hot` by the dev

@@ -65,6 +65,7 @@ curl -s http://localhost:8080/health | jq
 | [Reporting](docs/reporting.md) | The metrics pipeline, the four reports, export |
 | [API & webhooks](docs/api.md) | Scoped tokens, the endpoints, outgoing webhooks |
 | [OpenAPI spec](docs/openapi.yaml) | The machine-readable contract |
+| [Releasing](docs/releasing.md) | Cutting a version, and what to set up in GitHub for it |
 | [Design decisions](docs/decisions.md) | Defaults chosen where the brief left room |
 | [Screenshots](docs/screenshots.md) | What the product looks like |
 | [Contributing](CONTRIBUTING.md) | Local development without Docker, coding standards |

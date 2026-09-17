@@ -34,7 +34,19 @@ RUN composer install \
     --optimize-autoloader
 
 COPY . .
-RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
+# `--optimize` and deliberately *not* `--classmap-authoritative`.
+#
+# Authoritative means: if a class is not in this classmap, it does not exist —
+# no filesystem lookup, ever. That is correct for an image whose code never
+# changes, and wrong the moment a development stack bind-mounts a newer tree
+# over it: a class added after the image was built is right there on disk and
+# the autoloader refuses to look, which surfaces as `Trait "…" not found` in a
+# file that has been there all along.
+#
+# The classmap still makes the common case a single array lookup. What we give
+# up is a stat call for a class the map has never heard of, which in production
+# is a class that does not exist anyway.
+RUN composer dump-autoload --no-dev --optimize
 
 # --- Stage 2: frontend bundle ----------------------------------------------
 FROM node:22-alpine AS assets
@@ -80,6 +92,11 @@ RUN apk add --no-cache \
     && rm -rf /tmp/pear
 
 WORKDIR /var/www/html
+
+# Composer, so the entrypoint can rebuild the autoloader on a development
+# stack whose code is a bind mount. Two megabytes of PHP script, and it is
+# never run in production — see the entrypoint.
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-ticktz.ini
 COPY docker/php/www.conf /usr/local/etc/php-fpm.d/zz-ticktz.conf

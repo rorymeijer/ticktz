@@ -9,6 +9,27 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.0.3
+
+**Inbound e-mail keeps its formatting.** A customer who sends a numbered list
+now arrives with a numbered list rather than four lines that start with digits.
+The quoted thread is still cut off the bottom — that is what makes a mail
+conversation readable — and it is cut using the markers Gmail, Outlook, Apple
+Mail, Thunderbird, Proton, Yahoo and Zoho each use, plus the bare "On … wrote:"
+line for clients that use nothing else. A cut that would leave nothing behind
+is refused, so a bare forward arrives whole.
+
+Mail without an HTML part is unchanged, and so is mail whose HTML turns out to
+hold nothing but a quote.
+
+**Signatures stop carrying tracking pixels.** Inbound mail goes through the
+same sanitiser as everything else, and a message may only show an image this
+instance serves — so the remote `<img>` in a customer's signature no longer
+reports every agent who opens the ticket to whoever put it there.
+
+Images a customer attached inline with `cid:` are still listed as attachments
+rather than shown in the body.
+
 ## 1.0.2
 
 **Paste a screenshot.** Tickets, replies and knowledge base articles now take
