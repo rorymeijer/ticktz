@@ -22,7 +22,8 @@ tracks what is shipped. The phase definitions come from the original brief in
 
 ## Phase 0 — Foundation & Docker
 
-- Laravel 11 + Inertia + React 18 + TypeScript, built with Vite.
+- Laravel (11 at the time, 12 since — see [D50](decisions.md)) + Inertia +
+  React 18 + TypeScript, built with Vite.
 - `docker-compose.yml` (development) and `docker-compose.prod.yml` (production)
   covering nginx, php-fpm, a worker running `queue:work` and `schedule:work`,
   MySQL 8, Redis and a mail sink. One multi-stage image serves both app roles.

@@ -75,7 +75,7 @@ phase documents its own configuration on the pages above.
 
 | Layer | Choice |
 | --- | --- |
-| Backend | Laravel 11, PHP 8.3 (8.4 supported) |
+| Backend | Laravel 12, PHP 8.3 (8.4 supported) |
 | Frontend | Inertia.js + React 18 + TypeScript, Vite, Tailwind |
 | Database | MySQL 8 (utf8mb4) |
 | Cache / queue / sessions | Redis |

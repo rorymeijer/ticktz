@@ -42,8 +42,13 @@ external origin.
 ## D4 — PHP 8.3 as the floor, 8.4 supported
 
 The brief specifies PHP 8.3. The Docker image is built on `php:8.3-fpm-alpine`
-and `composer.json` requires `^8.2`; CI runs the suite on both 8.3 and 8.4 so
-the codebase keeps working on distributions that ship the newer runtime.
+and CI runs the suite on both 8.3 and 8.4, so the codebase keeps working on
+distributions that ship the newer runtime.
+
+`composer.json` originally allowed `^8.2`; it was tightened to `^8.3` with the
+framework upgrade in [D50](#d50--laravel-12-because-11-carries-unpatched-advisories),
+because claiming support for a runtime nothing builds or tests on is a promise
+with nothing behind it.
 
 ## D5 — MIT license
 
@@ -816,3 +821,44 @@ rendering raw keys on the SLA and automation screens since phases 5 and 6.
 
 Both are cheap, and both catch a class of bug that no amount of care catches
 reliably.
+
+## D50 — Laravel 12, because 11 carries unpatched advisories
+
+The brief specifies Laravel 11, and the project was built on it. Late in the
+work `composer audit` began reporting three advisories against
+`laravel/framework` 11.56.1, the most serious being a **CRLF injection in the
+default `email` validation rule** (GHSA-5vg9-5847-vvmq / CVE-2026-48019, rated
+high) alongside a signed-URL path confusion.
+
+None of them are fixed on the 11.x line. The fix exists only in 12.61.1 and
+above, so "stay on the version the brief named" and "ship without known
+vulnerabilities" cannot both hold.
+
+Shipping them was not defensible for this product in particular. Ticktz
+validates e-mail addresses at the boundary everywhere — the portal, user
+administration, LDAP sync, inbound mail, the API's `requester_email` — and then
+puts those addresses into outgoing mail headers. A CRLF injection in the rule
+that is supposed to make an address safe is precisely the shape of bug this
+codebase is most exposed to, and the brief is explicit that all data stays on
+the operator's own infrastructure with a full audit trail: an instance
+compromised through its own notification mail undermines the whole premise.
+
+So the framework moved to 12.x and the brief's version number did not survive
+contact with a security advisory. Recorded here rather than quietly done,
+because it is a deviation from the specification.
+
+**What it cost:** nothing, as it turned out. `laravel/framework` was the only
+package that had to move (plus a `ramsey/uuid` patch and a polyfill); every
+other dependency already declared Laravel 12 support. No application code
+changed. The 669-test suite passed unaltered, all 70 documentation screenshots
+re-rendered without a failure, and migrations, seeders, the scheduler and the
+API all came up clean.
+
+The Laravel 12 changes that usually bite do not apply here: Carbon was already
+on 3.x, and the codebase uses no `image` validation rule (12 stops treating SVG
+as an image), no `Concurrency` facade, no `Number` helpers and no schema
+introspection.
+
+`composer.json` now requires `php: ^8.3` rather than `^8.2`. Laravel 12 would
+accept 8.2, but Docker builds on 8.3 and CI tests 8.3 and 8.4 — claiming
+support for a runtime nothing verifies is a promise with nothing behind it.
