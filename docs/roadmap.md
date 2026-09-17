@@ -505,3 +505,32 @@ tokens live in the user menu and webhooks under Administration, because both
 belong to the person or the instance rather than to the daily work. The
 permission catalogue already covers what is still to come, so roles can be
 configured ahead of the features arriving.
+
+## Phase 15 — Updates from the browser
+
+Shipped in 1.1.0.
+
+- **Administration → Updates** shows the installed version, the newest
+  published release, its notes, and a set of readiness checks. On a source
+  install it also shows a button.
+- **The check is off by default and stays off.** It is the only outbound
+  request Ticktz makes that nobody configured, and the brief says no telemetry.
+  Turning it on sends this server's IP address and a request for a public
+  release list — nothing about the desk.
+- **The web request never writes a file.** It creates a row naming a published
+  release; the queue worker, running as whoever owns the code, does the work. A
+  web-facing PHP process must never be able to write the application's own code
+  ([D66](decisions.md)).
+- **`POST /admin/updates` takes no input at all.** What gets installed is what
+  the checker independently reports, confirmed again in the worker — so no
+  request can name a tag, a URL or a version.
+- **The swap is a standalone script run detached**, because `vendor` is being
+  replaced under the process doing the replacing. It reports into a file, which
+  the next request — served by the new code — turns into a row.
+- **The previous version is kept**, `.env` and `storage` are never touched, and
+  a move that fails puts everything back. A failed migration deliberately does
+  not roll back.
+- **Docker installs are shown the command**, because recreating a running
+  container needs the Docker daemon and a web process must never reach it.
+- `php artisan ticktz:upgrade` does the same from a terminal, which is also the
+  answer for an install with no worker.

@@ -9,6 +9,32 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.1.0
+
+**Upgrade from the browser.** Administration → Updates shows which version this
+desk runs, whether a newer one is published, and — on a source install — a
+button that installs it. Both halves are off until you switch them on, and they
+are separate switches: checking GitHub is one decision, letting the instance
+replace its own code is another. Nothing is ever installed on a schedule. See
+[`docs/self-hosting.md`](docs/self-hosting.md).
+
+The web request never writes a file. It creates a row naming a published
+release, and the queue worker does the work — because a web-facing PHP process
+must never be able to write the application's own code, and a service desk
+takes uploads from anybody with an e-mail address. The readiness checks on the
+screen are how you find out whether your deployment keeps those two apart.
+
+The previous version is kept rather than deleted, `.env` and `storage` are
+never touched, and a move that fails puts everything back. Docker installs are
+shown the two commands instead: recreating a running container needs the Docker
+daemon, and a web process must never be able to reach it.
+
+`php artisan ticktz:upgrade` does the same thing from a terminal, which is also
+the answer for an install with no worker running.
+
+New permission: `updates.manage`. It is not `settings.manage` — replacing the
+application's code is a different kind of act from changing a preference.
+
 ## 1.0.3
 
 **Inbound e-mail keeps its formatting.** A customer who sends a numbered list

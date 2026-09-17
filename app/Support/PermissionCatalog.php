@@ -74,6 +74,11 @@ final class PermissionCatalog
             'email.manage',
             'directory.manage',
             'audit.view',
+            // Separate from `settings.manage`: replacing the application's own
+            // code is a different kind of act from changing a preference, and
+            // an operator who configures the desk is not automatically the one
+            // who decides when it moves to another version.
+            'updates.manage',
         ],
         'api' => [
             'api.tokens.manage',

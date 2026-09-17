@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SlaPolicyController;
 use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\TicketStatusController;
+use App\Http\Controllers\Admin\UpdateController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\WebhookController;
 use App\Http\Controllers\Admin\WorkflowController;
@@ -167,4 +168,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     });
 
     Route::get('audit-log', [AuditLogController::class, 'index'])->name('audit.index');
+
+    // Updates. `store` takes no input at all: what it installs is whatever the
+    // checker independently says is on offer. See UpdateController.
+    Route::get('updates', [UpdateController::class, 'index'])->name('updates.index');
+    Route::get('updates/status', [UpdateController::class, 'show'])->name('updates.status');
+    Route::post('updates', [UpdateController::class, 'store'])->name('updates.store');
 });

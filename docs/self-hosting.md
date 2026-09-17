@@ -256,6 +256,76 @@ hypothesis.
 
 ## Upgrading
 
+### From the web, under Administration → Updates
+
+Ticktz can tell you a new version exists, and on a source install it can
+install one. Both are off until you switch them on, and they are separate
+switches because they are different decisions.
+
+```dotenv
+# Look for new releases on GitHub. Off by default: this is the only outbound
+# request Ticktz makes that nobody configured, and no telemetry was the rule
+# this was built to. What GitHub learns is your IP address and that something
+# asked for a public release list — nothing about your desk or your people.
+TICKTZ_UPDATE_CHECK=true
+
+# Allow this instance to replace its own code. Source installs only.
+TICKTZ_SELF_UPGRADE=true
+```
+
+The screen then shows the installed version, what is published, the release
+notes, and a set of readiness checks. Nothing is ever installed without
+somebody pressing the button: there is no automatic upgrade and no schedule.
+
+**What actually runs it is the queue worker, not the web request.** That is the
+whole design and not an implementation detail. A web-facing PHP process must
+never be able to write the application's own code — a service desk accepts
+uploads from anybody with an e-mail address, and if the web process could write
+code then every file-write bug in the application would become a way to run
+code. So the button writes a row asking for a named, published release, and the
+worker, running as the user who owns the code, acts on it.
+
+Which gives the two requirements the checks look for:
+
+- the user running `queue:work` owns the application directory, and
+- the user running PHP-FPM or Apache does **not**.
+
+If your deployment has both running as the same user, the screen says so. It
+does not refuse to upgrade — that exposure is already there and refusing does
+not remove it — but it is worth fixing on its own account.
+
+The button is also absent when the release has no `ticktz-<version>.zip`
+attached, when another upgrade is running, or when the release on offer changed
+between the screen and the worker picking it up: what gets installed is a
+version somebody agreed to, never whatever happens to be newest.
+
+**Take a database backup first.** The upgrade keeps the previous code — in
+`storage/app/upgrades/<id>/previous`, which is the one directory an upgrade
+never replaces — but nothing here backs up your database, and the migrations
+run right after the swap.
+
+If the migrations fail, the new code stays in place and the failure is on the
+screen with the path to the previous version. It is deliberately not rolled
+back: migrations that failed halfway have already touched the schema, and
+putting the old code back in front of a half-migrated database is a second
+broken state rather than a recovery.
+
+### From the command line
+
+The same mechanism without the queue, which is also the answer for an install
+with no worker running:
+
+```bash
+php artisan ticktz:upgrade --check     # what is available, then stop
+php artisan ticktz:upgrade             # install it, asking first
+```
+
+### Docker
+
+A Docker install cannot replace itself, and no setting makes it able to:
+recreating a running container needs the Docker daemon, and the web process
+must never be able to reach it. The screen shows you these instead.
+
 ```bash
 cd /srv/ticktz
 ./scripts/backup.sh /var/backups/ticktz          # always, first
@@ -276,6 +346,22 @@ docker pull ghcr.io/rorymeijer/ticktz:1.1.0
 ```
 
 Pin a version rather than `latest` on anything you care about. `latest` moves.
+
+### Putting a version back
+
+A web upgrade keeps the code it replaced. To go back to it:
+
+```bash
+cd /srv/ticktz
+ls storage/app/upgrades                          # the upgrade's id
+cp -a storage/app/upgrades/<id>/previous/. .     # the old tree over the new
+php artisan optimize:clear
+```
+
+That restores the code, not the database. A patch or minor release never
+changes the schema in a way the previous version cannot read, so for those the
+code alone is enough; across a major version, restore the database backup you
+took before the upgrade as well.
 
 ### Upgrading MySQL 8.0 to 8.4
 

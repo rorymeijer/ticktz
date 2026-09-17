@@ -139,6 +139,7 @@ export default function AdminLayout({
         },
         { key: 'settings', href: '/admin/settings', label: t('admin.nav.settings'), permission: 'settings.manage', section: 'system' },
         { key: 'audit', href: '/admin/audit-log', label: t('admin.nav.audit'), permission: 'audit.view', section: 'system' },
+        { key: 'updates', href: '/admin/updates', label: t('admin.nav.updates'), permission: 'updates.manage', section: 'system' },
     ] satisfies AdminNavItem[]).filter((item) => can(item.permission));
 
     const sections: AdminNavItem['section'][] = ['identity', 'service_desk', 'system'];
