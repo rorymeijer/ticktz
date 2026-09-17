@@ -12,8 +12,12 @@
 # --- Stage 1: composer dependencies ----------------------------------------
 FROM php:8.4-fpm-alpine AS vendor
 
-RUN apk add --no-cache git unzip icu-dev oniguruma-dev libzip-dev $PHPIZE_DEPS \
-    && docker-php-ext-install -j"$(nproc)" bcmath intl pdo_mysql zip \
+# `ldap` is not optional here even though only directory sign-in uses it:
+# directorytree/ldaprecord declares ext-ldap as a hard requirement, so
+# `composer install` refuses to resolve the lock file without it. Leave it out
+# and this stage fails before a single package is written.
+RUN apk add --no-cache git unzip icu-dev oniguruma-dev libzip-dev openldap-dev $PHPIZE_DEPS \
+    && docker-php-ext-install -j"$(nproc)" bcmath intl ldap pdo_mysql zip \
     && apk del $PHPIZE_DEPS
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -54,6 +58,7 @@ RUN apk add --no-cache \
         libpng \
         freetype \
         libjpeg-turbo \
+        libldap \
         mysql-client \
         supervisor \
         tini \
@@ -65,9 +70,10 @@ RUN apk add --no-cache \
         libpng-dev \
         freetype-dev \
         libjpeg-turbo-dev \
+        openldap-dev \
         linux-headers \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" bcmath exif gd intl opcache pcntl pdo_mysql sockets zip \
+    && docker-php-ext-install -j"$(nproc)" bcmath exif gd intl ldap opcache pcntl pdo_mysql sockets zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del .build-deps \
