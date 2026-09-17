@@ -377,6 +377,25 @@ exist`. On a stack with no data worth keeping, `docker compose down -v` throws
 the volume away and the next `up` initialises cleanly. On one with data, restore
 the backup into a fresh volume instead.
 
+**`Trait "App\…" not found`, or any class that is plainly on disk.** The image
+builds its autoloader as a classmap, and the development stack bind-mounts a
+newer tree over it: a class added since the image was built is right there and
+absent from the map. Two things made that permanent — the map was built
+`--classmap-authoritative`, which means "not in the map, does not exist, do not
+look", and the `vendor` volume kept it, because Docker only fills a named
+volume from the image while it is still empty. So rebuilding the image did not
+help either.
+
+Both are fixed: the map is no longer authoritative, and the entrypoint rebuilds
+it on every non-production boot. An older container needs its volume dropped
+once — and `-v` alone would take the database with it:
+
+```bash
+docker compose down
+docker volume rm ticktz_vendor
+docker compose up --build
+```
+
 **A change you pulled has no effect, and the symptoms point elsewhere.** The
 image in the development stack carries a production-tuned `php.ini`, and
 production means `opcache.validate_timestamps = 0`: PHP reads each file once

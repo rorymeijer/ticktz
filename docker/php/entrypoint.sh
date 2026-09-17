@@ -21,6 +21,20 @@ wait_for_database() {
     done
 }
 
+# The development stack bind-mounts the source tree over the image, so the code
+# moves and the autoloader's classmap does not. A class added since the image
+# was built is on disk and absent from the map, which surfaces as
+# `Trait "…" not found` in a file that has been there all along — and the
+# `vendor` volume makes it stick, because Docker only fills a named volume from
+# the image while it is still empty.
+#
+# Rebuilding the map takes a second or two and is never done in production,
+# where the tree in the image is the tree that runs.
+if [ "${APP_ENV:-production}" != "production" ] && [ -x /usr/bin/composer ]; then
+    echo "ticktz: rebuilding the autoloader for the mounted source tree"
+    composer dump-autoload --no-interaction --optimize --quiet 2>/dev/null || true
+fi
+
 if [ -z "${APP_KEY}" ] && [ -f .env ] && ! grep -q '^APP_KEY=base64:' .env; then
     echo "ticktz: generating application key"
     php artisan key:generate --force --no-interaction

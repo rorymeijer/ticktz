@@ -162,7 +162,7 @@ jobs:
       - name: Install what the application ships with
         run: |
           composer install --no-dev --no-interaction --no-progress \
-            --prefer-dist --optimize-autoloader --classmap-authoritative
+            --prefer-dist --optimize-autoloader
           npm ci --no-audit --no-fund
           npm run build
 
