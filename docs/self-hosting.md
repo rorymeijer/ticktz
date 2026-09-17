@@ -277,6 +277,19 @@ docker pull ghcr.io/rorymeijer/ticktz:1.1.0
 
 Pin a version rather than `latest` on anything you care about. `latest` moves.
 
+### Upgrading MySQL 8.0 to 8.4
+
+Ticktz 1.0.1 moves both compose stacks from `mysql:8.0` to `mysql:8.4`, the
+current LTS — 8.0 left support in April 2026. The container upgrades the data
+directory itself on first boot with the new image, which takes a minute or two
+on a large desk and is **one-way**: an 8.4 data directory cannot be opened by
+8.0 again. Take the backup first, as above, and if you would rather stay on 8.0
+for now, pin the old image in your own compose override rather than editing the
+file in the repository.
+
+Nothing in Ticktz changes with it. The upgrade is listed here because a major
+database version is not something to discover in a release note after the fact.
+
 ## Scaling
 
 The brief this was built to sets the target at 500 agents and 10,000
@@ -348,6 +361,21 @@ noticing things.
 **Check the health endpoint first.** `/health` reports the database, the cache
 and the queue, and will usually tell you which one it is. It does not check the
 scheduler — see the last item below.
+
+**`dependency failed to start: container ticktz-mysql-1 is unhealthy`.** Read
+the database's own log — `docker compose logs mysql` — rather than the compose
+summary, which only reports that the container never became healthy. MySQL
+aborts on startup rather than ignoring a setting it does not recognise, so an
+option meant for a different major version reads as
+`[ERROR] [MY-000067] [Server] unknown variable '…'` followed immediately by
+`Aborting`.
+
+A failed first boot leaves a half-written data directory behind, and the
+official image only initialises an empty one — so fixing the setting is not
+enough on its own and the next start fails with `Table 'mysql.plugin' doesn't
+exist`. On a stack with no data worth keeping, `docker compose down -v` throws
+the volume away and the next `up` initialises cleanly. On one with data, restore
+the backup into a fresh volume instead.
 
 **No e-mail is arriving.** Is the `mail` queue being consumed? `php artisan
 queue:failed` lists what died. The mailbox screen has a *Test* button that

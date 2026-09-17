@@ -1147,3 +1147,37 @@ The one carve-out: when `sync_groups` is on but the map is still empty, nothing
 is recomputed. That is the state an administrator is in halfway through
 configuring the screen, and flattening every account to the default role at
 that moment would lock them out of it.
+
+## D61 — A database flag written for a version we do not run
+
+The development stack pinned `mysql:8.0` and passed it
+`--mysql-native-password=OFF`. That option was added in MySQL **8.4**. MySQL
+does not ignore a setting it does not recognise — it aborts:
+
+```
+[ERROR] [MY-000067] [Server] unknown variable 'mysql-native-password=OFF'.
+[ERROR] [MY-010119] [Server] Aborting
+```
+
+So `docker compose up` never started a database, and every service that waits
+on one failed behind it. It is the same lesson as D59, one layer down: this was
+listed in the 1.0.0 pull request under "not verified" precisely because no
+daemon existed to run it, and it broke the first time somebody did.
+
+The fix is not to delete the flag. The flag was right and the image was wrong:
+MySQL 8.0 left support in April 2026, so the stacks now pin **8.4**, the
+current LTS, and CI runs the suite against the same version rather than against
+one nobody deploys. With 8.4 the flag is unnecessary anyway — it already
+defaults to `caching_sha2_password` — so the compose files carry no
+version-specific database flags at all, which is the property that keeps this
+from happening again on the next bump.
+
+`docker/mysql/ticktz.cnf` lost `default-authentication-plugin` in the same
+change, and for the same reason pointing the other way: that one was **removed**
+in 8.4 and would have aborted the server exactly as the command-line flag did.
+One version-specific setting was hiding a second one.
+
+A note for whoever hits this in their own stack, because the error compose
+prints is not the error that matters: a failed first boot leaves a partly
+written data directory, and the official image only initialises an empty one.
+Fixing the setting alone leaves `Table 'mysql.plugin' doesn't exist` behind it.
