@@ -1560,3 +1560,42 @@ tested one. The shell script that makes the decision has its own test suite
 (`tests/Shell/place-code.test.sh`) run in CI, and CI now starts the built image
 and checks both that it places its code and that a newer version in the volume
 survives a restart — the two things no unit test can prove about an image.
+
+## D68 — Two stacks, and why they may not share a name
+
+`docker-compose.yml` and `docker-compose.prod.yml` both said `name: ticktz`.
+They describe deliberately different things — one bind-mounts the source tree
+and seeds demo data, the other bakes the code into an image and sets
+`APP_ENV: production` — and for a while it read as two profiles of one
+deployment. It is not. A Compose project's name *is* its identity: services,
+containers, networks and volumes are all keyed by it. Two files with one name
+are two descriptions of the same stack, and bringing either up replaces what
+the other left behind.
+
+**What that costs is not obvious until it happens.** `docker compose` with no
+`-f` reads `docker-compose.yml`, so every command written for development
+resolves against the development file — but `exec` attaches to a *container*,
+and the container carrying that name is whichever `up` created it last. Run the
+production stack, then run a development command, and it lands in the
+production container. The error it produced was `ticktz:demo` refusing to seed
+"in production" from a checkout whose `.env` read `APP_ENV=local`. Every piece
+of evidence to hand agreed with the operator: the file was right, the key was
+right, `printenv` inside the container showed the right key. Nothing pointed at
+the container being the wrong one, because nothing prints which project a
+container belongs to unless you ask.
+
+**So the development stack is `ticktz-dev` and production keeps `ticktz`.** The
+asymmetry is on purpose: renaming the production project would orphan the
+containers and volumes of every instance already running, to fix a collision
+that only bites somebody who runs both. A development stack is disposable, and
+the upgrade note says to recreate it once.
+
+**A cached config is the same mistake in a smaller form.** `config:cache`
+compiles the environment as it stood at that moment, and in this stack it lands
+in the code volume — which outlives the container, the image, and the boot that
+wrote it. An instance that came up once without an `APP_KEY` kept insisting
+there was none long after there was, with `printenv` and `config()` giving
+different answers and neither explaining the other. Anything compiled from the
+environment is now dropped at the start of a boot and rebuilt at the end, once
+the environment is settled. A cache that survives what it was derived from is
+not a cache.

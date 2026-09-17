@@ -9,6 +9,31 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.1.3
+
+**Separates the development stack from the production one.** Both compose files
+declared `name: ticktz`, and a Compose project's name is its identity — so the
+two files were two descriptions of a single stack. Bringing one up replaced the
+other's containers, and a `docker compose` command without `-f` then reached
+whichever had gone up last. The symptom that finally explained it: `php artisan
+ticktz:demo` refused to seed, "in production", run from a checkout whose `.env`
+said `APP_ENV=local`. It was talking to the production container, where the
+compose file sets `APP_ENV: production` outright.
+
+The development stack is now `ticktz-dev`. Production keeps the plain name, so
+a deployed instance is untouched by the upgrade. A development stack started
+before this still carries the old name; remove its containers once
+(`docker compose down && docker compose up -d --build`) and the two stop
+colliding. Its `vendor` volume is now `ticktz-dev_vendor`.
+
+**Stops a compiled config from outliving the boot that wrote it.** The
+compiled config lives in the code volume, so an instance that once came up
+without an `APP_KEY` kept answering from a snapshot saying there was none —
+`printenv APP_KEY` showing the key while `config('app.key')` reported nothing,
+with neither answer explaining the other. The entrypoint now drops it before
+anything reads it, and production compiles a fresh one once the environment is
+settled.
+
 ## 1.1.2
 
 **Fixes an instance that comes up with no APP_KEY.** 1.1.1 correctly stopped

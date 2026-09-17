@@ -22,6 +22,10 @@
 # docker/php/entrypoint.sh.
 # ---------------------------------------------------------------------------
 
+# The production stack keeps the plain name; the development stack is
+# `ticktz-dev`. They must differ: Compose identifies a stack by its name, so
+# one name across both files would mean each `up` replaces the other's
+# containers and volumes.
 name: ticktz
 
 x-app-base: &app-base
