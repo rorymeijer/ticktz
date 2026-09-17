@@ -38,6 +38,7 @@ class UpgradePreflight
             $this->check('web_cannot_write', ! $this->webCanWriteCode($root), false),
             $this->check('archive', class_exists(\ZipArchive::class), true),
             $this->check('database', $this->databaseAnswers(), true),
+            $this->check('code_persists', $this->codePersists($root), true, $this->persistenceDetail($root)),
             $this->check('disk_space', $this->freeBytes($root) >= $this->requiredBytes(), true, $this->diskDetail($root)),
         ];
 
@@ -76,7 +77,67 @@ class UpgradePreflight
     {
         return (bool) config('ticktz.updates.self_upgrade')
             && $this->rootIsWritable($this->root())
+            && $this->codePersists($this->root())
             && class_exists(\ZipArchive::class);
+    }
+
+    /**
+     * Whether code written here would still be there afterwards.
+     *
+     * Outside a container the question does not arise: a directory on a disk
+     * keeps what is put in it. Inside one it is the difference between an
+     * upgrade and an illusion. A container's own writable layer is private to
+     * that container and thrown away when it is recreated, so an upgrade
+     * written there is invisible to the app container that has to serve it and
+     * gone at the next `docker compose up -d` — succeeding loudly and
+     * reverting silently, which is the worst way for this to fail.
+     *
+     * Asked of the filesystem rather than of a setting. A volume mounted at
+     * the application root is a different device from the directory above it,
+     * and that is an observable fact; a configuration flag saying the same
+     * thing would only be somebody's belief about their deployment.
+     */
+    private function codePersists(string $root): bool
+    {
+        if (! $this->inContainer()) {
+            return true;
+        }
+
+        return $this->isMountPoint($root);
+    }
+
+    private function inContainer(): bool
+    {
+        return is_file('/.dockerenv') || is_file('/run/.containerenv');
+    }
+
+    private function isMountPoint(string $path): bool
+    {
+        $parent = dirname($path);
+
+        if ($parent === $path) {
+            return true;
+        }
+
+        $here = @stat($path);
+        $above = @stat($parent);
+
+        if ($here === false || $above === false) {
+            return false;
+        }
+
+        return $here['dev'] !== $above['dev'];
+    }
+
+    private function persistenceDetail(string $root): ?string
+    {
+        if (! $this->inContainer()) {
+            return null;
+        }
+
+        return $this->isMountPoint($root)
+            ? $root.' is on a volume'
+            : $root.' is the container\'s own writable layer';
     }
 
     public function root(): string

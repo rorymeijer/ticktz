@@ -157,6 +157,16 @@ expires on Monday morning, which is what the calendar is for.
 ### Service levels, in Dutch
 ![Serviceniveaus](screenshots/1d-admin-sla-nl.png)
 
+### Updates
+Which version this desk runs, what is published, and — on a source install —
+the button that installs it. The readiness panel is the interesting half: the
+upgrade is done by the queue worker rather than the web request, because a
+web-facing PHP process must never be able to write the application's own code,
+and these checks are how you find out whether your deployment actually keeps
+those two apart.
+
+![Updates](screenshots/1g-admin-updates.png)
+
 ## Agent & portal
 
 ### Agent dashboard

@@ -64,6 +64,7 @@ const PAGES = [
     ['/admin/users', 'admin'],
     ['/admin/service-desk', 'admin'],
     ['/admin/webhooks', 'admin'],
+    ['/admin/updates', 'admin'],
     ['/settings/api-tokens', 'admin'],
 
     /*

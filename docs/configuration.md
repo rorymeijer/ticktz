@@ -226,6 +226,22 @@ is recomputed and existing roles are left alone, so switching group sync on
 before filling the mapping in cannot demote you out of the screen you are
 configuring.
 
+## Updates
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `TICKTZ_UPDATE_CHECK` | `false` | Ask GitHub whether a newer release exists. Off by default and it stays off: this is the only outbound request Ticktz makes that nobody configured. What GitHub learns when it is on is this server's IP address and that something asked for a public release list — nothing about the desk, its version or its people, and no token is sent |
+| `TICKTZ_UPDATE_REPOSITORY` | `rorymeijer/ticktz` | Where releases are read from. Point it at your own fork if you publish your own builds |
+| `TICKTZ_UPDATE_PRE_RELEASES` | `false` | Offer releases marked pre-release on GitHub |
+| `TICKTZ_UPDATE_CACHE_HOURS` | `6` | How long an answer is kept. Hours rather than minutes: an unauthenticated caller gets sixty requests an hour from one address, and a desk with four administrators refreshing a screen should not be able to spend them |
+| `TICKTZ_SELF_UPGRADE` | `false` | Allow this instance to replace its own code from Administration → Updates. Source installs only, and only where the queue worker owns the application directory and the web server does not. A Docker install cannot self-upgrade at all — see [`docs/self-hosting.md`](self-hosting.md) |
+| `TICKTZ_INSTALL_ROOT` | the application directory | Where the code lives, when that is not where PHP thinks it is |
+| `TICKTZ_UPDATE_FREE_BYTES` | `1073741824` | Free disk an upgrade requires beside the installation. A flat floor; the exact check happens against the release's own size |
+
+Nothing is ever installed without somebody pressing the button. There is no
+automatic upgrade and no schedule, by design — see
+[D66](decisions.md#d66--upgrading-from-the-browser-without-letting-the-browser-write-code).
+
 ## Docker
 
 | Variable | Default | Notes |

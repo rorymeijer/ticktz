@@ -1424,3 +1424,139 @@ files are stored as attachments and listed on the ticket as they always were,
 but the picture does not appear in the body. Mapping a `cid:` reference onto
 the attachment it belongs to is the obvious next step and a smaller one than
 this was.
+
+## D66 — Upgrading from the browser, without letting the browser write code
+
+**Decision.** Administration → Updates can check GitHub for a new release and,
+on a source install, install one. Both are off by default and switched on
+separately. The web request never writes a file: it creates an `upgrades` row
+naming a published version, and the queue worker — running as whoever owns the
+code — does the work.
+
+**The constraint that shaped everything else.** A web-facing PHP process must
+never be able to write the application's own code. A service desk accepts
+uploads from anybody with an e-mail address, so if the web process could write
+code, every file-write bug anywhere in the application would become a way to
+run code — a path from "the attachment validator has a hole" to "somebody is
+executing PHP of their choosing". That is not a risk worth accepting for the
+convenience of a button.
+
+So the split is not a queue used for its own sake. It is the security boundary,
+and the readiness checks on the screen are how an operator finds out whether
+their deployment actually keeps the two apart, or only looks like it does. One
+of those checks reports that the web server *can* write the code — as a warning
+rather than a block, because that exposure predates this feature and refusing
+to upgrade does not remove it.
+
+**The request carries no input at all.** `POST /admin/updates` reads nothing
+from the body. What gets installed is what the checker independently reports is
+on offer, and the worker confirms the same answer again before it touches
+anything. There is no endpoint here that takes a URL, a tag, a path or a
+version — so the worst a forged request can achieve is asking for the upgrade
+the screen was already offering, and a stale page cannot install an old version
+over a new one.
+
+**The swap is a standalone script, run detached.** `vendor` is being replaced,
+and the process doing the replacing is running out of it. PHP loads files as it
+needs them, so a job that moves `vendor` aside and then calls anything it has
+not already loaded dies halfway with the old tree gone and the new one not yet
+in place. The script has no framework, no autoloader and no dependency beyond
+what PHP ships with; everything it needs is baked in as a literal. It reports
+into a plain file, because for the duration of it there is no database
+connection to write to and no application to write it with. The next request,
+served by the new code, turns that file into a row. This is how Nextcloud's
+updater works, and for the same reason.
+
+**What the release owns is named, not inferred.** The swap replaces a fixed
+list of paths rather than "everything except". An installation holds things
+nobody here knows about — an operator's own script, a certificate, a directory
+some earlier version created — and an upgrade that deletes what it does not
+recognise is an upgrade that loses somebody's work. `.env`, `storage` and
+`public/storage` are deliberately absent from the list, which is also what lets
+the backup of the old tree live under `storage` and survive the swap that
+creates it.
+
+**A failed move rolls back; a failed migration does not.** If the tree cannot
+be taken apart, everything already moved goes back, because a tree half
+dismantled is worse than one never touched. If the migrations fail afterwards,
+the new code stays. Migrations that failed halfway have already touched the
+schema, and putting the old code in front of a half-migrated database is a
+second broken state rather than a recovery — so the failure is loud and names
+the path to the previous version, and a person decides.
+
+**No "is a worker running" check.** The honest version needs a heartbeat this
+application does not have, and the dishonest version — reading the jobs table —
+answers yes precisely when work is piling up unconsumed. The screen answers it
+by observation instead: an upgrade nothing has picked up in five minutes is
+reported as stuck, with the reason.
+
+**Docker installs are shown the command.** Recreating a running container needs
+the Docker daemon, and a web process must never be able to reach it. That is a
+deliberate limit rather than a missing feature, and the screen says so in those
+words instead of offering a button that would have to lie.
+
+## D67 — Making Docker upgradeable without letting the image stop mattering
+
+**Decision.** The production stack puts `/var/www/html` on a `code` volume
+shared by the app, the worker and nginx. The image carries its own copy at
+`/usr/src/ticktz`, and the entrypoint copies that into the volume on first boot
+and whenever the image is the newer of the two.
+
+**Why the obvious version does not work.** The app and the worker are two
+containers from one image. Before this, the only thing they shared was
+`storage` — which is precisely the one directory an upgrade must never replace.
+So the worker could faithfully replace every PHP file in its own filesystem and
+the app container, which is what nginx actually talks to, would see none of it.
+Add to that `opcache.validate_timestamps = 0`, which means PHP never re-reads a
+file it has already compiled, and a container's writable layer being discarded
+on `up -d`, and you have three independent reasons why "just replace the .php
+files" reports success and changes nothing. Any one of them alone would be a
+silent failure; together they are the worst kind, because the upgrade *looks*
+like it worked and reverts at the next restart.
+
+**Why the pristine copy exists.** A named volume is filled from the image only
+while it is still empty. Once there is code in it, the image's copy at the same
+path is shadowed and there is no way to hand a newer version over — which is
+exactly the trap that produced the `Trait "…" not found` failure earlier in
+this work ([D60](decisions.md)). Keeping the image's tree at a path no volume is
+mounted on is what keeps `docker compose pull` meaningful. It is what the
+Nextcloud image does, and for this reason.
+
+**Three cases, and the third is the careful one.** Nothing in the target →
+fill it. This entrypoint filled it before and the image is now newer → replace.
+Something is there that this entrypoint did not put there → never touch it,
+whatever the versions say. That last case is a developer's bind-mounted source
+tree, and copying an image over it would delete work in progress. The marker
+file is what separates them: its absence means somebody else owns this
+directory. Upgrading from the browser needs no case of its own — it writes a
+newer version into the volume, so the image stops being the newer of the two.
+
+**opcache is a feature during the swap and a problem after it.** While files
+are being replaced, requests already running are served from compiled memory
+and never touch the half-replaced disk — closer to atomic than the source
+install manages. Afterwards somebody has to say the code changed, and it has to
+be said in the process serving the web, not the one that did the upgrade: in
+this stack those are two containers with separate opcaches. `UpgradeMonitor`
+already runs on the first web request after a swap, so it resets there.
+
+**The preflight asks the filesystem, not the operator.** "Will code written
+here still be here" is answered by comparing the device of the application root
+with the device above it — a volume is a different device, and that is an
+observable fact. A configuration flag saying the same thing would only be
+somebody's belief about their own deployment, and the failure it is guarding
+against is one nobody notices until a restart.
+
+**The cost, stated plainly.** The image is no longer the only thing that
+determines which code runs. After a browser upgrade, pulling an older image
+changes nothing — the running version is the higher of the two, not whichever
+was pulled last. That is the trade the feature is: an operator who would rather
+keep an immutable image removes the `code` volume, and the readiness checks then
+say so and the button disappears.
+
+**The lists are kept honest by a test.** The entrypoint replaces the same set of
+paths a release does, and a test reads both and fails if they drift. Two ways of
+upgrading that leave different trees behind would mean only one of them is the
+tested one. The shell script that makes the decision has its own test suite
+(`tests/Shell/place-code.test.sh`) run in CI, and CI now starts the built image
+and checks both that it places its code and that a newer version in the volume
+survives a restart — the two things no unit test can prove about an image.

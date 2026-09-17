@@ -1,6 +1,16 @@
 #!/bin/sh
 set -e
 
+# Put the image's code into /var/www/html, or leave a mounted source tree
+# alone. Its own script because it is the part with the decisions in it, and a
+# decision nobody can run is a decision nobody has checked — see
+# docker/php/place-code.sh and tests/Shell/place-code.test.sh.
+if [ -x /usr/local/bin/ticktz-place-code ]; then
+    /usr/local/bin/ticktz-place-code
+fi
+
+cd "${TICKTZ_APP_ROOT:-/var/www/html}"
+
 # Wait for the database before doing anything that touches it. Compose health
 # checks already gate startup, but self-hosters sometimes point Ticktz at an
 # external MySQL that is slower to come up.

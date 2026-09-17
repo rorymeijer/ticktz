@@ -80,6 +80,36 @@ class ReleaseChecker
     }
 
     /**
+     * The files attached to a release.
+     *
+     * Read from the cached payload rather than fetched again: the release the
+     * screen offered and the release the worker installs have to be the same
+     * one, and a second call could return a different answer if somebody
+     * published in between.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function assetsFor(Release $release): array
+    {
+        $payload = Cache::get(self::CACHE_KEY);
+
+        if (! is_array($payload)) {
+            return [];
+        }
+
+        $version = Version::parse((string) ($payload['tag_name'] ?? ''));
+
+        if ($version === null || $version->compare($release->version) !== 0) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            (array) ($payload['assets'] ?? []),
+            static fn ($asset): bool => is_array($asset),
+        ));
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     private function fetch(): ?array

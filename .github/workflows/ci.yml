@@ -82,6 +82,9 @@ jobs:
       - name: Check formatting
         run: ./vendor/bin/pint --test
 
+      - name: Shell tests
+        run: sh tests/Shell/place-code.test.sh
+
       # The Laravel 11 advisories that forced the upgrade in D50 sat in the
       # lock file for weeks before anyone ran this by hand. Now the build
       # notices.
@@ -222,6 +225,43 @@ jobs:
           context: .
           target: runtime
           push: false
-          load: false
+          load: true
+          tags: ticktz/app:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # The image carries its code at /usr/src/ticktz and the entrypoint puts
+      # it into /var/www/html, which is the arrangement that lets the app and
+      # the worker share a code volume. Nothing in the unit tests can prove the
+      # image was assembled that way — only starting one can.
+      - name: The image places its code
+        run: |
+          docker run --rm --entrypoint sh ticktz/app:ci -c '
+            set -e
+            test -f /usr/src/ticktz/artisan
+            test -s /usr/local/share/ticktz/image-version
+            /usr/local/bin/ticktz-place-code
+            test -f /var/www/html/artisan
+            test -f /var/www/html/vendor/autoload.php
+            test -f /var/www/html/public/build/manifest.json
+            test "$(cat /var/www/html/.ticktz-image)" = "$(cat /usr/local/share/ticktz/image-version)"
+            php /var/www/html/artisan --version
+          '
+
+      # A volume that already holds a newer version is left alone, which is
+      # what makes an upgrade installed from the browser survive a restart.
+      # Getting this backwards would silently undo every web upgrade on the
+      # next `docker compose up -d`.
+      - name: A newer version in the volume survives a restart
+        run: |
+          docker volume create ticktz-ci-code
+          docker run --rm -v ticktz-ci-code:/var/www/html --entrypoint sh ticktz/app:ci -c '
+            /usr/local/bin/ticktz-place-code >/dev/null
+            printf "99.0.0" > /var/www/html/.ticktz-image
+            printf "installed from the browser" > /var/www/html/artisan
+          '
+          docker run --rm -v ticktz-ci-code:/var/www/html --entrypoint sh ticktz/app:ci -c '
+            /usr/local/bin/ticktz-place-code
+            test "$(cat /var/www/html/artisan)" = "installed from the browser"
+          '
+          docker volume rm ticktz-ci-code
