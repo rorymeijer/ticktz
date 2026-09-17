@@ -87,6 +87,53 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Updates
+    |--------------------------------------------------------------------------
+    |
+    | Off. This is the only outbound request Ticktz would make that nobody
+    | configured — no mailbox, no webhook, no directory, just the application
+    | talking to a third party — and the brief this was built to says no
+    | telemetry and no third-party trackers. Turning it on sends nothing about
+    | the desk: it is the same unauthenticated request a browser makes for a
+    | public release list, and what GitHub learns is this server's IP address.
+    |
+    | With it off, the update screen still works. It shows the running version
+    | and how to upgrade; it just cannot tell you whether there is a newer one.
+    |
+    */
+    'updates' => [
+        'enabled' => (bool) env('TICKTZ_UPDATE_CHECK', false),
+        'repository' => (string) env('TICKTZ_UPDATE_REPOSITORY', 'rorymeijer/ticktz'),
+        'pre_releases' => (bool) env('TICKTZ_UPDATE_PRE_RELEASES', false),
+        'cache_hours' => (int) env('TICKTZ_UPDATE_CACHE_HOURS', 6),
+        'timeout' => (int) env('TICKTZ_UPDATE_TIMEOUT', 8),
+
+        /*
+         * Where this instance keeps its code, and whether it may replace it.
+         *
+         * A source install can upgrade itself: fetch the release, install it,
+         * migrate. A Docker install cannot — replacing a running container
+         * needs the daemon, and a web-facing PHP process must never be able to
+         * reach that — so it is shown the command instead.
+         *
+         * `self_upgrade` is the switch, and it is not the only gate: the
+         * process doing the work has to own the code, and the process serving
+         * the web must not. See UpgradePreflight.
+         */
+        'self_upgrade' => (bool) env('TICKTZ_SELF_UPGRADE', false),
+        'root' => (string) env('TICKTZ_INSTALL_ROOT', base_path()),
+
+        /*
+         * Room a release needs beside the installation. A flat floor: a
+         * release is a production tree, a few hundred megabytes, archive and
+         * extraction together well inside a gigabyte. The exact check happens
+         * against the release asset's own size, where the real number is.
+         */
+        'free_bytes_required' => (int) env('TICKTZ_UPDATE_FREE_BYTES', 1024 * 1024 * 1024),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination defaults
     |--------------------------------------------------------------------------
     */
