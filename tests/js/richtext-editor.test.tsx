@@ -34,6 +34,14 @@ vi.mock('@inertiajs/react', () => ({
                 'editor.link.cancel': 'Cancel',
                 'editor.link.invalid': 'That does not look like a web address.',
                 'editor.link.placeholder': 'https://example.com',
+                'editor.image.add': 'Add image',
+                'editor.image.uploading': 'Uploading image…',
+                'editor.image.alt': 'Describe this image',
+                'editor.image.alt_help': 'What somebody would miss.',
+                'editor.image.alt_apply': 'Save description',
+                'editor.image.rejected': 'Not an image we accept.',
+                'editor.image.too_many': 'Too many uploads.',
+                'editor.image.failed': 'Could not upload.',
                 'editor.history.undo': 'Undo',
                 'editor.history.redo': 'Redo',
                 'editor.style.label': 'Text style',
@@ -58,8 +66,16 @@ beforeAll(() => {
     Range.prototype.getBoundingClientRect = () => new DOMRect();
 });
 
-function Harness({ profile = 'basic' as const, initial = '' }) {
-    return <RichTextEditor value={initial} onChange={() => {}} profile={profile} label="Description" />;
+function Harness({ profile = 'basic' as const, initial = '', images = false }) {
+    return (
+        <RichTextEditor
+            value={initial}
+            onChange={() => {}}
+            profile={profile}
+            images={images}
+            label="Description"
+        />
+    );
 }
 
 describe('RichTextEditor', () => {
@@ -143,6 +159,26 @@ describe('RichTextEditor', () => {
         expect(screen.getByRole('combobox', { name: 'Text style' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Code block' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Divider' })).toBeInTheDocument();
+    });
+
+    /**
+     * Images are a property of the field. A note whose readership is not
+     * defined cannot decide who may see a screenshot pasted into it, so the
+     * button is not offered there — and an icon-only button with no name is
+     * exactly what the accessibility gate caught elsewhere in this codebase.
+     */
+    it('offers the image button only where the field holds images, with a name', async () => {
+        const { unmount } = render(<Harness />);
+
+        await screen.findByRole('toolbar', { name: 'Formatting' });
+        expect(screen.queryByRole('button', { name: 'Add image' })).not.toBeInTheDocument();
+
+        unmount();
+
+        render(<Harness images />);
+
+        await screen.findByRole('toolbar', { name: 'Formatting' });
+        expect(screen.getByRole('button', { name: 'Add image' })).toBeInTheDocument();
     });
 
     it('offers to remove a link only when the cursor is in one', async () => {

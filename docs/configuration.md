@@ -185,6 +185,26 @@ scheme a browser would execute.
 What stays plain text: names, keys, slugs, addresses, CSV mappings, automation
 conditions, and e-mail templates. See [`decisions.md`](decisions.md) (D62).
 
+### Pasted images
+
+Tickets, replies and knowledge base articles take images; nothing else does.
+They are stored on the attachment disk by default, never on a public one, and
+served through a policy that follows whatever they were pasted into — a
+screenshot on an internal note is not readable by the requester.
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `TICKTZ_RICH_TEXT_IMAGE_DISK` | the attachment disk | Where pasted images are stored. Never a public disk |
+| `TICKTZ_MAX_INLINE_IMAGE_KB` | `5120` | Smaller than the attachment limit on purpose: this is a picture inside somebody's reading, not a file they chose to send |
+| `TICKTZ_ALLOWED_INLINE_IMAGE_EXTENSIONS` | `png,jpg,jpeg,gif,webp` | Checked by reading the file, not by trusting its name |
+| `TICKTZ_INLINE_IMAGE_ORPHAN_DAYS` | `7` | How long an image nobody ever saved is kept. `ticktz:prune-images` sweeps the rest, daily |
+| `TICKTZ_UPLOAD_RATE_LIMIT` | `30` | Uploads per minute per person |
+
+A message may only show an image this instance is serving. A remote one is a
+tracking pixel — see D63. Articles may still embed a remote image, because they
+are written by staff on purpose; that is one line to change if you would rather
+they could not.
+
 ## Directories (LDAP / Active Directory)
 
 Connection details are **not** environment variables. They are rows in the
@@ -219,7 +239,7 @@ Host ports for the development stack only, so two checkouts can run at once:
 
 | Variable | Default | Publishes |
 | --- | --- | --- |
-| `TICKTZ_VITE_PORT` | `5173` | The Vite dev server |
+| `TICKTZ_VITE_PORT` | `5173` | The Vite dev server. Also what the browser is told to fetch assets from, so publishing a different port here is enough — no second setting to keep in step |
 | `TICKTZ_MYSQL_PORT` | `3306` | MySQL, for a database client |
 | `TICKTZ_MAIL_UI_PORT` | `8025` | GreenMail's web interface |
 | `TICKTZ_MAIL_SMTP_PORT` | `3025` | GreenMail's SMTP listener |

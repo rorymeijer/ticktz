@@ -1262,3 +1262,104 @@ an editor. That is a real number and worth stating plainly. The alternative to
 a library here is not "no library" — keeping selection, undo and paste
 normalisation correct across browsers is a multi-year problem — it is a worse
 one.
+
+## D63 — Pasting a screenshot, and who may see it
+
+Tickets, replies and knowledge base articles take images. Paste, drop or pick
+one and it uploads to `/rich-text/images`, lands outside the web root, and
+comes back as a relative URL the editor puts in the text.
+
+**Not the attachments table**, which was the obvious place to look first. An
+attachment belongs to a ticket — the column is not nullable and the whole
+attachment policy stands on it — while an image pasted into an article belongs
+to no ticket, and one pasted into a draft nobody has filed yet belongs to
+nothing at all. Covering both would have meant making `ticket_id` nullable and
+teaching the policy to cope, which is a change to the thing that decides who
+may download somebody's payslip. A second table was cheaper and safer.
+
+**An image has the audience of whatever it was pasted into.** It is bound to
+its owner when the text referencing it is saved, and read through that owner's
+own rules: everyone who may read the ticket sees the screenshot in it, and one
+on an internal note stays unreadable to the requester who may read everything
+around it. Between the paste and the save it belongs to nothing and only its
+uploader may see it — treating an unclaimed upload as public for convenience
+would make paste-and-abandon the easiest way to host a file on somebody else's
+server.
+
+**Only our own images, in a message.** A remote `<img>` is a tracking pixel:
+whoever controls the URL learns the IP address, the time and the user agent of
+every person who opens the ticket — which on a service desk is an agent, their
+team lead, and whoever it is escalated to. A requester needs no account and no
+cleverness to plant one; they need a mail client that pastes a signature. The
+brief this was built to says no third-party trackers, and honouring that for
+the trackers we ship but not for the ones our own input field accepts would be
+honouring it in the wrong direction.
+
+The first version of that check read only the URL's path, so
+`https://tracker.test/rich-text/images/<uuid>` — our path, somebody else's host
+— walked straight through it. A test caught it. A scheme or a host of any kind
+is now a refusal, protocol-relative `//host/…` included.
+
+Articles keep the wider rule and may still embed a remote image. They are
+written by staff, on purpose, and an administrator pointing at a diagram on
+their own intranet is a different act from a stranger's signature arriving in a
+ticket. An operator who disagrees has one line to change.
+
+**Images are a property of the field, not of the profile.** The two are
+orthogonal: an asset note has a vocabulary but no readership of its own, so an
+image pasted into one would be bound to a record nothing can authorise — a
+broken image at best and a question about who may read it at worst. Three
+fields declare `images: true`, and the editor offers the button in exactly
+those three.
+
+**They travel with the mail.** A relative path behind a policy renders as a
+broken image in an inbox, which is worse than no image because it looks like
+the desk sent something and lost it. Each one is attached by `cid:` and
+filtered per recipient through the same policy, so an internal note's
+screenshot reaches the agents it was mailed to and is removed from anybody
+else's copy.
+
+**An alt text box**, because a screenshot with no description is nothing to a
+screen reader and an accessibility gate we pass by not shipping images is not a
+gate. It starts as the file name — a poor description, and a far better
+starting point than an empty string.
+
+**A prune command**, because every abandoned draft leaves its screenshots
+behind. Most are a login screen; some are a payslip. Unowned rows older than
+the configured window are deleted daily, file and all.
+
+## D64 — Three ways to serve a page that nobody could have found by reading it
+
+Within a day of the first release the development stack failed three times, in
+three different places, all for the same underlying reason: it had never been
+run. The test suite says nothing about any of them, because the suite runs
+against `artisan serve` with a built bundle and a SQLite file — a shape that
+shares almost nothing with the stack an operator starts.
+
+**The database never started.** A flag written for MySQL 8.4 passed to an 8.0
+image; MySQL aborts on an unknown variable. (D61)
+
+**The healthcheck said it had.** `mysqladmin ping` as root reports a running
+server just as cheerfully when the data directory was initialised without the
+application's user and database, which is what a volume left over from the
+first failure gives you. The dependency gate opened, the app started, and the
+first query failed with "Host … is not allowed to connect to this MySQL
+server" — error 1130, which sounds like a network or a grant problem and is
+neither. The healthcheck now connects as the user the app connects as, to the
+database the app uses, so a half-initialised volume is reported wrong where it
+is wrong.
+
+**The page was white.** Vite has to listen on `0.0.0.0` to be reachable from
+outside its container, and laravel-vite-plugin writes whatever it is listening
+on into `public/hot` — which is the URL the *browser* is then told to load the
+application from. `http://0.0.0.0:5173` is not an address a browser can fetch.
+Chrome quietly treats it as localhost and the page works; Safari and Firefox do
+not, and the page is blank with nothing in any log, because the server did its
+job and the browser was handed an address that does not exist. `server.hmr.host`
+is what the plugin writes instead.
+
+The third one is the one worth sitting with, because unlike the other two it
+needed no Docker to find. Running the dev server and reading the file it writes
+would have shown `http://0.0.0.0:5173` on any machine. It was not found because
+nobody looked at the development path at all — the built bundle was what every
+check exercised, and the hot file only exists on the path no check took.

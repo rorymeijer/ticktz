@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { editorValue, isBlankHtml, normaliseUrl } from '@/lib/richtext';
+import { imageFilesIn } from '@/lib/richTextUpload';
 
 describe('isBlankHtml', () => {
     /**
@@ -86,5 +87,37 @@ describe('editorValue', () => {
 
     it('passes a document with words in it through unchanged', () => {
         expect(editorValue('<p>Printer is broken</p>')).toBe('<p>Printer is broken</p>');
+    });
+});
+
+describe('imageFilesIn', () => {
+    const png = () => new File(['x'], 'shot.png', { type: 'image/png' });
+
+    it('picks the images out of a drop', () => {
+        const list = [png(), new File(['x'], 'notes.txt', { type: 'text/plain' })];
+
+        expect(imageFilesIn(list as unknown as FileList)).toHaveLength(1);
+    });
+
+    /**
+     * A clipboard carries the same screenshot several ways at once — an image,
+     * and the HTML or text a mail client wrapped around it. Only the image is
+     * ours to upload.
+     */
+    it('reads the file entries of a clipboard and ignores the rest', () => {
+        const items = [
+            { kind: 'string', type: 'text/html', getAsFile: () => null },
+            { kind: 'file', type: 'image/png', getAsFile: () => png() },
+        ];
+
+        const files = imageFilesIn(items as unknown as DataTransferItemList);
+
+        expect(files).toHaveLength(1);
+        expect(files[0].type).toBe('image/png');
+    });
+
+    it('says nothing when there is nothing', () => {
+        expect(imageFilesIn(null)).toEqual([]);
+        expect(imageFilesIn(undefined)).toEqual([]);
     });
 });
