@@ -219,6 +219,16 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      # Make the build context look like a developer's machine rather than a
+      # clean checkout. Without this the checks below pass by accident: CI has
+      # no .env and has never run the Vite dev server, so nothing would be
+      # there to leak whether the image excluded it or not.
+      - name: Plant the files a working checkout would have
+        run: |
+          printf 'APP_KEY=base64:leaked\nDB_PASSWORD=hunter2\n' > .env
+          printf 'http://localhost:5173' > public/hot
+          mkdir -p bootstrap/cache && printf '<?php return [];' > bootstrap/cache/config.php
+
       - name: Build the runtime image
         uses: docker/build-push-action@v6
         with:
@@ -246,6 +256,27 @@ jobs:
             test -f /var/www/html/public/build/manifest.json
             test "$(cat /var/www/html/.ticktz-image)" = "$(cat /usr/local/share/ticktz/image-version)"
             php /var/www/html/artisan --version
+          '
+
+      # Neither the secrets nor the dev-server marker may reach the image. The
+      # .env would ship a database password to anybody who pulls it, and
+      # public/hot makes Laravel send every browser to localhost:5173 for its
+      # JavaScript — a white page with nothing in any log to explain it.
+      - name: The image carries no secrets and no dev-server marker
+        run: |
+          docker run --rm --entrypoint sh ticktz/app:ci -c '
+            set -e
+            for path in .env public/hot bootstrap/cache/config.php node_modules; do
+              if [ -e "/usr/src/ticktz/$path" ]; then
+                echo "LEAKED INTO THE IMAGE: $path" >&2
+                exit 1
+              fi
+            done
+            # And the placed tree inherits that, since it is a copy of it.
+            /usr/local/bin/ticktz-place-code >/dev/null
+            test ! -e /var/www/html/public/hot
+            test ! -e /var/www/html/.env
+            echo "clean"
           '
 
       # A volume that already holds a newer version is left alone, which is

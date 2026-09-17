@@ -118,6 +118,19 @@ RUN chmod +x /usr/local/bin/ticktz-entrypoint /usr/local/bin/ticktz-place-code
 COPY --from=vendor /var/www/html /usr/src/ticktz
 COPY --from=assets /app/public/build /usr/src/ticktz/public/build
 
+# A second lock on the same door as .dockerignore, because this one is cheap
+# and the failure it prevents is silent.
+#
+# `public/hot` is written by the Vite dev server and makes Laravel point every
+# browser at http://localhost:5173 for its JavaScript — the page comes up white
+# with nothing in any server log to say why. `bootstrap/cache` may hold a
+# config compiled on whoever's machine built this. Neither belongs in an image,
+# and the release archive already strips both; this keeps the two ways of
+# shipping Ticktz producing the same tree.
+RUN rm -f /usr/src/ticktz/public/hot \
+          /usr/src/ticktz/.env \
+          /usr/src/ticktz/bootstrap/cache/*.php
+
 RUN mkdir -p /usr/src/ticktz/storage/framework/{cache,sessions,testing,views} \
         /usr/src/ticktz/storage/logs \
         /usr/src/ticktz/bootstrap/cache \

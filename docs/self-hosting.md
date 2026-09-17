@@ -350,6 +350,25 @@ pull` no longer moves you to whatever the image has unless that image is
 compares versions — but the running version is the higher of the two, not
 whichever you pulled last.
 
+#### If a page comes up white
+
+Almost always `public/hot`: a file the Vite dev server writes, which makes
+Laravel tell the browser to fetch its JavaScript from `http://localhost:5173`.
+Nothing is wrong on the server, so nothing is in any log.
+
+```bash
+docker compose -f docker-compose.prod.yml exec app ls -l public/hot
+docker compose -f docker-compose.prod.yml exec app rm -f public/hot
+```
+
+Laravel checks for that file on every request, so the page works again at once.
+
+It got into the image because `docker build` copies the directory you build
+from rather than what is committed, and before 1.1.1 there was no
+`.dockerignore` to stop it. If you built an image before 1.1.1 from a checkout
+that also held a `.env`, **that image contains your database password and
+`APP_KEY`** — rotate them if you have pushed it anywhere.
+
 #### If the app container crash-loops on a missing vendor file
 
 A `502 Bad Gateway` from nginx with `Failed opening required '.../vendor/...'`

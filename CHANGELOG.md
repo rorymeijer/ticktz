@@ -31,6 +31,27 @@ first boot answers 502 while it is still copying.
 Recovering an instance already stuck this way is in
 [`docs/self-hosting.md`](docs/self-hosting.md).
 
+**Adds the `.dockerignore` that should always have been there.** `docker build`
+copies the directory you build from, not what is committed, so everything
+gitignored but present on disk went into the image:
+
+- **`.env`** — your database password, `APP_KEY` and mail credentials, baked
+  into an image you might push to a registry. Rotate those if you have pushed
+  an image built before this.
+- **`public/hot`** — written by the Vite dev server, and it makes Laravel point
+  every browser at `http://localhost:5173` for its JavaScript. The page comes
+  up white with nothing in any server log to explain it. If you are seeing that
+  now, `docker compose exec app rm -f public/hot` fixes it immediately.
+- **`vendor`** — and this one is worse than size. In the build, `COPY . .` runs
+  *after* `composer install --no-dev`, so a local vendor directory overwrote
+  the clean production one. Images built from a working checkout shipped the
+  development dependencies.
+
+The image also strips `public/hot`, `.env` and `bootstrap/cache` itself, so the
+two ways of shipping Ticktz produce the same tree. CI plants all three in the
+build context before building and fails if any reaches the image — a guard that
+cannot fail guards nothing.
+
 ## 1.1.0
 
 **Upgrade from the browser.** Administration → Updates shows which version this

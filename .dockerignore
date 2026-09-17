@@ -1,0 +1,68 @@
+# ---------------------------------------------------------------------------
+# What never belongs in the build context.
+#
+# The Dockerfile's `COPY . .` copies whatever is in the directory you build
+# from — not whatever is committed. Everything gitignored but present on disk
+# goes in too, and two of those are actively harmful:
+#
+#   .env         your database password, APP_KEY and mail credentials, baked
+#                into an image you might push to a registry
+#   public/hot   written by the Vite dev server, and it makes Laravel point
+#                every browser at http://localhost:5173 for its JavaScript.
+#                The page then comes up white with nothing in any server log
+#                to explain it
+#
+# The rest is size and staleness: a local `vendor` with development
+# dependencies, a `bootstrap/cache` holding a config compiled for somebody
+# else's machine, and twenty-three megabytes of screenshots.
+# ---------------------------------------------------------------------------
+
+.git
+.github
+.gitignore
+.gitattributes
+
+# Rebuilt inside the image, from the lock files, without dev dependencies.
+vendor
+node_modules
+
+# Secrets. `.env.example` is documentation and stays.
+.env
+.env.*
+!.env.example
+
+# Written by the Vite dev server. See above — this one is the white screen.
+public/hot
+
+# Built by the assets stage and copied in from there, so a stale local build
+# cannot shadow the one this image was made with.
+public/build
+
+# A symlink into storage, recreated by `artisan storage:link` at boot.
+public/storage
+
+# Belongs to whichever instance is running, never to the image: logs, sessions,
+# compiled views, uploaded attachments. The Dockerfile creates the empty
+# skeleton it needs.
+storage/app
+storage/framework
+storage/logs
+storage/*.sqlite
+
+# A config, route or event cache compiled somewhere else, for somewhere else.
+bootstrap/cache
+
+# Local databases.
+database/*.sqlite
+database/*.sqlite-journal
+
+# Not shipped: the tests, and the screenshots the documentation links to —
+# twenty-three megabytes every instance would pull to look at a picture of
+# itself. The written documentation does ship.
+tests
+docs/screenshots
+
+.idea
+.vscode
+.DS_Store
+*.log
