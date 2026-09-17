@@ -116,7 +116,23 @@ services:
     ports:
       - "${TICKTZ_MYSQL_PORT:-3306}:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DB_ROOT_PASSWORD:-root-secret}"]
+      # Checks what the application needs, not merely that a server answers.
+      #
+      # `mysqladmin ping` as root says the process is up, and it says that
+      # just as cheerfully when the data directory was initialised without the
+      # application's user and database — which is what a leftover volume
+      # gives you. The dependency gate then opens, the app starts, and the
+      # first query fails with "Host … is not allowed to connect to this MySQL
+      # server", a long way from the cause.
+      #
+      # So: connect as the user the app connects as, to the database the app
+      # uses. `$$` escapes the compose interpolation so the shell inside the
+      # container expands them.
+      test:
+        - CMD-SHELL
+        - >-
+          mysql -h 127.0.0.1 -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD"
+          -e 'select 1' "$$MYSQL_DATABASE"
       interval: 5s
       timeout: 5s
       retries: 30

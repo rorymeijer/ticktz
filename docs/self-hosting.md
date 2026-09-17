@@ -377,6 +377,29 @@ exist`. On a stack with no data worth keeping, `docker compose down -v` throws
 the volume away and the next `up` initialises cleanly. On one with data, restore
 the backup into a fresh volume instead.
 
+**`Host '172.20.0.x' is not allowed to connect to this MySQL server`.** Error
+1130, and it does not mean what it sounds like. The server is running and
+reachable; it simply has no account by that name. The official image creates
+`MYSQL_USER` only when it initialises an *empty* data directory, so a volume
+left over from an earlier, failed boot gives you a server that starts, answers
+root, and has never heard of the application's user:
+
+```bash
+# The password is read inside the container. It lives in .env, which your own
+# shell has not sourced, so a $DB_ROOT_PASSWORD out here only makes mysql ask.
+docker compose exec mysql sh -c \
+  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "select user, host from mysql.user; show databases;"'
+```
+
+No `ticktz` row means the initialisation never ran. `docker compose down -v`
+and start again, or restore a backup into a fresh volume.
+
+One other way to reach the same error: setting `DB_USERNAME=root` in `.env`.
+The image refuses to create an account called root — it already exists, as
+`root@localhost` only — and logs that it is ignoring the request, so the app
+then tries to connect as root from a container address and is turned away. Use
+any other name.
+
 **No e-mail is arriving.** Is the `mail` queue being consumed? `php artisan
 queue:failed` lists what died. The mailbox screen has a *Test* button that
 sends through the real path.
