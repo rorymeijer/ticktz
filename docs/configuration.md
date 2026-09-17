@@ -184,7 +184,7 @@ settings change without a deploy.
 | --- | --- | --- |
 | `TICKTZ_HTTP_PORT` | `8080` | Host port the bundled nginx publishes (the compose fallback is `80` when unset). Terminate TLS in front of it |
 | `TICKTZ_IMAGE` | `ticktz/app:latest` | Override to run a published image instead of building |
-| `TICKTZ_AUTO_MIGRATE` | `true` | Migrations run when the app container boots. `false` to run them yourself |
+| `TICKTZ_AUTO_MIGRATE` | `false` in the production stack, `true` otherwise | Migrations run when the app container boots. Off in production so a first boot lands on the setup wizard rather than migrating into a database nobody has chosen |
 | `TICKTZ_SEED_DEMO` | `true` in the dev stack, `false` otherwise | Seeds the demo desk on first boot. Ignored in production, and skipped entirely once the instance has any user — a restart must never re-seed over a desk somebody is using |
 | `CONTAINER_ROLE` | `app` | `app` or `worker`; set by the compose files |
 

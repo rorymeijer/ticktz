@@ -52,7 +52,7 @@ curl -s http://localhost:8080/health | jq
 
 | Document | What it covers |
 | --- | --- |
-| [Self-hosting](docs/self-hosting.md) | Installing, upgrading, backups, scaling, troubleshooting |
+| [Self-hosting](docs/self-hosting.md) | The setup wizard, upgrading, backups, scaling, troubleshooting |
 | [Configuration](docs/configuration.md) | Every setting, and the ones where the value matters |
 | [Architecture](docs/architecture.md) | How it is put together, and why |
 | [Roadmap](docs/roadmap.md) | What each phase shipped |

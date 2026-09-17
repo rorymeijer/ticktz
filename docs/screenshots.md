@@ -392,6 +392,51 @@ bigger would encode the length twice and say nothing new.
 
 ![Rapportage](screenshots/85-reports-nl.png)
 
+## Installing
+
+### The wizard
+A fresh instance sends every URL here. Seven steps, nothing written until the
+last one — close the tab halfway and you have lost only the typing.
+
+![Setup wizard](screenshots/95-install-welcome.png)
+
+### Requirements
+Failures are listed first. On a screen whose only job is telling you what is
+wrong, making somebody scroll past twenty green rows to find the red one is a
+design working against itself.
+
+The required list is derived from what the dependency tree actually declares,
+not from the list everybody copies — `bcmath` was on it here until it was
+checked, and would have blocked installs on servers that work perfectly.
+
+![Requirements](screenshots/96-install-requirements.png)
+
+### Where the data lives
+The one question worth thinking about: the MySQL that ships alongside, or a
+server you already run. The built-in option is only offered when there is
+visibly one to point at.
+
+The connection is tested before you can continue, and the test checks the
+grant as well as the credentials — a read-only user connects happily and then
+fails on the first migration, which is a much worse place to find out.
+
+![Database](screenshots/97-install-database.png)
+
+### Your account
+The first account has every permission, so it gets a longer minimum than the
+default. Deliberately not checked against Have I Been Pwned: that would make
+installation depend on reaching a third party, and an air-gapped deployment
+could not create its own administrator.
+
+![Administrator](screenshots/99-install-administrator.png)
+
+### Before it commits
+Everything that can fail has already been tried by this point. Pressing the
+button writes `.env` and the marker — the first durable changes of the whole
+process.
+
+![Finish](screenshots/9b-install-finish.png)
+
 ## API & webhooks
 
 ### API tokens

@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Models\ApiToken;
 use App\Services\AuditLogger;
 use App\Services\Automation\AutomationGuard;
+use App\Services\Install\EnvWriter;
 use App\Services\SettingsRepository;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,12 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SettingsRepository::class);
+
+        // EnvWriter takes the path it edits, so the container cannot guess it.
+        // Bound rather than defaulted in the constructor, because a writer
+        // that silently falls back to the application's own .env is one that
+        // will one day be handed a temp path in a test and edit the real file.
+        $this->app->bind(EnvWriter::class, static fn () => EnvWriter::forApplication());
         $this->app->singleton(AuditLogger::class);
         // The automation loop guard holds the state of the cascade currently
         // running. Every collaborator has to see the same instance or a rule
@@ -78,6 +85,13 @@ class AppServiceProvider extends ServiceProvider
         // Keying by token id also means revoking a token frees its bucket,
         // rather than leaving an exhausted counter behind under a user id that
         // the replacement token would inherit.
+        // The installer. Unauthenticated, and one of its endpoints opens a
+        // connection to whatever host and port it is handed — so the limit is
+        // per IP and deliberately low. A human filling in a form tests a
+        // connection a handful of times; anything using it to sweep a network
+        // hits the wall almost immediately.
+        RateLimiter::for('install', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));
+
         RateLimiter::for('api-token', function (Request $request): Limit {
             $token = $request->user()?->currentAccessToken();
 

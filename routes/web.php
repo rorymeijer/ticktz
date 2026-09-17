@@ -21,6 +21,9 @@ use Inertia\Inertia;
 
 Route::get('/health', HealthController::class)->name('health');
 
+// The setup wizard. Disappears the moment the instance is installed.
+require __DIR__.'/install.php';
+
 /*
 |--------------------------------------------------------------------------
 | Public

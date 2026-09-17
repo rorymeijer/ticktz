@@ -56,6 +56,13 @@ it was issued for and what its owner may do today, outgoing webhooks with
 HMAC-signed payloads and a delivery log, and an OpenAPI spec tested against the
 real route table.
 
+**Setup wizard** — a fresh instance sends every URL to `/install` and walks
+through requirements, database, application, administrator and optional
+e-mail. The one question with weight is where the data lives: the MySQL that
+ships in the compose file, or a server you already run. Nothing is written
+until the last step, and the wizard closes behind itself once the instance is
+up. `php artisan ticktz:install` does the same thing without a browser.
+
 **Multilingual** — Dutch and English throughout, per user, including outgoing
 e-mail. A test fails the build when the two locales drift apart, and another
 fails it when a `t()` key has nothing behind it.
@@ -66,6 +73,8 @@ rather than once by hand.
 ### Notes for operators
 
 - PHP 8.4, MySQL 8, Redis.
+- First boot opens the setup wizard. Upgrading an existing instance does not:
+  a migrated database with users in it counts as installed.
 - `docker compose up` on a fresh clone gives a working, populated demo. Do not
   point that compose file at real data: see
   [docs/self-hosting.md](docs/self-hosting.md) for the production one.

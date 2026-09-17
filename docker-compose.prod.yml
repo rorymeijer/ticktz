@@ -49,6 +49,10 @@ services:
       CONTAINER_ROLE: app
       APP_ENV: production
       APP_DEBUG: "false"
+      # Off by default so a first boot lands on the setup wizard rather than
+      # migrating into a database nobody has chosen yet. Set it to true for an
+      # unattended deployment that runs `ticktz:install` itself.
+      TICKTZ_AUTO_MIGRATE: ${TICKTZ_AUTO_MIGRATE:-false}
       DB_HOST: mysql
       DB_PORT: 3306
       REDIS_HOST: redis

@@ -204,5 +204,5 @@ See [`self-hosting.md`](self-hosting.md#scaling) for the operational detail.
 | [`self-hosting.md`](self-hosting.md) | Running it |
 | [`configuration.md`](configuration.md) | Every setting |
 | [`api.md`](api.md) | The public API and webhooks |
-| [`decisions.md`](decisions.md) | Fifty-four decisions, with the reasoning |
+| [`decisions.md`](decisions.md) | Fifty-seven decisions, with the reasoning |
 | [`roadmap.md`](roadmap.md) | What each phase built |

@@ -79,6 +79,10 @@ Then:
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+Open it in a browser and the **setup wizard** takes it from there: it checks
+the server, asks where the database should live, and creates your
+administrator. See [First run](#first-run).
+
 The production stack differs from the development one in the ways that matter:
 the image is self-contained with vendor and compiled assets baked in, there are
 no bind mounts, MySQL and Redis are not published on the host, and there is no
@@ -135,16 +139,68 @@ server {
 
 ## First run
 
-The migrations run automatically when the app container starts
-(`TICKTZ_AUTO_MIGRATE=false` turns that off if you would rather run them
-yourself). What is left is an administrator:
+Open the instance in a browser. A fresh one sends every URL to `/install` and
+walks you through seven short steps: requirements, database, what to call this
+service desk, your account, and optionally outgoing e-mail.
+
+### Where the data lives
+
+The one question worth thinking about, and the wizard asks it plainly:
+
+- **The built-in database.** The MySQL container that came with the compose
+  file, already running next to the app. Its credentials are already in the
+  environment, so the wizard fills them in and you press *Test connection*.
+  Nothing to configure, nothing to maintain separately. This is the right
+  answer for most self-hosters.
+- **Your own database.** A MySQL or MariaDB server you already run — managed,
+  clustered, or simply the one that is already in your backup schedule. Give
+  it host, port, database, user and password.
+
+If you choose your own, **create the database first**. Ticktz will not create
+it, because a process that can create databases is a process with more rights
+on your server than a service desk needs. The user does need permission to
+create tables in it, and the wizard checks that before it lets you continue —
+a connection that succeeds with a read-only grant would otherwise fail on the
+first migration, which is a much worse place to find out.
+
+The wizard never writes anything until the last step. Close the tab halfway
+and you have lost nothing but the typing.
+
+### Once it closes
+
+The installer disappears the moment it finishes. It is unauthenticated by
+necessity — there is nobody to authenticate as before the first account
+exists — so leaving it reachable on a running instance would be a complete
+takeover in three screens. Afterwards its endpoints answer 404 and `/install`
+redirects to the login page. There is no setting that re-opens it; running it
+again is `php artisan ticktz:install --force`, which requires shell access.
+
+Upgrading an instance that predates the wizard does not trigger it: a migrated
+database with users in it counts as installed.
+
+### Without a browser
+
+For unattended deployments, the same install runs on the command line — same
+service, so the two cannot drift:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec app \
-  php artisan ticktz:admin
+docker compose -f docker-compose.prod.yml exec app php artisan ticktz:install \
+  --name="Service desk" --url="https://servicedesk.example.org" \
+  --locale=nl --timezone=Europe/Amsterdam --prefix=SUP \
+  --db-host=mysql --db-name=ticktz --db-user=ticktz --db-password="$DB_PASSWORD" \
+  --admin-name="Rianne Bakker" --admin-email=rianne@example.org \
+  --admin-password="$ADMIN_PASSWORD"
 ```
 
-Then work through *Administration*:
+Supply every option and it never prompts. Leave some out and it asks, unless
+it is running non-interactively — a first-boot script blocked on a hidden
+prompt is indistinguishable from a crash.
+
+(`ticktz:admin` still exists for adding administrators later.)
+
+### Then
+
+Work through *Administration*:
 
 1. **Settings** — the instance name, the ticket key prefix, the default
    language.

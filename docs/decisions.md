@@ -975,3 +975,81 @@ Verified the same way as [D50](#d50--laravel-12-because-11-carries-unpatched-adv
 669 tests unchanged, zero axe violations across eighteen pages, the API and the
 webhook pipeline exercised against a running instance, migrations clean from
 scratch, and `composer audit` empty.
+
+## D56 — The installer asks one real question, and closes behind itself
+
+A setup wizard at `/install`: requirements, database, application,
+administrator, optional e-mail. The only question with weight is where the data
+lives, and it has two answers — the MySQL that ships in the compose file, or a
+server the operator already runs. The built-in option is offered only when the
+environment visibly has one to point at, because recommending a database that
+is not there is worse than asking for four fields.
+
+Three properties it is built around.
+
+**Nothing is written until the last step.** The whole wizard is one page and
+one request. A fresh instance has no configured session store to keep
+half-finished answers in, and database credentials are the last thing to park
+in a session on a half-configured server, so they stay in the browser until the
+request that uses them. Closing the tab costs the typing and nothing else.
+
+**`.env` is written last, after the migrations.** This was learned by running
+it: the first version wrote `.env` before migrating, and `artisan serve` —
+which watches that file — restarted the process mid-migration, leaving 67
+tables' worth of work as 16 and no marker. The same thing happens in the wild
+with a config reloader or a supervisor watch. With the durable write at the
+end, the worst case is a prepared database and a configuration to write by
+hand. The other way round is a half-built database and a wizard that will try
+again against it.
+
+**It closes behind itself.** The wizard is unauthenticated by necessity — there
+is nobody to authenticate as before the first account exists — and it accepts
+database credentials, writes `.env` and creates an administrator. Left
+reachable on a running instance it is a takeover in three screens. So its
+acting endpoints answer 404 afterwards, with no setting, parameter or header
+that re-opens them; re-running it is `ticktz:install --force`, which requires
+shell access. Only the GET redirects to login, because a bookmarked `/install`
+landing on a 404 reads like a broken deployment and leaks nothing.
+
+An instance that predates this feature — migrated, with users — counts as
+installed and adopts the marker. Dropping somebody's working desk into a setup
+wizard on upgrade would be unforgivable.
+
+The console path (`ticktz:install`) runs the same service, so the two cannot
+drift.
+
+## D57 — Running the installer found four bugs that reading it did not
+
+Worth recording, because each was invisible until the thing actually ran
+against a real MySQL server.
+
+**The password rule called an external API.** `Password::uncompromised()` asks
+Have I Been Pwned whether the administrator's password has been breached. It is
+k-anonymous and well intentioned, and it made installation depend on reaching a
+third party over the internet: an air-gapped or firewalled deployment could not
+create its own administrator, and every install made an outbound call the
+operator never asked for. In a product whose premise is that nothing leaves
+your infrastructure, that is the wrong trade. Removed; the length and
+composition rules stay.
+
+**`bcmath` was listed as required.** Copied from the list everybody copies.
+Nothing in the dependency tree asks for it, no application code calls it, and
+the full suite passes without it — it would have blocked installs on servers
+that work perfectly. The required list is now derived from what
+`composer.lock` actually declares for production, plus `pdo_mysql`, which no
+package declares because none of them knows which driver we chose.
+
+**Seeding reached for Redis.** The settings repository caches, the default
+cache is Redis, and at install time that is a hostname nobody has verified —
+on a first run outside Docker it is usually not there at all. The install now
+runs against an in-memory store and leaves the real cache to `.env`. An
+installer must not depend on a service it is not configuring.
+
+**`email_verified_at` is not mass-assignable.** Correctly so — verification
+state is not something a form should set. Under the strict-model guard it threw
+loudly; in production it would have silently dropped the field and left the
+first administrator unverified. It is set with `forceFill` now, because the
+person who just proved they control the server is verified by construction.
+
+The general point: every one of these passes code review. None of them survives
+one honest run.
