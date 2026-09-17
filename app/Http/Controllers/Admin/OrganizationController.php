@@ -103,7 +103,7 @@ class OrganizationController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/', Rule::unique('organizations', 'slug')->ignore($organization?->getKey())],
-            'description' => ['nullable', 'string', 'max:1000'],
+            'description' => ['nullable', 'string', 'max:5000'],
             'email_domains' => ['array'],
             'email_domains.*' => ['string', 'max:255', 'regex:/^[a-z0-9.-]+\.[a-z]{2,}$/i'],
             'contact_email' => ['nullable', 'email', 'max:255'],

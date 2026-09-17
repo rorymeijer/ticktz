@@ -14,10 +14,11 @@ import {
     Field,
     Select,
     TextInput,
-    Textarea,
 } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import type { PrioritySummary } from '@/types/tickets';
+import { RichTextField } from '@/Components/RichText/RichTextField';
+import { RichText } from '@/Components/RichText/RichText';
 
 interface RequestTypePayload {
     id: number;
@@ -104,9 +105,10 @@ export default function RequestForm({
                 </div>
 
                 {requestType.instructions ? (
-                    <div className="mb-5 whitespace-pre-wrap rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
-                        {requestType.instructions}
-                    </div>
+                    <RichText
+                        html={requestType.instructions}
+                        className="mb-5 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sky-900"
+                    />
                 ) : null}
 
                 <form onSubmit={submit}>
@@ -159,17 +161,14 @@ export default function RequestForm({
                                 </Field>
                             ) : null}
 
-                            <Field label={t('portal.form.description')} error={form.errors.description}>
-                                {(props) => (
-                                    <Textarea
-                                        {...props}
-                                        rows={6}
-                                        value={form.data.description}
-                                        placeholder={t('portal.form.description_placeholder')}
-                                        onChange={(event) => form.setData('description', event.target.value)}
-                                    />
-                                )}
-                            </Field>
+                            <RichTextField
+                                label={t('portal.form.description')}
+                                error={form.errors.description}
+                                value={form.data.description}
+                                onChange={(html) => form.setData('description', html)}
+                                placeholder={t('portal.form.description_placeholder')}
+                                minHeight="9rem"
+                            />
 
                             <div>
                                 <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900">

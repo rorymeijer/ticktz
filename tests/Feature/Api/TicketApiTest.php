@@ -180,8 +180,11 @@ it('hides internal notes from a requester reading the conversation', function ()
 
     $response = withToken($token)->getJson('/api/v1/tickets/'.$ticket->key.'/comments')->assertOk();
 
+    // Both shapes: the markup as stored, and the same content flattened for
+    // a caller with no room for it.
     expect($response->json('data'))->toHaveCount(1)
-        ->and($response->json('data.0.body'))->toBe('Public answer');
+        ->and($response->json('data.0.body'))->toBe('<p>Public answer</p>')
+        ->and($response->json('data.0.body_text'))->toBe('Public answer');
 });
 
 it('returns a validation error in the shared error shape', function (): void {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\RichText\RichTextSanitizer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -58,6 +59,14 @@ class CustomFieldValue extends Model
         return match ($field->type) {
             'multiselect' => json_encode(array_values((array) $value), JSON_UNESCAPED_UNICODE),
             'checkbox' => $value ? '1' : '0',
+            // The one field type somebody writes sentences into. Sanitised
+            // here rather than through HasRichText, because every type shares
+            // this column and only this one is prose — a date has no business
+            // going near an HTML allowlist. A value that cleans down to
+            // nothing is stored as nothing, which is what deletes the row.
+            'textarea' => is_scalar($value)
+                ? (app(RichTextSanitizer::class)->clean((string) $value) ?: null)
+                : null,
             default => is_scalar($value) ? (string) $value : json_encode($value),
         };
     }

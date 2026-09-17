@@ -49,7 +49,7 @@ class UpdateUserRequest extends FormRequest
             ],
             'job_title' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
-            'signature' => ['nullable', 'string', 'max:2000'],
+            'signature' => ['nullable', 'string', 'max:10000'],
             'is_active' => ['boolean'],
             'role_ids' => ['array'],
             'role_ids.*' => ['integer', Rule::exists('roles', 'id')],

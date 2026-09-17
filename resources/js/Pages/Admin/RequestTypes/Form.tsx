@@ -21,6 +21,7 @@ import {
 import { useTranslations } from '@/hooks/useTranslations';
 import { slugify } from '@/lib/slug';
 import type { PrioritySummary } from '@/types/tickets';
+import { RichTextField } from '@/Components/RichText/RichTextField';
 
 interface CustomFieldOption {
     id: number;
@@ -229,20 +230,14 @@ export default function RequestTypeForm({
                             )}
                         </Field>
 
-                        <Field
+                        <RichTextField
                             label={t('admin.request_types.fields.instructions')}
                             help={t('admin.request_types.fields.instructions_help')}
                             error={form.errors.instructions}
-                        >
-                            {(props) => (
-                                <Textarea
-                                    {...props}
-                                    rows={4}
-                                    value={form.data.instructions}
-                                    onChange={(event) => form.setData('instructions', event.target.value)}
-                                />
-                            )}
-                        </Field>
+                            value={form.data.instructions}
+                            onChange={(html) => form.setData('instructions', html)}
+                            minHeight="7rem"
+                        />
 
                         {locales
                             .filter((locale) => locale.code !== 'en')
@@ -282,21 +277,17 @@ export default function RequestTypeForm({
                                         )}
                                     </Field>
 
-                                    <Field label={t('admin.request_types.fields.instructions')}>
-                                        {(props) => (
-                                            <Textarea
-                                                {...props}
-                                                rows={3}
-                                                value={form.data.instructions_translations[locale.code] ?? ''}
-                                                onChange={(event) =>
-                                                    form.setData('instructions_translations', {
-                                                        ...form.data.instructions_translations,
-                                                        [locale.code]: event.target.value,
-                                                    })
-                                                }
-                                            />
-                                        )}
-                                    </Field>
+                                    <RichTextField
+                                        label={t('admin.request_types.fields.instructions')}
+                                        minHeight="6rem"
+                                        value={form.data.instructions_translations[locale.code] ?? ''}
+                                        onChange={(html) =>
+                                            form.setData('instructions_translations', {
+                                                ...form.data.instructions_translations,
+                                                [locale.code]: html,
+                                            })
+                                        }
+                                    />
                                 </div>
                             ))}
 

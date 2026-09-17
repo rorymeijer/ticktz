@@ -55,7 +55,7 @@ test('the portal never shows an internal note', function () {
         ->get("/portal/requests/{$ticket->key}")
         ->assertOk()
         ->assertInertia(fn ($page) => $page->has('comments', 1)
-            ->where('comments.0.body', 'Public answer for you'))
+            ->where('comments.0.body', '<p>Public answer for you</p>'))
         ->assertDontSee('CONFIDENTIAL vendor pricing');
 });
 

@@ -194,6 +194,10 @@ control posts immediately — an agent should never hunt for a save button to
 reassign a ticket. The amber frame and lock mark an internal note: the cost of
 mistaking one for a public reply is a note going out to the customer.
 
+The reply box is a formatting editor, and switching to the internal note tab
+starts a fresh one rather than carrying the draft across — sending a customer
+a half-written internal note is not a mistake worth making convenient.
+
 ![Ticket detail](screenshots/24-agent-ticket-detail.png)
 
 ### Creating a ticket
@@ -271,6 +275,11 @@ Articles and categories in one screen, with status, audience and read counts.
 Editor on the left, everything that decides who can read it on the right, and
 the version history underneath. The tickets the article answered are listed
 beside it.
+
+The toolbar is a real toolbar: one tab stop, arrow keys between the buttons,
+Alt + F10 to reach it from the text and Escape to get back. Articles get the
+document vocabulary — headings, tables, images, code blocks — where a ticket
+reply gets the message one.
 
 ![Article editor](screenshots/55-admin-kb-edit.png)
 

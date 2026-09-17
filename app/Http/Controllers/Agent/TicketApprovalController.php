@@ -38,7 +38,7 @@ class TicketApprovalController extends Controller
             'approver_ids.*' => ['integer', Rule::exists('users', 'id')],
             'mode' => ['nullable', Rule::in(ApprovalStep::MODES)],
             'subject' => ['nullable', 'string', 'max:255'],
-            'reason' => ['nullable', 'string', 'max:2000'],
+            'reason' => ['nullable', 'string', 'max:10000'],
         ]);
 
         if (empty($data['approval_workflow_id']) && empty($data['approver_ids'])) {

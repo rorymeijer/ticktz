@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasRichText;
 use App\Models\Concerns\HasRoles;
+use App\Services\RichText\RichTextAttribute;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -36,7 +38,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use Auditable, HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
+    use Auditable, HasApiTokens, HasFactory, HasRichText, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * @var list<string>
@@ -59,6 +61,16 @@ class User extends Authenticatable
         'signature',
         'is_active',
     ];
+
+    /**
+     * @return array<string, RichTextAttribute>
+     */
+    protected static function richTextAttributes(): array
+    {
+        return [
+            'signature' => new RichTextAttribute,
+        ];
+    }
 
     /**
      * @var list<string>

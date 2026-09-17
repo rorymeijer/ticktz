@@ -3,6 +3,7 @@ import { useForm } from '@inertiajs/react';
 import { Button, Field, Modal, Select, TextInput, Textarea } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import type { AssetDetail, AssetOptions } from '@/types/assets';
+import { RichTextField } from '@/Components/RichText/RichTextField';
 
 /**
  * Adding or editing an asset.
@@ -217,16 +218,14 @@ export function AssetDialog({
                     )}
                 </Field>
 
-                <Field label={t('assets.fields.notes')} error={form.errors.notes} className="sm:col-span-2">
-                    {(props) => (
-                        <Textarea
-                            {...props}
-                            rows={3}
-                            value={form.data.notes ?? ''}
-                            onChange={(event) => form.setData('notes', event.target.value)}
-                        />
-                    )}
-                </Field>
+                <RichTextField
+                    label={t('assets.fields.notes')}
+                    error={form.errors.notes}
+                    className="sm:col-span-2"
+                    value={form.data.notes ?? ''}
+                    onChange={(html) => form.setData('notes', html)}
+                    minHeight="6rem"
+                />
             </div>
         </Modal>
     );

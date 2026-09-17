@@ -79,7 +79,10 @@ services:
       TICKTZ_QUEUE_WORKERS: ${TICKTZ_QUEUE_WORKERS:-4}
 
   mysql:
-    image: mysql:8.0
+    # Pinned to the LTS, and to the same version the dev stack and CI run.
+    # Upgrading an existing 8.0 data directory is one-way; see the upgrade
+    # notes in docs/self-hosting.md before pulling this.
+    image: mysql:8.4
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-ticktz}
       MYSQL_USER: ${DB_USERNAME:-ticktz}

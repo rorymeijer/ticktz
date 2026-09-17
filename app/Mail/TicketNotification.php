@@ -40,6 +40,17 @@ class TicketNotification extends Mailable implements ShouldQueue
         public readonly ?EmailChannel $channel,
         public readonly string $renderedSubject,
         public readonly string $renderedBody,
+        /**
+         * The same notification as plain text.
+         *
+         * Not derived from the HTML: it is rendered from the same template
+         * against the flattened placeholder values, so the text part reads as
+         * something a person wrote rather than as markup with the tags pulled
+         * out. Required rather than defaulted — a notification has two parts,
+         * and a caller that forgets one should not quietly send a stripped
+         * version of the other.
+         */
+        public readonly string $renderedText,
         public readonly string $messageId,
         public readonly ?string $inReplyTo = null,
         string $locale = 'en',
@@ -94,6 +105,7 @@ class TicketNotification extends Mailable implements ShouldQueue
             with: [
                 'ticket' => $this->ticket,
                 'body' => $this->renderedBody,
+                'text' => $this->renderedText,
                 'channel' => $this->channel,
                 'locale' => (string) $this->locale,
             ],

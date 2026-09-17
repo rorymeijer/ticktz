@@ -9,6 +9,43 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.0.1
+
+**Rich text everywhere.** Every field somebody writes sentences into now has a
+formatting toolbar: ticket descriptions and replies, knowledge base articles,
+asset notes, request type and approval instructions, approval reasons and
+decisions, e-mail signatures and multiline custom fields. Bold, italic, lists,
+quotes, links and tables; headings, images and code blocks in articles.
+Everything is sanitised against an allowlist on the way into the database, and
+each field keeps a plain-text copy beside it for search, e-mail and the API.
+
+Outgoing e-mail now really has two parts: formatted HTML, and a plain-text
+version rendered from the same template rather than the markup with its tags
+pulled out.
+
+**Upgrading.** The migration converts everything already stored — blank lines
+become paragraphs, and anything resembling a tag is escaped, so a ticket that
+said `<3` still says `<3`. It also rebuilds two FULLTEXT indexes, which takes a
+few minutes on a large desk. Take a backup first.
+
+**The database moves to MySQL 8.4**, the current LTS; 8.0 left support in April
+2026. The container upgrades its data directory on first boot and that is
+one-way, so this is the other reason to take the backup. The development stack
+did not start at all before this, on any version: it passed `mysql:8.0` a flag
+that only exists in 8.4, and MySQL aborts rather than ignoring a setting it
+does not recognise.
+
+**For API clients.** `description` and `body` now return markup. The same
+content without it is in `description_text` and `body_text` — switch the field
+you read and nothing else changes. Writes accept either: plain text is wrapped
+in paragraphs, so a client written against 1.0.0 keeps working untouched.
+
+**Also fixed.** Help text under a form field was never announced to screen
+readers — `aria-describedby` pointed at an id nothing carried. The button that
+links one ticket to another had no accessible name at all. Directory sign-in
+failed outright on servers whose LDAP returns the distinguished name as an
+array, and a directory group removed in AD never removed the role it granted.
+
 ## 1.0.0
 
 The first release. A complete service desk: tickets, a customer portal, e-mail

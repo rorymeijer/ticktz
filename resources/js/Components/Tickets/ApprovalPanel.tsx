@@ -23,6 +23,8 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { relativeTime } from '@/lib/datetime';
 import type { Approval, ApprovalWorkflowSummary } from '@/types/approvals';
 import type { UserSummary } from '@/types/tickets';
+import { RichTextField } from '@/Components/RichText/RichTextField';
+import { RichText } from '@/Components/RichText/RichText';
 
 /**
  * The approval beside a ticket.
@@ -97,9 +99,7 @@ export function ApprovalPanel({
                     <div>
                         <p className="text-sm font-medium text-slate-900">{current.subject}</p>
                         {current.reason ? (
-                            <p className="mt-0.5 whitespace-pre-wrap text-xs leading-5 text-slate-500">
-                                {current.reason}
-                            </p>
+                            <RichText html={current.reason} className="mt-0.5 text-xs text-slate-500" />
                         ) : null}
                     </div>
 
@@ -276,17 +276,13 @@ function RequestDialog({
                     )}
                 </Field>
 
-                <Field label={t('approvals.fields.reason')} error={form.errors.reason}>
-                    {(props) => (
-                        <Textarea
-                            {...props}
-                            rows={3}
-                            maxLength={2000}
-                            value={form.data.reason}
-                            onChange={(event) => form.setData('reason', event.target.value)}
-                        />
-                    )}
-                </Field>
+                <RichTextField
+                    label={t('approvals.fields.reason')}
+                    error={form.errors.reason}
+                    value={form.data.reason}
+                    onChange={(html) => form.setData('reason', html)}
+                    minHeight="5rem"
+                />
             </div>
         </Modal>
     );

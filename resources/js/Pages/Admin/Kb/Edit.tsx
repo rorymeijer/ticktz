@@ -2,7 +2,7 @@ import { Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 import AdminLayout from '@/Layouts/AdminLayout';
-import { ArticleBody } from '@/Components/Kb/ArticleBody';
+import { RichTextField } from '@/Components/RichText/RichTextField';
 import { IconLock, IconTicket, IconTrash } from '@/Components/Icons';
 import {
     Badge,
@@ -20,7 +20,6 @@ import {
 } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import { formatDateTime, relativeTime } from '@/lib/datetime';
-import { cn } from '@/lib/cn';
 import type { KbArticleAdmin, KbArticleVersion, KbCategoryAdmin, KbOptions } from '@/types/kb';
 
 export default function AdminKbEdit({
@@ -35,7 +34,6 @@ export default function AdminKbEdit({
     options: KbOptions;
 }) {
     const { t, locale } = useTranslations();
-    const [preview, setPreview] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [restoring, setRestoring] = useState<KbArticleVersion | null>(null);
 
@@ -129,54 +127,20 @@ export default function AdminKbEdit({
                                 )}
                             </Field>
 
-                            <div>
-                                <div className="mb-1.5 flex items-center justify-between">
-                                    <span className="text-sm font-medium text-slate-700">{t('kb.fields.body')}</span>
-                                    <div className="flex rounded-lg border border-slate-200 p-0.5">
-                                        {[false, true].map((mode) => (
-                                            <button
-                                                key={String(mode)}
-                                                type="button"
-                                                onClick={() => setPreview(mode)}
-                                                className={cn(
-                                                    'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                                    preview === mode
-                                                        ? 'bg-slate-100 text-slate-900'
-                                                        : 'text-slate-600 hover:text-slate-800',
-                                                )}
-                                            >
-                                                {mode ? t('kb.editor.preview') : t('kb.editor.write')}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {preview ? (
-                                    /* The preview renders exactly what is in the
-                                       textarea, un-sanitised — which is the point:
-                                       it shows the author what they typed, and the
-                                       saved article shows them what survived. */
-                                    <div className="min-h-64 rounded-lg border border-slate-200 bg-white p-4">
-                                        <ArticleBody html={form.data.body} />
-                                    </div>
-                                ) : (
-                                    <Textarea
-                                        rows={22}
-                                        value={form.data.body}
-                                        aria-label={t('kb.fields.body')}
-                                        className="font-mono text-xs"
-                                        onChange={(event) => form.setData('body', event.target.value)}
-                                    />
-                                )}
-
-                                {form.errors.body ? (
-                                    <p className="mt-1 text-xs font-medium text-red-600" role="alert">
-                                        {form.errors.body}
-                                    </p>
-                                ) : (
-                                    <p className="mt-1 text-xs text-slate-500">{t('kb.fields.body_help')}</p>
-                                )}
-                            </div>
+                            {/*
+                              * The write/preview toggle is gone with the raw
+                              * HTML textarea it existed to compensate for.
+                              * Editing in place is the preview.
+                              */}
+                            <RichTextField
+                                label={t('kb.fields.body')}
+                                profile="article"
+                                value={form.data.body}
+                                onChange={(html) => form.setData('body', html)}
+                                error={form.errors.body}
+                                help={t('kb.fields.body_help')}
+                                minHeight="26rem"
+                            />
 
                             <Field label={t('kb.fields.note')} error={form.errors.note} help={t('kb.fields.note_help')}>
                                 {(props) => (

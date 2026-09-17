@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\HasRichText;
+use App\Services\RichText\RichTextAttribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -37,6 +39,8 @@ use Illuminate\Support\Str;
  */
 class ApprovalDecision extends Model
 {
+    use HasRichText;
+
     public const PENDING = 'pending';
 
     public const APPROVED = 'approved';
@@ -54,6 +58,16 @@ class ApprovalDecision extends Model
         'approver_id', 'decision', 'comment', 'source',
         'notified_at', 'decided_at', 'token_hash', 'token_expires_at',
     ];
+
+    /**
+     * @return array<string, RichTextAttribute>
+     */
+    protected static function richTextAttributes(): array
+    {
+        return [
+            'comment' => new RichTextAttribute,
+        ];
+    }
 
     protected $hidden = ['token_hash'];
 

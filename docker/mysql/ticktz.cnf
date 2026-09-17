@@ -1,6 +1,9 @@
 [mysqld]
 character-set-server = utf8mb4
 collation-server = utf8mb4_unicode_ci
-default-authentication-plugin = caching_sha2_password
+# No authentication plugin is set here. `default-authentication-plugin` was
+# removed in MySQL 8.4 — setting it aborts the server the same way an unknown
+# command-line flag does — and 8.4 already defaults to caching_sha2_password,
+# which is what this line was asking for.
 innodb_file_per_table = 1
 max_connections = 500

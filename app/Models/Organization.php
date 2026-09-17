@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasRichText;
+use App\Services\RichText\RichTextAttribute;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,12 +24,22 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Organization extends Model
 {
     /** @use HasFactory<OrganizationFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasFactory, HasRichText, SoftDeletes;
 
     protected $fillable = [
         'name', 'slug', 'description', 'email_domains', 'contact_email',
         'phone', 'is_active', 'shared_ticket_visibility',
     ];
+
+    /**
+     * @return array<string, RichTextAttribute>
+     */
+    protected static function richTextAttributes(): array
+    {
+        return [
+            'description' => new RichTextAttribute,
+        ];
+    }
 
     protected function casts(): array
     {

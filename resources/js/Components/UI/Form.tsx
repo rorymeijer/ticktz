@@ -42,8 +42,12 @@ export function InputError({ message, className }: { message?: string | null; cl
     );
 }
 
-export function HelpText({ children, className }: { children: ReactNode; className?: string }) {
-    return <p className={cn('mt-1 text-xs text-slate-500', className)}>{children}</p>;
+export function HelpText({ children, className, id }: { children: ReactNode; className?: string; id?: string }) {
+    return (
+        <p id={id} className={cn('mt-1 text-xs text-slate-500', className)}>
+            {children}
+        </p>
+    );
 }
 
 export const TextInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function TextInput(
@@ -116,7 +120,11 @@ export function Field({
             <div className={label ? 'mt-1.5' : undefined}>
                 {children({ id, 'aria-invalid': error ? true : undefined, 'aria-describedby': describedBy })}
             </div>
-            {help && !error ? <HelpText className="mt-1" >{help}</HelpText> : null}
+            {help && !error ? (
+                <HelpText className="mt-1" id={`${id}-help`}>
+                    {help}
+                </HelpText>
+            ) : null}
             {error ? (
                 <p id={`${id}-error`} role="alert" className="mt-1 text-xs font-medium text-red-600">
                     {error}

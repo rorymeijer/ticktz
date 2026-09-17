@@ -23,7 +23,7 @@ class StoreTicketRequest extends FormRequest
     {
         return [
             'subject' => ['required', 'string', 'max:500'],
-            'description' => ['nullable', 'string', 'max:65000'],
+            'description' => ['nullable', 'string', 'max:100000'],
             'requester_id' => ['required', 'integer', Rule::exists('users', 'id')],
             'priority_id' => ['nullable', 'integer', Rule::exists('priorities', 'id')],
             'status_id' => ['nullable', 'integer', Rule::exists('ticket_statuses', 'id')],

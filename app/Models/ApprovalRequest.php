@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasRichText;
+use App\Services\RichText\RichTextAttribute;
 use Database\Factories\ApprovalRequestFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -28,7 +30,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ApprovalRequest extends Model
 {
     /** @use HasFactory<ApprovalRequestFactory> */
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, HasRichText;
 
     public const PENDING = 'pending';
 
@@ -45,6 +47,16 @@ class ApprovalRequest extends Model
         'ticket_id', 'approval_workflow_id', 'subject', 'reason', 'status',
         'current_position', 'requested_by', 'due_at', 'completed_at',
     ];
+
+    /**
+     * @return array<string, RichTextAttribute>
+     */
+    protected static function richTextAttributes(): array
+    {
+        return [
+            'reason' => new RichTextAttribute,
+        ];
+    }
 
     protected function casts(): array
     {

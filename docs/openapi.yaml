@@ -175,7 +175,10 @@ paths:
               required: [subject]
               properties:
                 subject: { type: string, maxLength: 255 }
-                description: { type: string, nullable: true }
+                description:
+                  type: string
+                  nullable: true
+                  description: Plain text or rich text; both are accepted.
                 requester_id: { type: integer, nullable: true }
                 requester_email: { type: string, format: email, nullable: true }
                 priority_id: { type: integer, nullable: true }
@@ -863,7 +866,16 @@ components:
         id: { type: integer }
         key: { type: string, example: "SUP-1042" }
         subject: { type: string }
-        description: { type: string, nullable: true }
+        description:
+          type: string
+          nullable: true
+          description: >-
+            Rich text: an allowlisted subset of HTML, safe to render as markup.
+            Plain text sent on a write is accepted and wrapped in paragraphs.
+        description_text:
+          type: string
+          nullable: true
+          description: The same content with the markup taken out.
         source: { type: string, enum: [portal, email, agent, api, automation] }
         status:
           type: object
@@ -933,7 +945,15 @@ components:
       properties:
         id: { type: integer }
         ticket_id: { type: integer }
-        body: { type: string }
+        body:
+          type: string
+          description: >-
+            Rich text: an allowlisted subset of HTML, safe to render as markup.
+            Plain text sent on a write is accepted and wrapped in paragraphs.
+        body_text:
+          type: string
+          nullable: true
+          description: The same content with the markup taken out.
         is_internal: { type: boolean }
         source: { type: string }
         author:

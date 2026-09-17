@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button, Field, Modal, Textarea } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import type { DecisionOutcome } from '@/types/approvals';
+import { RichTextField } from '@/Components/RichText/RichTextField';
 
 /**
  * Approve or reject, with room to say why.
@@ -52,22 +53,14 @@ export function DecideDialog({
                 </>
             }
         >
-            <Field
+            <RichTextField
                 label={t('approvals.fields.comment')}
                 error={form.errors.comment}
                 help={t('approvals.fields.comment_help')}
-            >
-                {(props) => (
-                    <Textarea
-                        {...props}
-                        rows={3}
-                        autoFocus
-                        maxLength={2000}
-                        value={form.data.comment}
-                        onChange={(event) => form.setData('comment', event.target.value)}
-                    />
-                )}
-            </Field>
+                value={form.data.comment}
+                onChange={(html) => form.setData('comment', html)}
+                minHeight="5rem"
+            />
         </Modal>
     );
 }

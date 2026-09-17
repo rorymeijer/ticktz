@@ -169,6 +169,22 @@ failure mode of that feature that can take an instance down.
 Everything paginates. The API caps `per_page` at 100 regardless of what a
 caller asks for.
 
+## Rich text
+
+Nothing to configure. Every field somebody writes prose into is rich text, and
+what each one may contain is decided by a profile in the code rather than a
+setting — an administrator who could widen the allowlist could grant themselves
+a script tag, which is the one thing the allowlist exists to refuse.
+
+Two profiles: knowledge base articles get the document vocabulary (headings,
+tables, images, code blocks), and everything else gets the message vocabulary
+(emphasis, lists, quotes, links, tables). Both refuse scripts, forms, iframes,
+embedded media, event handlers, `style` and `class` attributes, and any link
+scheme a browser would execute.
+
+What stays plain text: names, keys, slugs, addresses, CSV mappings, automation
+conditions, and e-mail templates. See [`decisions.md`](decisions.md) (D62).
+
 ## Directories (LDAP / Active Directory)
 
 Connection details are **not** environment variables. They are rows in the

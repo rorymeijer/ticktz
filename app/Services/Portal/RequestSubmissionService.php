@@ -34,7 +34,7 @@ class RequestSubmissionService
     {
         $rules = [
             'subject' => [$requestType->subject_template ? 'nullable' : 'required', 'string', 'max:500'],
-            'description' => ['nullable', 'string', 'max:65000'],
+            'description' => ['nullable', 'string', 'max:100000'],
             'attachments' => ['array', 'max:10'],
             'attachments.*' => AttachmentService::rules(),
         ];

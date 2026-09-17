@@ -5,6 +5,7 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { cn } from '@/lib/cn';
 import { relativeTime } from '@/lib/datetime';
 import type { ApprovalDecision, ApprovalStepView } from '@/types/approvals';
+import { RichText } from '@/Components/RichText/RichText';
 
 /**
  * An approval, step by step.
@@ -85,7 +86,7 @@ function DecisionRow({ decision, dimmed }: { decision: ApprovalDecision; dimmed:
                 </p>
 
                 {decision.comment ? (
-                    <p className="mt-0.5 text-xs italic leading-5 text-slate-500">“{decision.comment}”</p>
+                    <RichText html={decision.comment} className="mt-0.5 text-xs italic text-slate-500" />
                 ) : null}
 
                 <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">

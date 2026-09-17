@@ -74,7 +74,7 @@ it('fires on a transition and can read the status it moved to', function (): voi
 
     app(TicketService::class)->transition($ticket->fresh(), status('resolved'), makeAgent());
 
-    expect($ticket->fresh()->comments()->latest('id')->first()->body)->toBe('Closing the loop.');
+    expect($ticket->fresh()->comments()->latest('id')->first()->body_text)->toBe('Closing the loop.');
 });
 
 it('fires on an assignment', function (): void {

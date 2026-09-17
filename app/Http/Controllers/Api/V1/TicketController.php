@@ -149,7 +149,7 @@ class TicketController extends ApiController
 
         $validated = $request->validate([
             'status' => ['required', 'string', 'max:64'],
-            'comment' => ['nullable', 'string', 'max:10000'],
+            'comment' => ['nullable', 'string', 'max:100000'],
         ]);
 
         $target = TicketStatus::query()

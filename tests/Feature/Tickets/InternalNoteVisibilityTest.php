@@ -34,7 +34,7 @@ test('an internal note is visible to agents and stripped for requesters', functi
     // note is absent from the query result, not merely hidden by CSS.
     $requester = User::factory()->requester()->create();
 
-    $readable = $ticket->comments()->readableBy($requester->fresh())->pluck('body')->all();
+    $readable = $ticket->comments()->readableBy($requester->fresh())->pluck('body_text')->all();
 
     expect($readable)->toBe(['Public answer']);
 });

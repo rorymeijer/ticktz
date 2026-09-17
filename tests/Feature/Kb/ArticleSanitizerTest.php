@@ -13,7 +13,7 @@ use App\Services\Kb\ArticleSanitizer;
  * So these are not "does the library work" tests — they are the contract.
  */
 beforeEach(function (): void {
-    $this->sanitizer = new ArticleSanitizer;
+    $this->sanitizer = app(ArticleSanitizer::class);
 });
 
 it('strips a script tag and everything in it', function (): void {

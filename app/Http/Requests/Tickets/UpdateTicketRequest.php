@@ -28,7 +28,7 @@ class UpdateTicketRequest extends FormRequest
     {
         return [
             'subject' => ['sometimes', 'required', 'string', 'max:500'],
-            'description' => ['sometimes', 'nullable', 'string', 'max:65000'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:100000'],
             'priority_id' => ['sometimes', 'required', 'integer', Rule::exists('priorities', 'id')],
             'queue_id' => ['sometimes', 'nullable', 'integer', Rule::exists('queues', 'id')],
             'team_id' => ['sometimes', 'nullable', 'integer', Rule::exists('teams', 'id')],

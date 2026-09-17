@@ -368,7 +368,7 @@ it('posts an automated comment with no author and fills its placeholders', funct
     expect($comment->user_id)->toBeNull()
         ->and($comment->is_internal)->toBeTrue()
         ->and($comment->source)->toBe('automation')
-        ->and($comment->body)->toBe("Auto-triaged {$ticket->key} as Normal. ");
+        ->and($comment->body_text)->toBe("Auto-triaged {$ticket->key} as Normal.");
 });
 
 it('says nothing happened when the ticket is already in the state the rule wants', function (): void {

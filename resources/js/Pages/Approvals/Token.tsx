@@ -7,6 +7,7 @@ import { useTranslations } from '@/hooks/useTranslations';
 import type { ReactNode } from 'react';
 import type { Approval } from '@/types/approvals';
 import type { UserSummary } from '@/types/tickets';
+import { RichText } from '@/Components/RichText/RichText';
 
 /**
  * Deciding an approval from an e-mail, without signing in.
@@ -72,7 +73,9 @@ function Decide({ token, approval, approver }: { token: string; approval: Approv
                             <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
                                 {t('approvals.fields.reason')}
                             </dt>
-                            <dd className="mt-0.5 whitespace-pre-wrap leading-6 text-slate-700">{approval.reason}</dd>
+                            <dd className="mt-0.5">
+                                <RichText html={approval.reason} />
+                            </dd>
                         </div>
                     ) : null}
 
@@ -83,8 +86,8 @@ function Decide({ token, approval, approver }: { token: string; approval: Approv
                             </dt>
                             <dd className="mt-0.5 text-slate-700">{approval.ticket.subject}</dd>
                             {approval.ticket.description ? (
-                                <dd className="mt-1 whitespace-pre-wrap text-xs leading-6 text-slate-500">
-                                    {approval.ticket.description}
+                                <dd className="mt-1">
+                                    <RichText html={approval.ticket.description} className="text-xs text-slate-500" />
                                 </dd>
                             ) : null}
                         </div>

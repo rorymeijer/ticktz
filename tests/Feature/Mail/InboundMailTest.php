@@ -302,7 +302,7 @@ it('trims the quoted thread off a reply', function (): void {
 
     $comment = $ticket->comments()->latest('id')->first();
 
-    expect($comment->body)->toBe('Still broken.')
+    expect($comment->body_text)->toBe('Still broken.')
         ->and($comment->body)->not->toContain('turning it off');
 });
 
