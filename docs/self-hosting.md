@@ -350,6 +350,43 @@ pull` no longer moves you to whatever the image has unless that image is
 compares versions — but the running version is the higher of the two, not
 whichever you pulled last.
 
+#### If every page is a 500 and the log says MissingAppKeyException
+
+The instance has no `APP_KEY`. Set one in your `.env` — that is where it
+belongs, because it is backed up with the rest of your settings:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T app php artisan key:generate --show
+```
+
+Put the `base64:…` it prints on the existing `APP_KEY=` line in `.env`
+(replace it, do not add a second), then `docker compose -f
+docker-compose.prod.yml up -d`.
+
+From 1.1.2 an instance with no key generates one into the code volume and says
+so in its log. That keeps it running, but a key in your own `.env` is better:
+**this key encrypts the mailbox passwords in your database**, and a key that
+lives only in the code volume is lost with `docker volume rm ticktz_code`.
+
+#### If pages return an empty 500 but redirects work
+
+The give-away is that shape: `GET /` answers 302 and the first page that
+renders anything returns 500 with an empty body, and no log names a reason.
+Laravel compiles every Blade view into `storage/framework/views` on first
+render, so a `storage` the web server cannot write to fails exactly there and
+nowhere earlier.
+
+In the bundled stack the entrypoint runs as root and php-fpm as `www-data`, so
+Ticktz 1.1.2 hands `storage` and `bootstrap/cache` over on every boot. On
+1.1.0 and 1.1.1 it did not, and a `storage` volume created by those versions
+is owned by root:
+
+```bash
+docker compose -f docker-compose.prod.yml exec app chown -R www-data:www-data storage bootstrap/cache
+```
+
+No restart needed. Upgrading to 1.1.2 repairs it by itself.
+
 #### If a page comes up white
 
 Almost always `public/hot`: a file the Vite dev server writes, which makes
