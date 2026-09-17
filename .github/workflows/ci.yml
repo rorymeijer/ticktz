@@ -71,6 +71,12 @@ jobs:
       - name: Check formatting
         run: ./vendor/bin/pint --test
 
+      # The Laravel 11 advisories that forced the upgrade in D50 sat in the
+      # lock file for weeks before anyone ran this by hand. Now the build
+      # notices.
+      - name: Audit dependencies
+        run: composer audit --no-interaction
+
       - name: Run migrations against MySQL
         env:
           DB_CONNECTION: mysql
@@ -106,6 +112,12 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
+      - name: Audit dependencies
+        # Advisory only below high: the npm tree is build-time tooling, and a
+        # moderate advisory in a transitive dev dependency should not stop a
+        # release of a product that ships none of it.
+        run: npm audit --audit-level=high
+
       - name: Type-check
         run: npm run typecheck
 
@@ -114,6 +126,75 @@ jobs:
 
       - name: Production build
         run: npx vite build
+
+  accessibility:
+    name: Accessibility
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: ticktz
+          MYSQL_ROOT_PASSWORD: root
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      # .env.example puts sessions, cache and queues on Redis, and the audit
+      # signs in — without this the first request fails on the session store.
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, gd, intl, ldap, mbstring, pdo_mysql, redis, sockets, zip
+          coverage: none
+          tools: composer:v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci --no-audit --no-fund
+
+      - name: Install the browser axe drives
+        run: npx playwright install --with-deps chromium
+
+      - name: Boot a demo instance
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: ticktz
+          DB_USERNAME: root
+          DB_PASSWORD: root
+          REDIS_HOST: 127.0.0.1
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan migrate:fresh --force
+          php artisan ticktz:demo
+          npm run build
+          php artisan serve --port=8123 &
+          # The audit signs in, so wait for a real response rather than a port.
+          for _ in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:8123/login && break; sleep 1; done
+
+      - name: Run axe over every shell
+        run: npm run a11y
 
   docker:
     name: Docker image

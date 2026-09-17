@@ -18,6 +18,11 @@ x-app-base: &app-base
   env_file: [.env]
   environment:
     APP_ENV: ${APP_ENV:-local}
+    # The development stack is for looking at, so it arrives populated: a
+    # `docker compose up` on a fresh clone that lands on an empty database with
+    # no accounts is not something anybody can evaluate. Only ever seeds when
+    # the instance has no users, and never in production — see the entrypoint.
+    TICKTZ_SEED_DEMO: ${TICKTZ_SEED_DEMO:-true}
     DB_HOST: mysql
     DB_PORT: 3306
     REDIS_HOST: redis

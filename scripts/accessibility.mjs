@@ -20,6 +20,8 @@
  * about keyboard order, focus visibility or whether a label makes sense. Those
  * stay a human job. What it does catch, it catches every time.
  */
+import { existsSync } from 'node:fs';
+
 import { chromium } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
 
@@ -30,7 +32,12 @@ const option = (name, fallback) => {
 };
 
 const BASE = option('base', 'http://127.0.0.1:8123').replace(/\/$/, '');
-const EXECUTABLE = process.env.PLAYWRIGHT_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+// Use the pinned browser when it is actually on disk (the dev container ships
+// one), and otherwise let Playwright resolve the copy it installed itself.
+// Handing it a path that does not exist fails with a worse message than simply
+// not knowing.
+const PINNED = process.env.PLAYWRIGHT_CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const EXECUTABLE = existsSync(PINNED) ? PINNED : undefined;
 
 const ACCOUNTS = {
     admin: { email: 'rianne@ticktz.test', password: 'ticktz-demo' },

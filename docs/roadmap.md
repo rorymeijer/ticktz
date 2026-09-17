@@ -463,6 +463,40 @@ things that happen in it. Full notes in [`api.md`](api.md); the contract is
   labels that had been rendering raw keys since phases 5 and 6
   ([D49](decisions.md)).
 
+## Phase 12 — i18n, polish, docs & release
+
+The round that turns a working application into something somebody else can
+run.
+
+- **The accessibility pass was run, not asserted.** axe-core over eighteen
+  pages, signed in as the role that works in each, with a budget of zero. It
+  found three rules failing — a critical unnamed account menu on sixteen pages,
+  contrast, and invalid `<dl>` markup — none of which were visible to anyone
+  looking at the screens ([D51](decisions.md)).
+- **Colour is now derived where it is not ours to choose.** Label chips painted
+  an administrator's colour on a 10% tint of itself, as little as 2.85:1. No
+  palette fixes that, because the palette belongs to the operator — so the ink
+  is computed to clear 4.5:1 against the tint it will actually sit on
+  ([D52](decisions.md)).
+- **Two silent failure modes now fail the build**: a translation key with
+  nothing behind it, and an OpenAPI spec that has drifted from the route table.
+  The first found two labels that had been rendering raw keys since phases 5
+  and 6 ([D49](decisions.md)).
+- **Backup and restore are scripts, not instructions.** The archive carries the
+  database, storage and `.env` together, because `APP_KEY` decrypts the mailbox
+  passwords inside the database — and restoring one without the other gives an
+  instance that looks healthy and cannot read a mailbox ([D53](decisions.md)).
+- **CI gained the gates that catch what review does not**: `composer audit`,
+  `npm audit`, and the accessibility run against a booted demo instance. The
+  advisories that forced the Laravel 12 upgrade sat in the lock file for weeks
+  because nothing was watching ([D50](decisions.md)).
+- **Releases are a tag.** The workflow verifies, refuses to publish when the
+  tag and the version in the code disagree, builds for amd64 and arm64, and
+  drafts the notes rather than publishing a commit list.
+- **The documentation a self-hoster actually needs**: installing, TLS, first
+  run, backups, upgrading, scaling, and a troubleshooting section organised by
+  symptom rather than by subsystem.
+
 ### Not yet wired up
 
 The sidebar only shows destinations that have routes today: Dashboard, Tickets,

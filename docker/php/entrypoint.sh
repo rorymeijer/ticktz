@@ -33,6 +33,22 @@ case "${CONTAINER_ROLE}" in
             php artisan migrate --force --no-interaction
         fi
         php artisan storage:link --no-interaction 2>/dev/null || true
+
+        # Seed the demo desk on a first boot, so `docker compose up` on a fresh
+        # clone gives something you can actually sign in to rather than an
+        # empty database with no accounts in it.
+        #
+        # Three guards, because this writes people and tickets into a database:
+        # never in production, never unless explicitly enabled, and never when
+        # the instance already has users. The last one is what makes it safe to
+        # leave on — a restart re-runs this block, and re-seeding over a desk
+        # somebody has started using would be unforgivable.
+        if [ "${TICKTZ_SEED_DEMO:-false}" = "true" ] && [ "${APP_ENV:-production}" != "production" ]; then
+            if [ "$(php artisan tinker --execute='echo \App\Models\User::query()->withTrashed()->count();' 2>/dev/null | tr -cd '0-9')" = "0" ]; then
+                echo "ticktz: empty instance, seeding the demo desk"
+                php artisan ticktz:demo --no-interaction
+            fi
+        fi
         if [ "${APP_ENV:-production}" = "production" ]; then
             php artisan config:cache
             php artisan route:cache

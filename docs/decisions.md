@@ -862,3 +862,89 @@ introspection.
 `composer.json` now requires `php: ^8.3` rather than `^8.2`. Laravel 12 would
 accept 8.2, but Docker builds on 8.3 and CI tests 8.3 and 8.4 — claiming
 support for a runtime nothing verifies is a promise with nothing behind it.
+
+## D51 — The accessibility budget is zero, and a machine enforces it
+
+`scripts/accessibility.mjs` runs axe-core over eighteen pages — every shell,
+signed in as the role that works in it — and fails on any violation. It runs in
+CI against a booted demo instance.
+
+Zero rather than a threshold, because a tolerated violation is one nobody ever
+fixes. The number only ever goes up from there, and each addition is
+individually reasonable.
+
+The first run justified the whole exercise. It found a **critical** unnamed
+account menu on sixteen pages: its trigger is an avatar and a chevron, both
+decorative, so to a screen reader the control had no name at all. Nobody
+looking at those screens for six phases had seen it, because there is nothing
+to see.
+
+What it cannot do is also worth stating. axe checks the rendered DOM, so it
+says nothing about keyboard order, focus visibility, or whether a label makes
+sense to a person. It does not check SVG contrast either — the destructive icon
+buttons were measured by hand and turned out to be at 1.9:1, under the 3:1 WCAG
+asks of meaningful graphics. The automated gate is a floor, not the ceiling.
+
+## D52 — Colour is derived where the colour is not ours
+
+Statuses, priorities, labels and asset types all carry a colour an
+administrator picked. A tinted chip that uses that colour as its text produces
+whatever contrast the colour happens to give: a mid-tone amber on its own 10%
+tint measures 2.85:1.
+
+There is no palette fix, because the palette belongs to the operator. So
+`resources/js/lib/contrast.ts` derives the ink instead — keep the hue they
+chose, darken it until it clears 4.5:1 against the background it will actually
+sit on. A colour that already passes is returned untouched, which is most of
+them.
+
+Where the palette *is* ours, it is measured rather than eyeballed. The avatar
+colours were the Tailwind 600 shades; half of them sat between 3.19 and 4.10
+against the white initials they carry. Every hue moved one shade darker, worst
+case now 5.02, and the figures are recorded in the code so a future change gets
+re-measured rather than nudged. (The same discipline as the chart palette in
+[D42](#d42--the-charts-are-hand-drawn-and-the-palette-is-validated).)
+
+Writing the tests for the helper found the bug worth having: an unparseable
+colour was returned unchanged, so a chip could paint white on white —
+invisible, rather than merely low-contrast. It now falls back to slate-700.
+
+## D53 — A backup is three things, or it is not a backup
+
+`scripts/backup.sh` archives the database, the storage directory **and**
+`.env`, together, and says so loudly.
+
+`APP_KEY` lives in `.env` and decrypts the mailbox and directory passwords held
+in the database. Restore a database onto an instance with a different key and
+you get something that starts, shows every ticket, lets everyone sign in — and
+cannot read a single mailbox, with nothing in the log that explains why. That
+is a far worse failure than a restore that refuses, so `restore.sh` compares
+the keys and warns before it overwrites anything.
+
+Two consequences follow. The archive holds working credentials, so it is as
+sensitive as the instance and the script sets `0600`/`0700` accordingly. And
+`restore.sh` deliberately does **not** overwrite `.env`: a new host usually
+needs a different `APP_URL`, different mail settings and different TLS, so the
+archived copy is placed alongside as `.env.restored` to diff. The one line that
+must be carried across is named explicitly.
+
+Both scripts were exercised against a stub standing in for `docker compose`,
+because the environment they were written in has no Docker daemon — the guards,
+the confirmation, the key-mismatch warning and the artefact layout are
+verified; a run against a live MySQL container is not.
+
+## D54 — Version 1.0.0, and what that promises
+
+Semantic versioning, read for a self-hosted application: a **major** may
+require a manual step during an upgrade, a **minor** never does, and a
+**patch** never changes the database. That is the promise an operator actually
+needs, and it is the one the release notes are written against.
+
+The release workflow refuses to publish when the tag and `TICKTZ_VERSION`
+disagree. A container that reports a different version from the tag it was
+built from is the kind of thing nobody notices until they are trying to work
+out what is in production.
+
+Images are built for `linux/amd64` and `linux/arm64`, and the release is
+**drafted** rather than published: generated notes are a commit list, and a
+release worth tagging is worth a paragraph written by a person.
