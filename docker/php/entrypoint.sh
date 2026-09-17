@@ -45,10 +45,16 @@ if [ "${APP_ENV:-production}" != "production" ] && [ -x /usr/bin/composer ]; the
     composer dump-autoload --no-interaction --optimize --quiet 2>/dev/null || true
 fi
 
-if [ -z "${APP_KEY}" ] && [ -f .env ] && ! grep -q '^APP_KEY=base64:' .env; then
-    echo "ticktz: generating application key"
-    php artisan key:generate --force --no-interaction
-fi
+# The application key is handled by ticktz-place-code, under the same lock that
+# guards the code, because two containers generating different keys is worse
+# than either generating none: APP_KEY encrypts the mailbox passwords in the
+# database, so a second key makes the first one's data unreadable.
+#
+# This used to live here, guarded by `[ -f .env ]`, and that guard was only
+# ever satisfied by accident — the image carried a `.env` copied out of
+# whoever's working directory built it. Removing that (correctly) left nothing
+# to generate a key, and the instance came up with MissingAppKeyException and
+# an empty 500.
 
 case "${CONTAINER_ROLE}" in
     app)

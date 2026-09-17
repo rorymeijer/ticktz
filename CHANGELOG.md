@@ -9,6 +9,41 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.1.2
+
+**Fixes an instance that comes up with no APP_KEY.** 1.1.1 correctly stopped
+copying `.env` into the image — it was carrying whoever's database password
+built it — and that broke the key generation which had been relying on it. The
+entrypoint's guard was `[ -f .env ]`, satisfied only by that accident, so an
+instance with no `APP_KEY` in its environment now generated none and answered
+every page with `MissingAppKeyException` behind an empty 500.
+
+Generating it moved into the placement script, under the same lock that guards
+the code, because two containers generating different keys is worse than either
+generating none: `APP_KEY` encrypts the mailbox passwords in the database, so a
+second key makes the first one's data unreadable. It is written once and never
+changed.
+
+It is a fallback, not the arrangement to prefer. **Set `APP_KEY` in your own
+`.env`** — compose injects it — so the key is backed up with your other
+settings rather than living in the code volume and going with it.
+
+**Fixes an empty 500 on every page that renders something.** The entrypoint
+runs as root and php-fpm as `www-data`, and since 1.1.0 put the code at
+`/usr/src/ticktz` there is no `/var/www/html/storage` in the image for Docker
+to take ownership from — so a fresh `storage` volume is created owned by root
+and the web server cannot write to it.
+
+The symptom points nowhere near the cause: redirects work and pages do not.
+Laravel compiles every Blade view into `storage/framework/views` on first
+render, so `GET /` answers 302 quite happily and the first page that renders
+anything returns 500 with an empty body, with no permission named in any log.
+
+The entrypoint now hands `storage` and `bootstrap/cache` to `www-data` on every
+boot, which also repairs a volume created by 1.1.0 or 1.1.1. Doing it by hand
+on those versions: `docker compose exec app chown -R www-data:www-data storage
+bootstrap/cache`.
+
 ## 1.1.1
 
 **Fixes a Docker first boot that could end in a crash loop.** The app and the

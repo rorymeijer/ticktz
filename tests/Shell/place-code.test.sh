@@ -53,6 +53,7 @@ run_place() {
     TICKTZ_IMAGE_TREE="$1" \
     TICKTZ_IMAGE_VERSION_FILE="$WORK/image-version" \
     TICKTZ_APP_ROOT="$2" \
+    APP_KEY="${APP_KEY-}" \
     sh "$SCRIPT" > "$WORK/out-$$" 2>&1 || true
 }
 
@@ -172,6 +173,83 @@ run_place "$WORK/badimage" "$WORK/target"
 
 check "refuses to mark an unloadable copy as placed" "$([ -f "$WORK/target/.ticktz-image" ] && echo marked || echo "not marked")" "not marked"
 check "and says why" "$(grep -c 'will not load' "$WORK/out-$$" 2>/dev/null || echo 0)" "1"
+
+# --- 11. storage ends up owned by the user that serves the web -------------
+# The entrypoint runs as root and php-fpm as www-data, and with /var/www/html
+# empty in the image a fresh `storage` volume is created owned by root. Laravel
+# compiles every Blade view into storage/framework/views on first render, so
+# the symptom is redirects working and pages returning an empty 500 — with no
+# permission named in any log.
+if [ "$(id -u)" = "0" ] && id www-data >/dev/null 2>&1; then
+    rm -rf "$WORK/owned"; mkdir -p "$WORK/owned"
+    make_image "$WORK/image" 1.1.0
+    run_place "$WORK/image" "$WORK/owned"
+
+    check "storage is owned by www-data" "$(stat -c '%U' "$WORK/owned/storage")" "www-data"
+    check "storage/framework/views too" "$(stat -c '%U' "$WORK/owned/storage/framework/views")" "www-data"
+    check "and bootstrap/cache" "$(stat -c '%U' "$WORK/owned/bootstrap/cache")" "www-data"
+
+    # An existing volume from an earlier version has the same problem, so the
+    # repair has to happen on every boot and not only when placing.
+    chown -R root:root "$WORK/owned/storage"
+    run_place "$WORK/image" "$WORK/owned"
+
+    check "a root-owned storage is handed over on a later boot" "$(stat -c '%U' "$WORK/owned/storage")" "www-data"
+
+    # A developer's bind-mounted checkout has no marker, and handing their
+    # storage to uid 82 would stop their own artisan writing to it.
+    rm -rf "$WORK/devtree"; mkdir -p "$WORK/devtree/storage" "$WORK/devtree/vendor"
+    printf '#!/usr/bin/env php' > "$WORK/devtree/artisan"
+    printf '<?php require __DIR__ . "/composer/real.php";' > "$WORK/devtree/vendor/autoload.php"
+    mkdir -p "$WORK/devtree/vendor/composer"
+    printf '<?php return true;' > "$WORK/devtree/vendor/composer/real.php"
+    chown -R root:root "$WORK/devtree"
+    run_place "$WORK/image" "$WORK/devtree"
+
+    check "leaves a mounted source tree's ownership alone" "$(stat -c '%U' "$WORK/devtree/storage")" "root"
+else
+    echo "  skip ownership checks (needs root and a www-data user)"
+fi
+
+# --- 12. an instance with no APP_KEY gets one, once ------------------------
+# The image carries no `.env` — it must not, it would be somebody's database
+# password — so when the environment does not supply a key there is nothing to
+# read one from. Without this the instance boots and every page is
+# MissingAppKeyException behind an empty 500.
+#
+# The fake artisan writes the key the way Laravel's key:generate does, so the
+# check is about when this runs and how often, not about Laravel.
+rm -rf "$WORK/keyed"; mkdir -p "$WORK/keyed"
+make_image "$WORK/image" 1.1.0
+cat > "$WORK/image/artisan" <<'ARTISAN'
+#!/usr/bin/env php
+<?php
+if (($argv[1] ?? '') === 'key:generate') {
+    $env = __DIR__ . '/.env';
+    $key = 'base64:' . base64_encode(random_bytes(32));
+    $body = is_file($env) ? file_get_contents($env) : "APP_KEY=\n";
+    file_put_contents($env, preg_replace('/^APP_KEY=.*$/m', 'APP_KEY=' . $key, $body));
+}
+ARTISAN
+
+APP_KEY= run_place "$WORK/image" "$WORK/keyed"
+
+check "generates a key when the environment has none" \
+    "$(grep -c '^APP_KEY=base64:' "$WORK/keyed/.env" 2>/dev/null || echo 0)" "1"
+
+first_key="$(grep '^APP_KEY=' "$WORK/keyed/.env")"
+APP_KEY= run_place "$WORK/image" "$WORK/keyed"
+
+# Changing it on a later boot would make everything the first key encrypted —
+# the mailbox passwords — unreadable.
+check "and never changes it afterwards" "$(grep '^APP_KEY=' "$WORK/keyed/.env")" "$first_key"
+
+# An operator who sets APP_KEY themselves should be left alone entirely.
+rm -rf "$WORK/envkey"; mkdir -p "$WORK/envkey"
+APP_KEY=base64:fromtheoperator run_place "$WORK/image" "$WORK/envkey"
+
+check "writes no .env when the environment supplies a key" \
+    "$([ -f "$WORK/envkey/.env" ] && echo written || echo "left alone")" "left alone"
 
 echo
 if [ "$failures" -gt 0 ]; then

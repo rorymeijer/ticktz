@@ -54,6 +54,44 @@ newer_than() {
     php -r 'exit(version_compare($argv[1], $argv[2], ">") ? 0 : 1);' "$1" "$2"
 }
 
+# Hand the instance's own directories to the user that serves the web.
+#
+# The entrypoint runs as root and php-fpm runs as www-data, so everything
+# created here is root-owned unless it is given away. That matters because
+# `storage` and `bootstrap/cache` are the two places the *application* writes
+# to, and with /var/www/html empty in the image there is nothing for Docker to
+# take ownership from: a fresh `storage` volume is created empty and owned by
+# root.
+#
+# The symptom when this is missing is worth writing down, because it points
+# nowhere near the cause. Redirects work and pages do not: Laravel compiles
+# every Blade view into storage/framework/views on first render, so `GET /`
+# answers 302 quite happily and the first page that renders anything returns
+# 500 with an empty body. Nothing in the nginx or php-fpm log names a
+# permission.
+#
+# Conditional, because `chown -R` over a desk with years of attachments in it
+# is not something to do on every boot.
+own_instance_directories() {
+    [ "$(id -u)" = "0" ] || return 0
+
+    # Only for a tree this script placed. Without the marker, /var/www/html is
+    # somebody's bind-mounted working copy — the development stack — and
+    # chowning it would hand a developer's own `storage` to uid 82 on their
+    # host, where their `artisan` can no longer write to it. That stack worked
+    # before this function existed and must keep working exactly as it did.
+    [ -f "$PLACED_BY_IMAGE" ] || return 0
+
+    for path in "$APP_ROOT/storage" "$APP_ROOT/bootstrap/cache"; do
+        [ -d "$path" ] || continue
+
+        if [ "$(stat -c '%U' "$path" 2>/dev/null)" != "www-data" ]; then
+            echo "ticktz: giving ${path} to www-data"
+            chown -R www-data:www-data "$path" 2>/dev/null || true
+        fi
+    done
+}
+
 # Can this tree actually boot?
 #
 # Asked rather than assumed, because the marker is a claim and not a fact. A
@@ -216,4 +254,45 @@ place_and_verify() {
     return 0
 }
 
+# Make sure this instance has an APP_KEY, and that it is the same one next time.
+#
+# Under the placement lock, because two containers generating different keys is
+# worse than either of them generating none: APP_KEY encrypts the mailbox
+# passwords in the database, so a second key makes the first one's data
+# unreadable.
+#
+# Only a fallback. An operator who sets APP_KEY in their own `.env` — which
+# compose injects into the environment — never reaches this, and that is the
+# arrangement to prefer: a key in the operator's file is backed up with their
+# other settings, while this one lives in the code volume and goes with it.
+ensure_app_key() {
+    [ -z "${APP_KEY:-}" ] || return 0
+
+    env_file="$APP_ROOT/.env"
+
+    if [ -f "$env_file" ] && grep -q '^APP_KEY=base64:' "$env_file"; then
+        return 0
+    fi
+
+    acquire_lock || return 0
+
+    # Asked again now that nothing else is writing: another container may have
+    # generated one while this one waited.
+    if [ ! -f "$env_file" ] || ! grep -q '^APP_KEY=base64:' "$env_file"; then
+        echo "ticktz: no APP_KEY in the environment, generating one in ${env_file}"
+        echo "ticktz: back it up — it encrypts the mailbox passwords in your database"
+
+        [ -f "$env_file" ] || printf 'APP_KEY=\n' > "$env_file"
+        grep -q '^APP_KEY=' "$env_file" || printf 'APP_KEY=\n' >> "$env_file"
+
+        (cd "$APP_ROOT" && php artisan key:generate --force --no-interaction) || true
+        chown www-data:www-data "$env_file" 2>/dev/null || true
+        chmod 640 "$env_file" 2>/dev/null || true
+    fi
+
+    release_lock
+}
+
 place_code
+own_instance_directories
+ensure_app_key
