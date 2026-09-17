@@ -36,7 +36,7 @@ export function BrandLockup({
             )}
             <span className="flex flex-col leading-tight">
                 <span className="text-sm font-semibold tracking-tight text-slate-900">{name}</span>
-                {subtitle ? <span className="text-[11px] text-slate-500">{subtitle}</span> : null}
+                {subtitle ? <span className="text-[11px] text-slate-600">{subtitle}</span> : null}
             </span>
         </span>
     );

@@ -39,14 +39,17 @@ export default function AdminIndex({
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {tiles.map((tile) => {
+                    // Not <dt>/<dd>: each tile is wrapped in a <Link>, and HTML only
+                    // allows <div> between a <dl> and its terms — so the description-list
+                    // markup was invalid and bought nothing. These are stat tiles.
                     const content = (
                         <>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                                 {t(`admin.stats.${tile.key}`)}
-                            </dt>
-                            <dd className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
+                            </p>
+                            <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
                                 {stats[tile.key] ?? 0}
-                            </dd>
+                            </p>
                         </>
                     );
 
@@ -85,7 +88,7 @@ export default function AdminIndex({
                             <li key={entry.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-5 py-2.5 text-sm">
                                 <span className="font-medium text-slate-900">{entry.actor.name}</span>
                                 <span className="text-slate-600">{entry.description ?? entry.event}</span>
-                                <span className="ml-auto whitespace-nowrap text-xs text-slate-400">
+                                <span className="ml-auto whitespace-nowrap text-xs text-slate-500">
                                     {relativeTime(entry.created_at, t)}
                                 </span>
                             </li>

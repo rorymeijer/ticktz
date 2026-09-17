@@ -18,7 +18,7 @@ export function Pagination<T>({ page, className }: { page: Paginated<T>; classNa
     return (
         <nav
             className={cn('flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3', className)}
-            aria-label="Pagination"
+            aria-label={t('common.pagination.label')}
         >
             <p className="text-xs text-slate-500">
                 {t('common.pagination.showing', {

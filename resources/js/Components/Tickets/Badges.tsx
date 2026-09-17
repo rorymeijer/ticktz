@@ -1,4 +1,5 @@
 import { Badge } from '@/Components/UI';
+import { tintedChip } from '@/lib/contrast';
 import type { PrioritySummary, StatusSummary } from '@/types/tickets';
 
 /**
@@ -31,10 +32,13 @@ export function PriorityBadge({ priority }: { priority: PrioritySummary | null }
 }
 
 export function LabelChip({ label }: { label: { name: string; color: string } }) {
+    // The ink is derived rather than taken from the label: a label's own colour
+    // on a 10% tint of itself measures as little as 2.85:1, and the colour is
+    // the administrator's to choose, so no fixed palette can fix it.
     return (
         <span
             className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-            style={{ backgroundColor: `${label.color}1a`, color: label.color }}
+            style={tintedChip(label.color)}
         >
             {label.name}
         </span>

@@ -77,7 +77,7 @@ export default function PortalIndex({
                 </p>
 
                 <div className="relative mt-5 max-w-xl">
-                    <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                     <TextInput
                         type="search"
                         value={search}
@@ -101,7 +101,7 @@ export default function PortalIndex({
                                     {category.name}
                                 </h3>
                                 {category.description ? (
-                                    <p className="text-xs text-slate-400">{category.description}</p>
+                                    <p className="text-xs text-slate-500">{category.description}</p>
                                 ) : null}
                             </div>
 
@@ -163,7 +163,7 @@ export default function PortalIndex({
                                         {request.subject}
                                     </span>
                                     <StatusBadge status={request.status} />
-                                    <span className="text-xs text-slate-400">
+                                    <span className="text-xs text-slate-500">
                                         {relativeTime(request.last_activity_at, t)}
                                     </span>
                                 </Link>

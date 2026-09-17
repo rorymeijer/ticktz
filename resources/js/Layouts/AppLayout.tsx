@@ -58,13 +58,13 @@ export default function AppLayout({
                                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
                         )}
                     >
-                        <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-brand-600' : 'text-slate-400')} />
+                        <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-brand-600' : 'text-slate-500')} />
                         <span className="truncate">{item.label}</span>
                     </Link>
                 );
             })}
 
-            <div className="mt-auto px-3 pt-4 text-[11px] text-slate-400">
+            <div className="mt-auto px-3 pt-4 text-[11px] text-slate-500">
                 {app.name} {app.version}
             </div>
         </nav>
@@ -106,7 +106,7 @@ export default function AppLayout({
                                     type="button"
                                     onClick={() => setMobileOpen(false)}
                                     aria-label={t('nav.close_menu')}
-                                    className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
+                                    className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100"
                                 >
                                     <IconX />
                                 </button>
@@ -122,7 +122,7 @@ export default function AppLayout({
                             type="button"
                             onClick={() => setMobileOpen(true)}
                             aria-label={t('nav.open_menu')}
-                            className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 lg:hidden"
+                            className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 lg:hidden"
                         >
                             <IconMenu />
                         </button>
@@ -135,10 +135,14 @@ export default function AppLayout({
                             {actions}
                             <LocaleSwitcher />
                             {user ? (
+                                /* The avatar is decorative and the chevron is an icon, so
+                                   without an explicit label this trigger has no accessible
+                                   name at all — axe rates that critical. */
                                 <Dropdown
                                     trigger={
                                         <button
                                             type="button"
+                                            aria-label={t('nav.account_menu', { name: user.name })}
                                             className="flex items-center gap-1.5 rounded-lg p-1 hover:bg-slate-100"
                                         >
                                             <Avatar
@@ -147,7 +151,7 @@ export default function AppLayout({
                                                 color={user.avatar_color}
                                                 size="sm"
                                             />
-                                            <IconChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                                            <IconChevronDown className="h-3.5 w-3.5 text-slate-500" />
                                         </button>
                                     }
                                 >

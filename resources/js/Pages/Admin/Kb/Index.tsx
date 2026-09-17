@@ -135,7 +135,7 @@ export default function AdminKbIndex({
                                                 {article.title}
                                             </Link>
                                             {article.ticket_count ? (
-                                                <span className="ml-2 text-xs text-slate-400">
+                                                <span className="ml-2 text-xs text-slate-500">
                                                     {t('kb.articles.ticket_count', {
                                                         count: article.ticket_count,
                                                     })}
@@ -217,7 +217,7 @@ export default function AdminKbIndex({
                                     ) : null}
                                 </span>
 
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-slate-500">
                                     {t('kb.categories.article_count', {
                                         count: category.article_count ?? 0,
                                     })}
@@ -232,7 +232,7 @@ export default function AdminKbIndex({
                                     aria-label={t('common.actions.delete')}
                                     onClick={() => setDeletingCategory(category)}
                                 >
-                                    <IconTrash className="h-4 w-4 text-slate-400" />
+                                    <IconTrash className="h-4 w-4 text-slate-500" />
                                 </Button>
                             </li>
                         ))}
@@ -300,7 +300,7 @@ function SearchField({ value, filters }: { value: string; filters: Record<string
                 );
             }}
         >
-            <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <TextInput
                 type="search"
                 value={term}

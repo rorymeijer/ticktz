@@ -120,7 +120,7 @@ function ApprovalCard({ approval }: { approval: Approval }) {
                             </p>
                         ) : null}
 
-                        <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                             {approval.ticket?.requester ? (
                                 <span>
                                     {t('approvals.ticket.requested_by', { name: approval.ticket.requester.name })}

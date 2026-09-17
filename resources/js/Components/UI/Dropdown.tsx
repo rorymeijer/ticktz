@@ -108,5 +108,5 @@ export function DropdownDivider() {
 }
 
 export function DropdownHeading({ children }: { children: ReactNode }) {
-    return <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{children}</p>;
+    return <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{children}</p>;
 }

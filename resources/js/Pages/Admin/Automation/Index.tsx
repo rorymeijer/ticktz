@@ -234,7 +234,7 @@ export default function AutomationIndex({
                     ) : (
                         byTrigger.map(([trigger, group]) => (
                             <div key={trigger} className="space-y-2">
-                                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                     {t(`automation.triggers.${trigger}`)}
                                 </h3>
                                 {group.map((rule) => (
@@ -338,18 +338,18 @@ function RuleCard({
             <CardBody className="space-y-3">
                 <dl className="space-y-1.5 text-sm">
                     <div className="flex flex-wrap gap-x-2">
-                        <dt className="w-12 shrink-0 text-xs font-medium uppercase tracking-wide text-slate-400">
+                        <dt className="w-12 shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500">
                             {t('automation.rules.conditions')}
                         </dt>
                         <dd className="text-slate-700">
                             {rule.conditions.length === 0 ? (
-                                <span className="text-slate-400">{t('automation.rules.conditions_any')}</span>
+                                <span className="text-slate-500">{t('automation.rules.conditions_any')}</span>
                             ) : (
                                 <span>
                                     {rule.conditions.map((condition, index) => (
                                         <span key={index}>
                                             {index > 0 ? (
-                                                <span className="text-slate-400">
+                                                <span className="text-slate-500">
                                                     {' '}
                                                     {rule.match_type === 'all' ? '·' : '/'}{' '}
                                                 </span>
@@ -362,13 +362,13 @@ function RuleCard({
                         </dd>
                     </div>
                     <div className="flex flex-wrap gap-x-2">
-                        <dt className="w-12 shrink-0 text-xs font-medium uppercase tracking-wide text-slate-400">
+                        <dt className="w-12 shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500">
                             {t('automation.rules.actions')}
                         </dt>
                         <dd className="text-slate-700">
                             {rule.actions.map((action, index) => (
                                 <span key={index}>
-                                    {index > 0 ? <span className="text-slate-400"> · </span> : null}
+                                    {index > 0 ? <span className="text-slate-500"> · </span> : null}
                                     {describeAction(action, options, t)}
                                 </span>
                             ))}
@@ -761,7 +761,7 @@ function RuleDialog({ rule, options, onClose }: { rule: Rule | null; options: Op
                     </Field>
 
                     {form.data.conditions.length === 0 ? (
-                        <p className="text-xs text-slate-400">{t('automation.conditions.empty')}</p>
+                        <p className="text-xs text-slate-500">{t('automation.conditions.empty')}</p>
                     ) : (
                         <ul className="space-y-2">
                             {form.data.conditions.map((condition, index) => (
@@ -945,7 +945,7 @@ function ConditionRow({
             <button
                 type="button"
                 onClick={onRemove}
-                className="ml-auto rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600"
+                className="ml-auto rounded p-1 text-slate-600 hover:bg-slate-100 hover:text-red-600"
                 aria-label={t('common.actions.remove')}
             >
                 <IconX className="h-3.5 w-3.5" />
@@ -1016,7 +1016,7 @@ function ActionRow({
                 <button
                     type="button"
                     onClick={onRemove}
-                    className="ml-auto rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600"
+                    className="ml-auto rounded p-1 text-slate-600 hover:bg-slate-100 hover:text-red-600"
                     aria-label={t('common.actions.remove')}
                 >
                     <IconX className="h-3.5 w-3.5" />

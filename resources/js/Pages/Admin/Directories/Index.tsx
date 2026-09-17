@@ -107,7 +107,7 @@ export default function DirectoriesIndex({
                                     <Badge tone={directory.is_enabled ? 'green' : 'slate'}>
                                         {directory.is_enabled ? t('common.labels.enabled') : t('common.labels.disabled')}
                                     </Badge>
-                                    <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-500">
+                                    <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
                                         {directory.connection}
                                     </code>
                                 </span>
@@ -502,7 +502,7 @@ function DirectoryForm({
                                                 className="font-mono text-xs"
                                                 onChange={(event) => setGroupRole(index, event.target.value, role)}
                                             />
-                                            <span aria-hidden="true" className="text-slate-400">
+                                            <span aria-hidden="true" className="text-slate-500">
                                                 →
                                             </span>
                                             <Select

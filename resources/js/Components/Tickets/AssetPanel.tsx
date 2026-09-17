@@ -54,7 +54,7 @@ export function AssetPanel({
                                     {asset.name}
                                 </Link>
                                 <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                                    <span className="font-mono text-[11px] text-slate-400">{asset.asset_tag}</span>
+                                    <span className="font-mono text-[11px] text-slate-500">{asset.asset_tag}</span>
                                     <AssetStatusBadge status={asset.status} />
                                 </span>
                             </span>
@@ -67,7 +67,7 @@ export function AssetPanel({
                                             preserveScroll: true,
                                         })
                                     }
-                                    className="rounded p-1 text-slate-300 hover:text-red-600"
+                                    className="rounded p-1 text-slate-500 hover:text-red-600"
                                 >
                                     <IconX className="h-3.5 w-3.5" />
                                 </button>
@@ -141,7 +141,7 @@ function LinkDialog({
     return (
         <Modal open onClose={onClose} size="lg" title={t('assets.ticket.add')}>
             <div className="relative">
-                <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <TextInput
                     type="search"
                     autoFocus
@@ -154,7 +154,7 @@ function LinkDialog({
             </div>
 
             {term.trim() === '' && results.length > 0 ? (
-                <p className="mt-2 text-xs text-slate-400">{t('assets.ticket.suggested')}</p>
+                <p className="mt-2 text-xs text-slate-500">{t('assets.ticket.suggested')}</p>
             ) : null}
 
             <div className="mt-3 max-h-80 overflow-y-auto">
@@ -164,7 +164,7 @@ function LinkDialog({
                             <li key={asset.id} className="flex items-center gap-3 py-2.5">
                                 <span className="min-w-0 flex-1">
                                     <span className="block text-sm font-medium text-slate-800">{asset.name}</span>
-                                    <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+                                    <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                                         <span className="font-mono">{asset.asset_tag}</span>
                                         {asset.serial_number ? <span>· {asset.serial_number}</span> : null}
                                     </span>

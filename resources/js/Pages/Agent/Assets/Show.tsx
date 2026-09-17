@@ -45,7 +45,7 @@ export default function AssetShow({
             title={`${asset.asset_tag} — ${asset.name}`}
             header={
                 <span className="flex items-center gap-2">
-                    <Link href="/agent/assets" className="text-slate-400 hover:text-slate-600">
+                    <Link href="/agent/assets" className="text-slate-500 hover:text-slate-600">
                         {t('assets.title')}
                     </Link>
                     <span aria-hidden="true" className="text-slate-300">
@@ -66,7 +66,7 @@ export default function AssetShow({
                             aria-label={t('common.actions.delete')}
                             onClick={() => setDeleting(true)}
                         >
-                            <IconTrash className="h-4 w-4 text-slate-400" />
+                            <IconTrash className="h-4 w-4 text-slate-500" />
                         </Button>
                     </div>
                 ) : null
@@ -183,7 +183,7 @@ export default function AssetShow({
                                                 {/* The label is derived from the single stored
                                                     row, so the two ends of a relationship can
                                                     never contradict each other. */}
-                                                <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                                                <p className="text-[11px] uppercase tracking-wide text-slate-500">
                                                     {t(`assets.relation.${relation.type}`)}
                                                 </p>
                                                 <Link
@@ -192,7 +192,7 @@ export default function AssetShow({
                                                 >
                                                     {relation.asset.name}
                                                 </Link>
-                                                <p className="mt-0.5 flex flex-wrap items-center gap-2 font-mono text-[11px] text-slate-400">
+                                                <p className="mt-0.5 flex flex-wrap items-center gap-2 font-mono text-[11px] text-slate-500">
                                                     {relation.asset.asset_tag}
                                                 </p>
                                                 {relation.note ? (
@@ -206,7 +206,7 @@ export default function AssetShow({
                                                     type="button"
                                                     aria-label={t('assets.actions.unrelate')}
                                                     onClick={() => setUnrelating(relation)}
-                                                    className="rounded p-1 text-slate-300 hover:text-red-600"
+                                                    className="rounded p-1 text-slate-500 hover:text-red-600"
                                                 >
                                                     <IconX className="h-3.5 w-3.5" />
                                                 </button>
@@ -260,7 +260,7 @@ function Detail({ label, value, mono = false }: { label: string; value?: string 
 
     return (
         <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</dt>
+            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
             <dd className={mono ? 'mt-0.5 font-mono text-xs text-slate-800' : 'mt-0.5 text-sm text-slate-800'}>
                 {value}
             </dd>
@@ -352,7 +352,7 @@ function RelateDialog({ asset, options, onClose }: { asset: AssetDetail; options
 
                 <div>
                     <div className="relative">
-                        <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                         <TextInput
                             type="search"
                             autoFocus

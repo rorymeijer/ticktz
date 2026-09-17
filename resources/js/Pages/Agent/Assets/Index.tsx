@@ -133,7 +133,7 @@ export default function AssetsIndex({
                                         </TD>
                                         <TD className="text-slate-600">
                                             {asset.assignee?.name ?? (
-                                                <span className="text-slate-300">{t('assets.fields.unassigned')}</span>
+                                                <span className="text-slate-500">{t('assets.fields.unassigned')}</span>
                                             )}
                                         </TD>
                                         <TD className="text-slate-500">{asset.location ?? '—'}</TD>
@@ -144,7 +144,7 @@ export default function AssetsIndex({
                                                     <WarrantyBadge expired={asset.warranty_expired} />
                                                 </span>
                                             ) : (
-                                                <span className="text-slate-300">—</span>
+                                                <span className="text-slate-500">—</span>
                                             )}
                                         </TD>
                                     </TR>
@@ -192,7 +192,7 @@ function SearchField({ value, query }: { value: string; query: Record<string, st
                 );
             }}
         >
-            <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <TextInput
                 type="search"
                 value={term}

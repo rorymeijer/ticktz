@@ -16,6 +16,7 @@ return [
     'reports' => 'Reports',
     'admin' => 'Administration',
     'settings' => 'Settings',
+    'account_menu' => 'Account menu for :name',
     'profile' => 'Profile',
     'log_in' => 'Log in',
     'log_out' => 'Log out',

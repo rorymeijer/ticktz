@@ -117,7 +117,7 @@ export function TicketTable({
                         <span className="truncate text-sm">{ticket.assignee.name}</span>
                     </div>
                 ) : (
-                    <span className="text-xs text-slate-400">{t('common.labels.unassigned')}</span>
+                    <span className="text-xs text-slate-500">{t('common.labels.unassigned')}</span>
                 );
             case 'team':
                 return <span className="text-sm">{ticket.team?.name ?? '—'}</span>;
@@ -135,7 +135,7 @@ export function TicketTable({
                 return ticket.sla ? (
                     <SlaBadge timer={ticket.sla} compact />
                 ) : (
-                    <span className="text-xs text-slate-400">—</span>
+                    <span className="text-xs text-slate-500">—</span>
                 );
             case 'created_at':
                 return (

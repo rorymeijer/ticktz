@@ -423,7 +423,7 @@ export default function RequestTypeForm({
                                         {...props}
                                         value={form.data.subject_template}
                                         className="font-mono text-xs"
-                                        placeholder="Laptop for :employee"
+                                        placeholder={t('admin.request_types.fields.subject_template_placeholder')}
                                         onChange={(event) => form.setData('subject_template', event.target.value)}
                                     />
                                 )}
@@ -499,7 +499,7 @@ export default function RequestTypeForm({
                                                         type="button"
                                                         aria-label={t('common.actions.previous')}
                                                         onClick={() => move(index, -1)}
-                                                        className="px-1 text-xs text-slate-400 hover:text-slate-700"
+                                                        className="px-1 text-xs text-slate-500 hover:text-slate-700"
                                                     >
                                                         ▲
                                                     </button>
@@ -507,7 +507,7 @@ export default function RequestTypeForm({
                                                         type="button"
                                                         aria-label={t('common.actions.next')}
                                                         onClick={() => move(index, 1)}
-                                                        className="px-1 text-xs text-slate-400 hover:text-slate-700"
+                                                        className="px-1 text-xs text-slate-500 hover:text-slate-700"
                                                     >
                                                         ▼
                                                     </button>
@@ -517,7 +517,7 @@ export default function RequestTypeForm({
                                                     <p className="text-sm font-medium text-slate-800">
                                                         {definition?.label ?? row.custom_field_id}
                                                     </p>
-                                                    <code className="font-mono text-[11px] text-slate-400">
+                                                    <code className="font-mono text-[11px] text-slate-500">
                                                         {definition?.key}
                                                     </code>
                                                 </div>

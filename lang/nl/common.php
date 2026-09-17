@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'actions' => [
+        'dismiss' => 'Sluiten',
         'save' => 'Opslaan',
         'cancel' => 'Annuleren',
         'create' => 'Aanmaken',
@@ -58,6 +59,7 @@ return [
         'description' => 'Er zijn geen gegevens voor de huidige filters.',
     ],
     'pagination' => [
+        'label' => 'Paginering',
         'showing' => ':from–:to van :total getoond',
         'per_page' => 'Per pagina',
     ],

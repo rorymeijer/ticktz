@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'actions' => [
+        'dismiss' => 'Dismiss',
         'save' => 'Save',
         'cancel' => 'Cancel',
         'create' => 'Create',
@@ -58,6 +59,7 @@ return [
         'description' => 'There is no data to show for the current filters.',
     ],
     'pagination' => [
+        'label' => 'Pagination',
         'showing' => 'Showing :from–:to of :total',
         'per_page' => 'Per page',
     ],

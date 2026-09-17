@@ -54,7 +54,7 @@ export default function Dashboard({
                             href={card.href}
                             className="group rounded-xl border border-slate-200 bg-white p-4 shadow-card transition-colors hover:border-brand-300"
                         >
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                                 {t(`dashboard.cards.${card.key}`)}
                             </p>
                             <p
@@ -127,7 +127,7 @@ export default function Dashboard({
                                     </span>
                                     <PriorityBadge priority={ticket.priority} />
                                     <StatusBadge status={ticket.status} />
-                                    <span className="text-xs text-slate-400">
+                                    <span className="text-xs text-slate-500">
                                         {relativeTime(ticket.last_activity_at, t)}
                                     </span>
                                 </Link>

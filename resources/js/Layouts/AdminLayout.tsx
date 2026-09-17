@@ -157,7 +157,7 @@ export default function AdminLayout({
 
                             return (
                                 <div key={section} className="contents lg:block">
-                                    <p className="hidden px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400 first:pt-0 lg:block">
+                                    <p className="hidden px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-500 first:pt-0 lg:block">
                                         {t(`admin.sections.${section}`)}
                                     </p>
                                     {sectionItems.map((item) => (

@@ -152,7 +152,7 @@ function ChangeSummary({ entry }: { entry: AuditEntry }) {
                     <div key={key} className="flex flex-wrap items-baseline gap-1 text-[11px]">
                         <dt className="font-mono text-slate-500">{key}</dt>
                         {entry.old_values && key in entry.old_values ? (
-                            <dd className="text-slate-400 line-through">{render(entry.old_values[key])}</dd>
+                            <dd className="text-slate-500 line-through">{render(entry.old_values[key])}</dd>
                         ) : null}
                         <dd className="text-slate-700">{render(value)}</dd>
                     </div>

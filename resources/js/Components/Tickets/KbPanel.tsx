@@ -68,7 +68,7 @@ export function KbPanel({
                                             preserveScroll: true,
                                         })
                                     }
-                                    className="rounded p-1 text-slate-300 hover:text-red-600"
+                                    className="rounded p-1 text-slate-500 hover:text-red-600"
                                 >
                                     <IconX className="h-3.5 w-3.5" />
                                 </button>
@@ -123,7 +123,7 @@ function LinkDialog({ ticketKey, onClose }: { ticketKey: string; onClose: () => 
     return (
         <Modal open onClose={onClose} title={t('kb.ticket.add')} size="lg">
             <div className="relative">
-                <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <TextInput
                     type="search"
                     autoFocus

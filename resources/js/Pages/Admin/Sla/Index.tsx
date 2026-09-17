@@ -529,7 +529,7 @@ function CalendarCard({
                         return (
                             <li key={day} className="flex gap-2">
                                 <span className="w-10 shrink-0 text-slate-500">{t(`sla.days_short.${day}`)}</span>
-                                <span className={blocks.length === 0 ? 'text-slate-400' : 'text-slate-700'}>
+                                <span className={blocks.length === 0 ? 'text-slate-500' : 'text-slate-700'}>
                                     {blocks.length === 0
                                         ? t('sla.calendars.closed')
                                         : blocks.map((block) => `${block[0]}–${block[1]}`).join(', ')}
@@ -548,7 +548,7 @@ function CalendarCard({
                     </div>
 
                     {calendar.holidays.length === 0 ? (
-                        <p className="mt-1 text-xs text-slate-400">{t('sla.holidays.empty')}</p>
+                        <p className="mt-1 text-xs text-slate-500">{t('sla.holidays.empty')}</p>
                     ) : (
                         <ul className="mt-1.5 flex flex-wrap gap-1.5">
                             {calendar.holidays.map((holiday) => (
@@ -556,7 +556,7 @@ function CalendarCard({
                                     <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2 pr-1 text-xs text-slate-700">
                                         <span>
                                             {holiday.name}
-                                            <span className="ml-1 text-slate-400">
+                                            <span className="ml-1 text-slate-500">
                                                 {holiday.is_recurring
                                                     ? holiday.date.slice(5)
                                                     : holiday.date}
@@ -565,7 +565,7 @@ function CalendarCard({
                                         <button
                                             type="button"
                                             onClick={() => onDeleteHoliday(holiday)}
-                                            className="rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                                            className="rounded-full p-0.5 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
                                             aria-label={`${t('common.actions.delete')} ${holiday.name}`}
                                         >
                                             <IconX className="h-3 w-3" />
@@ -925,7 +925,7 @@ function GoalDialog({
                     <p className="text-xs text-slate-500">{t('sla.escalations.description')}</p>
 
                     {form.data.escalations.length === 0 ? (
-                        <p className="text-xs text-slate-400">{t('sla.escalations.empty')}</p>
+                        <p className="text-xs text-slate-500">{t('sla.escalations.empty')}</p>
                     ) : (
                         <ul className="space-y-3">
                             {form.data.escalations.map((escalation, index) => (
@@ -1092,7 +1092,7 @@ function ActionRow({
             <button
                 type="button"
                 onClick={onRemove}
-                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600"
+                className="rounded p-1 text-slate-600 hover:bg-slate-100 hover:text-red-600"
                 aria-label={t('common.actions.remove')}
             >
                 <IconX className="h-3.5 w-3.5" />
@@ -1211,7 +1211,7 @@ function CalendarDialog({
                 <fieldset className="space-y-2 border-t border-slate-100 pt-4">
                     <legend className="text-sm font-medium text-slate-800">{t('sla.calendars.working_hours')}</legend>
                     <p className="text-xs text-slate-500">{t('sla.calendars.working_hours_help')}</p>
-                    <p className="text-xs text-slate-400">{t('sla.calendars.midnight_hint')}</p>
+                    <p className="text-xs text-slate-500">{t('sla.calendars.midnight_hint')}</p>
 
                     <ul className="space-y-1.5">
                         {options.days.map((day) => {
@@ -1232,7 +1232,7 @@ function CalendarDialog({
                                                 className="w-28"
                                                 aria-label={`${t(`sla.days.${day}`)} ${t('sla.calendars.opens')}`}
                                             />
-                                            <span className="text-slate-400">–</span>
+                                            <span className="text-slate-500">–</span>
                                             <TextInput
                                                 type="time"
                                                 value={block[1]}
@@ -1248,7 +1248,7 @@ function CalendarDialog({
                                                         [day]: blocks.filter((_, i) => i !== index),
                                                     })
                                                 }
-                                                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600"
+                                                className="rounded p-1 text-slate-600 hover:bg-slate-100 hover:text-red-600"
                                                 aria-label={t('common.actions.remove')}
                                             >
                                                 <IconX className="h-3.5 w-3.5" />
@@ -1257,7 +1257,7 @@ function CalendarDialog({
                                     ))}
 
                                     {blocks.length === 0 ? (
-                                        <span className="text-xs text-slate-400">{t('sla.calendars.closed')}</span>
+                                        <span className="text-xs text-slate-500">{t('sla.calendars.closed')}</span>
                                     ) : null}
 
                                     {blocks.length < 4 ? (

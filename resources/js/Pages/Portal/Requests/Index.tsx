@@ -111,7 +111,7 @@ export default function PortalRequestsIndex({
 
                                         <StatusBadge status={request.status} />
 
-                                        <span className="w-24 text-right text-xs text-slate-400">
+                                        <span className="w-24 text-right text-xs text-slate-500">
                                             {relativeTime(request.last_activity_at, t)}
                                         </span>
                                     </Link>

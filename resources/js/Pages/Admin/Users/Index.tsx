@@ -150,7 +150,7 @@ export default function UsersIndex({
                                                     </Badge>
                                                 ))}
                                                 {user.roles.length === 0 ? (
-                                                    <span className="text-xs text-slate-400">
+                                                    <span className="text-xs text-slate-500">
                                                         {t('common.labels.none')}
                                                     </span>
                                                 ) : null}
@@ -172,7 +172,7 @@ export default function UsersIndex({
                                                 trigger={
                                                     <button
                                                         type="button"
-                                                        className="rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
+                                                        className="rounded-md px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
                                                         aria-label={t('common.labels.actions')}
                                                     >
                                                         ⋯

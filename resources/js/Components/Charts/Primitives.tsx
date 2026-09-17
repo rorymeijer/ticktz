@@ -24,7 +24,7 @@ export function StatTile({
 }) {
     return (
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
             <p
                 className={cn(
                     // A text token, not a series colour, and a sans face — a
@@ -94,7 +94,7 @@ export function StackedBars({
     const everyNth = Math.max(1, Math.ceil(days.length / 8));
 
     if (days.length === 0) {
-        return <p className="py-10 text-center text-sm text-slate-400">{t('reports.no_data')}</p>;
+        return <p className="py-10 text-center text-sm text-slate-500">{t('reports.no_data')}</p>;
     }
 
     return (
@@ -197,7 +197,7 @@ export function BarList({
     const max = givenMax ?? Math.max(1, ...rows.map((row) => row.value));
 
     if (rows.length === 0) {
-        return <p className="py-8 text-center text-sm text-slate-400">{t('reports.no_data')}</p>;
+        return <p className="py-8 text-center text-sm text-slate-500">{t('reports.no_data')}</p>;
     }
 
     return (
@@ -221,7 +221,7 @@ export function BarList({
                             />
                         </span>
                         {row.meta ? (
-                            <span className="shrink-0 text-xs tabular-nums text-slate-400">{row.meta}</span>
+                            <span className="shrink-0 text-xs tabular-nums text-slate-500">{row.meta}</span>
                         ) : null}
                     </div>
                 </li>

@@ -27,7 +27,7 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
                     <li key={item.id} className="flex flex-wrap items-baseline gap-x-2 px-5 py-2.5 text-sm text-slate-500">
                         <span className="font-medium text-slate-700">{item.actor.name}</span>
                         <span>{t(`tickets.timeline.events.${item.event}`)}</span>
-                        <time className="ml-auto text-xs text-slate-400" dateTime={item.created_at ?? undefined}>
+                        <time className="ml-auto text-xs text-slate-500" dateTime={item.created_at ?? undefined}>
                             {formatDateTime(item.created_at, locale)}
                         </time>
                     </li>
@@ -63,11 +63,11 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
                                     ) : null}
 
                                     {item.edited_at ? (
-                                        <span className="text-xs text-slate-400">({t('tickets.timeline.edited')})</span>
+                                        <span className="text-xs text-slate-500">({t('tickets.timeline.edited')})</span>
                                     ) : null}
 
                                     <time
-                                        className="ml-auto text-xs text-slate-400"
+                                        className="ml-auto text-xs text-slate-500"
                                         dateTime={item.created_at ?? undefined}
                                     >
                                         {formatDateTime(item.created_at, locale)}
@@ -97,9 +97,9 @@ export function AttachmentList({ files }: { files: AttachmentSummary[] }) {
                         href={file.url}
                         className="inline-flex max-w-64 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 hover:border-brand-300 hover:text-brand-700"
                     >
-                        <IconPaperclip className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                        <IconPaperclip className="h-3.5 w-3.5 shrink-0 text-slate-500" />
                         <span className="truncate">{file.name}</span>
-                        <span className="shrink-0 text-slate-400">{formatBytes(file.size)}</span>
+                        <span className="shrink-0 text-slate-500">{formatBytes(file.size)}</span>
                     </a>
                 </li>
             ))}

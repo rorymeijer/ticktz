@@ -2,6 +2,7 @@ import { router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 import { PriorityBadge, LabelChip } from '@/Components/Tickets/Badges';
+import { tintedChip } from '@/lib/contrast';
 import { IconPlus, IconX } from '@/Components/Icons';
 import {
     Avatar,
@@ -149,8 +150,10 @@ export function TicketSidebar({
                                             }
                                             className="rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 transition-opacity"
                                             style={{
-                                                backgroundColor: selected ? `${label.color}1a` : 'transparent',
-                                                color: selected ? label.color : '#64748b',
+                                                backgroundColor: selected
+                                                    ? tintedChip(label.color).backgroundColor
+                                                    : 'transparent',
+                                                color: selected ? tintedChip(label.color).color : '#64748b',
                                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                 ['--tw-ring-color' as any]: selected ? label.color : '#e2e8f0',
                                             }}
@@ -236,7 +239,7 @@ export function TicketSidebar({
                                                     { preserveScroll: true },
                                                 )
                                             }
-                                            className="text-slate-300 hover:text-red-600"
+                                            className="text-slate-500 hover:text-red-600"
                                         >
                                             <IconX className="h-3.5 w-3.5" />
                                         </button>

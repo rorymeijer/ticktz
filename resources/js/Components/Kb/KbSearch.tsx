@@ -41,7 +41,7 @@ export function KbSearch({ url, filters }: { url: string; filters: { q: string |
 
     return (
         <div className="relative">
-            <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <TextInput
                 type="search"
                 value={term}
@@ -55,7 +55,7 @@ export function KbSearch({ url, filters }: { url: string; filters: { q: string |
                     type="button"
                     onClick={() => setTerm('')}
                     aria-label={t('kb.search.clear')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-700"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:text-slate-700"
                 >
                     <IconX className="h-3.5 w-3.5" />
                 </button>
@@ -126,7 +126,7 @@ export function CategoryFilter({
                     >
                         {entry.name}
                         {entry.count !== null ? (
-                            <span className={cn('text-xs', current ? 'text-white/70' : 'text-slate-400')}>
+                            <span className={cn('text-xs', current ? 'text-white/70' : 'text-slate-500')}>
                                 {entry.count}
                             </span>
                         ) : null}

@@ -514,6 +514,7 @@ return [
             'priority' => 'Prioriteit',
             'allow_priority_choice' => 'Melder mag de prioriteit kiezen',
             'subject_template' => 'Sjabloon voor het ticketonderwerp',
+            'subject_template_placeholder' => 'Laptop voor :employee',
             'subject_template_help' => 'Gebruik :veld_sleutel om een antwoord in te voegen, bijv. “Laptop voor :employee”. Laat leeg om om een samenvatting te vragen.',
             'visibility' => 'Zichtbaar voor',
             'organizations' => 'Organisaties',

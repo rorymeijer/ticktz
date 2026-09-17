@@ -219,7 +219,7 @@ export default function RoleForm({
                                                             </span>
                                                             <code
                                                                 className={cn(
-                                                                    'block font-mono text-[10px] text-slate-400',
+                                                                    'block font-mono text-[10px] text-slate-500',
                                                                 )}
                                                             >
                                                                 {permission.name}

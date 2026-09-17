@@ -207,7 +207,7 @@ export default function RequestForm({
                                                             form.data.attachments.filter((_, i) => i !== index),
                                                         )
                                                     }
-                                                    className="text-slate-400 hover:text-slate-700"
+                                                    className="text-slate-500 hover:text-slate-700"
                                                 >
                                                     <IconX className="h-3 w-3" />
                                                 </button>

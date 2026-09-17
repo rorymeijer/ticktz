@@ -92,7 +92,7 @@ export default function CustomFieldsIndex({ fields, types }: { fields: CustomFie
                                             >
                                                 {field.label}
                                             </button>
-                                            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-500">
+                                            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
                                                 {field.key}
                                             </code>
                                             {field.is_required ? (

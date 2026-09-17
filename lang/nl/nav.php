@@ -16,6 +16,7 @@ return [
     'reports' => 'Rapportage',
     'admin' => 'Beheer',
     'settings' => 'Instellingen',
+    'account_menu' => 'Accountmenu van :name',
     'profile' => 'Profiel',
     'log_in' => 'Inloggen',
     'log_out' => 'Uitloggen',

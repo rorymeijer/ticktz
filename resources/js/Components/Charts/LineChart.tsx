@@ -68,7 +68,7 @@ export function LineChart({
     const everyNth = Math.max(1, Math.ceil(labels.length / 8));
 
     if (labels.length === 0) {
-        return <p className="py-10 text-center text-sm text-slate-400">{t('reports.no_data')}</p>;
+        return <p className="py-10 text-center text-sm text-slate-500">{t('reports.no_data')}</p>;
     }
 
     return (

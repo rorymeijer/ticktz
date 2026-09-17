@@ -83,7 +83,7 @@ export default function AdminKbEdit({
                         aria-label={t('common.actions.delete')}
                         onClick={() => setDeleting(true)}
                     >
-                        <IconTrash className="h-4 w-4 text-slate-400" />
+                        <IconTrash className="h-4 w-4 text-slate-500" />
                     </Button>
                 </div>
             }
@@ -142,7 +142,7 @@ export default function AdminKbEdit({
                                                     'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                                     preview === mode
                                                         ? 'bg-slate-100 text-slate-900'
-                                                        : 'text-slate-500 hover:text-slate-800',
+                                                        : 'text-slate-600 hover:text-slate-800',
                                                 )}
                                             >
                                                 {mode ? t('kb.editor.preview') : t('kb.editor.write')}
@@ -191,7 +191,7 @@ export default function AdminKbEdit({
                         </CardBody>
 
                         <CardFooter>
-                            <span className="mr-auto text-xs text-slate-400">
+                            <span className="mr-auto text-xs text-slate-500">
                                 {t('kb.versions.version', {
                                     number: article.version,
                                 })}
@@ -377,9 +377,9 @@ export default function AdminKbEdit({
                                         </div>
                                         <p className="text-xs text-slate-500">{version.title}</p>
                                         {version.note ? (
-                                            <p className="mt-0.5 text-xs italic text-slate-400">{version.note}</p>
+                                            <p className="mt-0.5 text-xs italic text-slate-500">{version.note}</p>
                                         ) : null}
-                                        <p className="mt-0.5 text-[11px] text-slate-400">
+                                        <p className="mt-0.5 text-[11px] text-slate-500">
                                             {formatDateTime(version.created_at, locale)}
                                             {version.editor
                                                 ? ` · ${t('kb.versions.by', { name: version.editor.name })}`

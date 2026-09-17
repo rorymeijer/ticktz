@@ -86,7 +86,7 @@ export default function AdminApprovalsIndex({
                                             aria-label={t('common.actions.delete')}
                                             onClick={() => setDeleting(workflow)}
                                         >
-                                            <IconTrash className="h-4 w-4 text-slate-400" />
+                                            <IconTrash className="h-4 w-4 text-slate-500" />
                                         </Button>
                                     </div>
                                 }
@@ -99,16 +99,16 @@ export default function AdminApprovalsIndex({
                                                 key={step.id}
                                                 className="flex flex-wrap items-center gap-2 text-sm text-slate-600"
                                             >
-                                                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-500">
+                                                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600">
                                                     {step.position + 1}
                                                 </span>
                                                 <span className="font-medium text-slate-800">{step.label}</span>
-                                                <span className="text-slate-400">
+                                                <span className="text-slate-500">
                                                     {t(`approvals.approver_type.${step.approver_type}`)}
                                                 </span>
                                                 <Badge tone="slate">{t(`approvals.mode.${step.mode}_short`)}</Badge>
                                                 {step.due_hours ? (
-                                                    <span className="text-xs text-slate-400">
+                                                    <span className="text-xs text-slate-500">
                                                         {t('approvals.fields.due_within', {
                                                             hours: step.due_hours,
                                                         })}
@@ -122,7 +122,7 @@ export default function AdminApprovalsIndex({
                                 )}
 
                                 {workflow.request_type_count ? (
-                                    <p className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-400">
+                                    <p className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-500">
                                         {t('approvals.admin.used_by', { count: workflow.request_type_count })}
                                     </p>
                                 ) : null}
@@ -347,14 +347,14 @@ function StepEditor({
     return (
         <div className="rounded-xl border border-slate-200 p-3">
             <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     {t('approvals.steps.number', { number: index + 1 })}
                 </span>
                 <button
                     type="button"
                     onClick={onRemove}
                     aria-label={t('approvals.admin.remove_step')}
-                    className="rounded p-1 text-slate-300 hover:text-red-600"
+                    className="rounded p-1 text-slate-500 hover:text-red-600"
                 >
                     <IconX className="h-3.5 w-3.5" />
                 </button>

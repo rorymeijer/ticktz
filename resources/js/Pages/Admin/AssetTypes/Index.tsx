@@ -79,7 +79,7 @@ export default function AssetTypesIndex({ types, fields }: { types: AssetTypeAdm
                                     ) : null}
                                 </span>
 
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-slate-500">
                                     {t('assets.admin.asset_count', { count: type.asset_count ?? 0 })}
                                 </span>
 
@@ -92,7 +92,7 @@ export default function AssetTypesIndex({ types, fields }: { types: AssetTypeAdm
                                     aria-label={t('common.actions.delete')}
                                     onClick={() => setDeleting(type)}
                                 >
-                                    <IconTrash className="h-4 w-4 text-slate-400" />
+                                    <IconTrash className="h-4 w-4 text-slate-500" />
                                 </Button>
                             </li>
                         ))}

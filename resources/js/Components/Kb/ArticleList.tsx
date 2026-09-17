@@ -42,7 +42,7 @@ export function ArticleRow({
                     <span className="mt-1 block text-sm leading-6 text-slate-500">{article.excerpt}</span>
                 ) : null}
 
-                <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     {article.category ? <span>{article.category.name}</span> : null}
                     {article.category ? <span aria-hidden="true">·</span> : null}
                     <span>

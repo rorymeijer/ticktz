@@ -214,7 +214,17 @@ class User extends Authenticatable
      */
     public function avatarColor(): string
     {
-        $palette = ['#4f46e5', '#0891b2', '#059669', '#d97706', '#dc2626', '#7c3aed', '#db2777', '#0284c7'];
+        // Eight hues, each dark enough to carry white initials at 10px.
+        //
+        // These are the Tailwind 700 shades, not the 600s they started as.
+        // Avatar initials are white on this colour, and at avatar sizes that is
+        // "small text" under WCAG, so it needs 4.5:1 — half the 600-shade
+        // palette sat between 3.2 and 4.1 and failed. Measured against white,
+        // lowest first: amber 5.02, cyan 5.36, emerald 5.48, sky 5.93,
+        // pink 6.04, red 6.47, violet 7.10, indigo 7.90.
+        //
+        // Re-measure before changing any of them.
+        $palette = ['#4338ca', '#0e7490', '#047857', '#b45309', '#b91c1c', '#6d28d9', '#be185d', '#0369a1'];
 
         return $palette[crc32((string) $this->getKey()) % count($palette)];
     }

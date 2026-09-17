@@ -61,7 +61,7 @@ function Decide({ token, approval, approver }: { token: string; approval: Approv
 
                 <dl className="mt-5 space-y-3 border-t border-slate-100 pt-4 text-sm">
                     <div>
-                        <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                        <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
                             {t('approvals.fields.subject')}
                         </dt>
                         <dd className="mt-0.5 font-medium text-slate-900">{approval.subject}</dd>
@@ -69,7 +69,7 @@ function Decide({ token, approval, approver }: { token: string; approval: Approv
 
                     {approval.reason ? (
                         <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
                                 {t('approvals.fields.reason')}
                             </dt>
                             <dd className="mt-0.5 whitespace-pre-wrap leading-6 text-slate-700">{approval.reason}</dd>
@@ -78,7 +78,7 @@ function Decide({ token, approval, approver }: { token: string; approval: Approv
 
                     {approval.ticket?.key ? (
                         <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
                                 {approval.ticket.key}
                             </dt>
                             <dd className="mt-0.5 text-slate-700">{approval.ticket.subject}</dd>
@@ -92,7 +92,7 @@ function Decide({ token, approval, approver }: { token: string; approval: Approv
 
                     {approval.ticket?.requester ? (
                         <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
                                 {t('approvals.ticket.requested_by', { name: '' }).trim()}
                             </dt>
                             <dd className="mt-0.5 text-slate-700">{approval.ticket.requester.name}</dd>
@@ -143,7 +143,7 @@ function Done({ outcome }: { outcome: string }) {
         <Card>
             <CardBody className="flex flex-col items-center gap-3 py-12 text-center">
                 <IconCheckCircle
-                    className={outcome === 'approved' ? 'h-8 w-8 text-emerald-500' : 'h-8 w-8 text-slate-400'}
+                    className={outcome === 'approved' ? 'h-8 w-8 text-emerald-500' : 'h-8 w-8 text-slate-500'}
                 />
                 <p className="text-sm font-medium text-slate-900">
                     {t(outcome === 'approved' ? 'approvals.token.done_approved' : 'approvals.token.done_rejected')}

@@ -83,10 +83,14 @@ export default function PortalLayout({
                         <div className="ml-auto flex items-center gap-1.5">
                             <LocaleSwitcher />
                             {user ? (
+                                /* The avatar is decorative and the chevron is an icon, so
+                                   without an explicit label this trigger has no accessible
+                                   name at all — axe rates that critical. */
                                 <Dropdown
                                     trigger={
                                         <button
                                             type="button"
+                                            aria-label={t('nav.account_menu', { name: user.name })}
                                             className="flex items-center gap-1.5 rounded-lg p-1 hover:bg-slate-100"
                                         >
                                             <Avatar
@@ -95,7 +99,7 @@ export default function PortalLayout({
                                                 color={user.avatar_color}
                                                 size="sm"
                                             />
-                                            <IconChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                                            <IconChevronDown className="h-3.5 w-3.5 text-slate-500" />
                                         </button>
                                     }
                                 >

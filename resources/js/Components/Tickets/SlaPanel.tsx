@@ -56,7 +56,7 @@ export function SlaPanel({ ticket }: { ticket: TicketDetail }) {
                             {ticket.sla_events.map((event) => (
                                 <li key={event.id} className="flex flex-wrap items-baseline gap-x-2 text-xs">
                                     <span className="text-slate-700">{describeEvent(event, t)}</span>
-                                    <time className="text-slate-400" dateTime={event.occurred_at}>
+                                    <time className="text-slate-500" dateTime={event.occurred_at}>
                                         {formatDateTime(event.occurred_at, locale)}
                                     </time>
                                 </li>

@@ -165,7 +165,7 @@ export default function AssetImport({
                                                 <span className="min-w-0 flex-1 truncate text-slate-800">
                                                     {row.name}
                                                 </span>
-                                                <span className="text-xs text-slate-400">{row.type}</span>
+                                                <span className="text-xs text-slate-500">{row.type}</span>
                                             </li>
                                         ))}
                                     </ul>

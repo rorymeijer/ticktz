@@ -73,7 +73,7 @@ export default function RolesIndex({ roles }: { roles: RoleRow[] }) {
                                         >
                                             {role.display_name}
                                         </Link>
-                                        <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-500">
+                                        <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
                                             {role.name}
                                         </code>
                                         {role.is_system ? <Badge>{t('common.labels.system')}</Badge> : null}
@@ -95,7 +95,7 @@ export default function RolesIndex({ roles }: { roles: RoleRow[] }) {
                                         trigger={
                                             <button
                                                 type="button"
-                                                className="rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
+                                                className="rounded-md px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
                                                 aria-label={t('common.labels.actions')}
                                             >
                                                 ⋯

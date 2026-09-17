@@ -183,7 +183,7 @@ export default function PortalRequestShow({
                                                         {comment.is_mine ? t('portal.requests.you') : comment.author.name}
                                                     </span>
                                                     <time
-                                                        className="ml-auto text-xs text-slate-400"
+                                                        className="ml-auto text-xs text-slate-500"
                                                         dateTime={comment.created_at ?? undefined}
                                                     >
                                                         {formatDateTime(comment.created_at, locale)}
@@ -242,7 +242,7 @@ export default function PortalRequestShow({
                                                                 form.data.attachments.filter((_, i) => i !== index),
                                                             )
                                                         }
-                                                        className="text-slate-400 hover:text-slate-700"
+                                                        className="text-slate-500 hover:text-slate-700"
                                                     >
                                                         <IconX className="h-3 w-3" />
                                                     </button>

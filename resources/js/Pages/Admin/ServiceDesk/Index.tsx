@@ -2,6 +2,7 @@ import { router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 import AdminLayout from '@/Layouts/AdminLayout';
+import { tintedChip } from '@/lib/contrast';
 import { IconPlus, IconTrash } from '@/Components/Icons';
 import {
     Badge,
@@ -105,7 +106,7 @@ export default function ServiceDeskIndex({
                                 ) : null}
                                 {status.is_public ? null : <Badge tone="purple">{t('common.labels.system')}</Badge>}
 
-                                <span className="ml-auto text-xs text-slate-400">
+                                <span className="ml-auto text-xs text-slate-500">
                                     {t('admin.service_desk.ticket_count', { count: status.ticket_count })}
                                 </span>
 
@@ -155,7 +156,7 @@ export default function ServiceDeskIndex({
                                 </span>
                                 {priority.is_default ? <Badge tone="green">{t('common.labels.default')}</Badge> : null}
 
-                                <span className="ml-auto text-xs text-slate-400">
+                                <span className="ml-auto text-xs text-slate-500">
                                     {t('admin.service_desk.ticket_count', { count: priority.ticket_count })}
                                 </span>
 
@@ -201,7 +202,7 @@ export default function ServiceDeskIndex({
                                             type="button"
                                             onClick={() => setEditingLabel(label)}
                                             className="rounded-full px-2.5 py-1 text-xs font-medium"
-                                            style={{ backgroundColor: `${label.color}1a`, color: label.color }}
+                                            style={tintedChip(label.color)}
                                         >
                                             {label.name}
                                             <span className="ml-1.5 opacity-60">{label.ticket_count}</span>

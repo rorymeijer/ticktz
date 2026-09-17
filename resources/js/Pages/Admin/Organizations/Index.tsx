@@ -104,7 +104,7 @@ export default function OrganizationsIndex({
                                                     </code>
                                                 ))}
                                                 {(organization.email_domains ?? []).length === 0 ? (
-                                                    <span className="text-xs text-slate-400">
+                                                    <span className="text-xs text-slate-500">
                                                         {t('common.labels.none')}
                                                     </span>
                                                 ) : null}

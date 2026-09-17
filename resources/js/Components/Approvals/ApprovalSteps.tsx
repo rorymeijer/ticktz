@@ -30,7 +30,7 @@ export function ApprovalSteps({ steps }: { steps: ApprovalStepView[] }) {
                         </span>
                         <StepBadge state={step.state} />
                         {step.decisions.length > 1 ? (
-                            <span className="text-[11px] text-slate-400">{t(`approvals.mode.${step.mode}_short`)}</span>
+                            <span className="text-[11px] text-slate-500">{t(`approvals.mode.${step.mode}_short`)}</span>
                         ) : null}
                     </div>
 
@@ -77,7 +77,7 @@ function DecisionRow({ decision, dimmed }: { decision: ApprovalDecision; dimmed:
                 <p className="text-xs text-slate-700">
                     {decision.approver?.name}
                     {decision.decision !== 'pending' ? (
-                        <span className="text-slate-400">
+                        <span className="text-slate-500">
                             {' · '}
                             {t(`approvals.decision.${decision.decision}`).toLowerCase()}
                         </span>
@@ -88,7 +88,7 @@ function DecisionRow({ decision, dimmed }: { decision: ApprovalDecision; dimmed:
                     <p className="mt-0.5 text-xs italic leading-5 text-slate-500">“{decision.comment}”</p>
                 ) : null}
 
-                <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+                <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
                     {decision.decided_at
                         ? t('approvals.ticket.answered', { time: relativeTime(decision.decided_at, t) })
                         : decision.notified_at

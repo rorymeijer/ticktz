@@ -514,6 +514,7 @@ return [
             'priority' => 'Priority',
             'allow_priority_choice' => 'Let the requester choose the priority',
             'subject_template' => 'Ticket subject template',
+            'subject_template_placeholder' => 'Laptop for :employee',
             'subject_template_help' => 'Use :field_key to insert an answer, e.g. “Laptop for :employee”. Leave blank to ask for a summary instead.',
             'visibility' => 'Visible to',
             'organizations' => 'Organisations',

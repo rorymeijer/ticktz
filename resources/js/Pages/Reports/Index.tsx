@@ -178,13 +178,13 @@ export default function ReportsIndex({
                                     className="min-w-0 flex-1 text-left"
                                 >
                                     <span className="block text-sm font-medium text-slate-800">{report.name}</span>
-                                    <span className="mt-0.5 block text-xs text-slate-400">
+                                    <span className="mt-0.5 block text-xs text-slate-500">
                                         {t(`reports.reports.${report.report}`)}
                                         {report.description ? ` · ${report.description}` : ''}
                                     </span>
                                 </button>
                                 {report.is_shared ? (
-                                    <span className="text-xs text-slate-400">{t('reports.saved.shared')}</span>
+                                    <span className="text-xs text-slate-500">{t('reports.saved.shared')}</span>
                                 ) : null}
                                 {report.is_mine || can.manage ? (
                                     <Button
@@ -193,7 +193,7 @@ export default function ReportsIndex({
                                         aria-label={t('common.actions.delete')}
                                         onClick={() => setDeleting(report)}
                                     >
-                                        <IconTrash className="h-4 w-4 text-slate-400" />
+                                        <IconTrash className="h-4 w-4 text-slate-500" />
                                     </Button>
                                 ) : null}
                             </li>

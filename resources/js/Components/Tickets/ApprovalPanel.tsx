@@ -74,7 +74,7 @@ export function ApprovalPanel({
                             </Badge>
                         ) : null}
                         {current.workflow ? (
-                            <span className="text-xs text-slate-400">{current.workflow.name}</span>
+                            <span className="text-xs text-slate-500">{current.workflow.name}</span>
                         ) : null}
                     </div>
 
@@ -120,7 +120,7 @@ export function ApprovalPanel({
                     {previous.length > 0 ? (
                         <ul className="space-y-1 border-t border-slate-100 pt-3">
                             {previous.map((approval) => (
-                                <li key={approval.id} className="flex items-center gap-2 text-xs text-slate-400">
+                                <li key={approval.id} className="flex items-center gap-2 text-xs text-slate-500">
                                     <ApprovalBadge status={approval.status} />
                                     <span className="min-w-0 flex-1 truncate">{approval.subject}</span>
                                     <span>{relativeTime(approval.completed_at ?? approval.created_at, t)}</span>

@@ -16,7 +16,7 @@ export default function AgentKbShow({ article, can }: { article: KbArticleDispla
             title={article.title}
             header={
                 <span className="flex items-center gap-2">
-                    <Link href="/agent/kb" className="text-slate-400 hover:text-slate-600">
+                    <Link href="/agent/kb" className="text-slate-500 hover:text-slate-600">
                         {t('kb.title')}
                     </Link>
                     <span aria-hidden="true" className="text-slate-300">

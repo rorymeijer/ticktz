@@ -11,7 +11,7 @@ import { cn } from '@/lib/cn';
 
 const controlClasses =
     'block w-full rounded-lg border-slate-300 bg-white text-sm text-slate-900 shadow-sm ' +
-    'placeholder:text-slate-400 focus:border-brand-500 focus:ring-brand-500 ' +
+    'placeholder:text-slate-500 focus:border-brand-500 focus:ring-brand-500 ' +
     'disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500';
 
 export function Label({

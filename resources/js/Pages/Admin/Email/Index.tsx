@@ -233,12 +233,12 @@ export default function EmailIndex({
                                             <p className="text-sm font-medium text-slate-800">
                                                 {t(`admin.email.template_labels.${key}`)}
                                             </p>
-                                            <code className="font-mono text-[11px] text-slate-400">{key}</code>
+                                            <code className="font-mono text-[11px] text-slate-500">{key}</code>
                                         </div>
 
                                         <div className="flex flex-wrap items-center gap-1.5">
                                             {overrides.length === 0 ? (
-                                                <span className="text-xs text-slate-400">
+                                                <span className="text-xs text-slate-500">
                                                     {t('admin.email.templates.using_default')}
                                                 </span>
                                             ) : (
@@ -308,7 +308,7 @@ export default function EmailIndex({
                                                 {t(`admin.email.inbound.status.${message.status}`)}
                                             </Badge>
                                             {message.reason ? (
-                                                <p className="mt-0.5 text-[11px] text-slate-400">{message.reason}</p>
+                                                <p className="mt-0.5 text-[11px] text-slate-500">{message.reason}</p>
                                             ) : null}
                                         </TD>
                                         <TD>

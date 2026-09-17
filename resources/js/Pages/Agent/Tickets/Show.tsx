@@ -49,7 +49,7 @@ export default function TicketShow({
             title={`${ticket.key} — ${ticket.subject}`}
             header={
                 <span className="flex items-center gap-2">
-                    <Link href="/agent/tickets" className="text-slate-400 hover:text-slate-600">
+                    <Link href="/agent/tickets" className="text-slate-500 hover:text-slate-600">
                         {t('tickets.title')}
                     </Link>
                     <span aria-hidden="true" className="text-slate-300">
