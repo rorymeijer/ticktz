@@ -381,20 +381,25 @@ Bind for 0.0.0.0:3025 failed: port is already allocated
 Name the old project to reach them:
 
 ```bash
-docker compose -p ticktz -f docker-compose.yml down --remove-orphans
+docker compose -p ticktz -f docker-compose.yml down
 docker compose up -d --build
 ```
 
 `-p` overrides the `name:` in the file, so that first command addresses exactly
 what was there before the rename. It is needed once.
 
-**If your production stack is running, bring it down first** and start it again
-afterwards. It is also project `ticktz`, so `--remove-orphans` takes it with
-them:
+**It stops your production stack too, if one is running.** Not as a side
+effect of any flag — `down` removes the containers of every service named in
+the file it was given, within the project it was given, and both files name
+`app`, `worker`, `nginx`, `mysql` and `redis`. Under one project those are the
+same containers. Start production again afterwards:
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+There is no spelling of that cleanup which spares it. Stopping production for
+the length of one `up -d` is the cost of having had both stacks under one name.
 
 Nothing is lost that you want to keep: the development stack's database is demo
 data, and the production stack's data lives in `ticktz_mysql` and

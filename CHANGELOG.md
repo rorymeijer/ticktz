@@ -28,9 +28,10 @@ A development stack started before this still carries the old name, and
 `docker compose down` no longer reaches it — it looks for `ticktz-dev` now, so
 the old containers stay up and the first `up` fails on a port they are still
 holding. Name the old project once:
-`docker compose -p ticktz -f docker-compose.yml down --remove-orphans`. See
-[self-hosting](docs/self-hosting.md#when-something-is-wrong), which also covers
-what that does to a production stack running alongside it.
+`docker compose -p ticktz -f docker-compose.yml down`. That stops a production
+stack running alongside as well — same project, same service names, same
+containers — so start it again afterwards. See
+[self-hosting](docs/self-hosting.md#when-something-is-wrong).
 
 **Stops a compiled config from outliving the boot that wrote it.** The
 compiled config lives in the code volume, so an instance that once came up
