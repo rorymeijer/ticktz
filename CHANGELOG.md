@@ -32,6 +32,22 @@ daemon, and a web process must never be able to reach it.
 `php artisan ticktz:upgrade` does the same thing from a terminal, which is also
 the answer for an install with no worker running.
 
+**Docker installs can upgrade themselves too.** The production stack now puts
+the application code on a `code` volume shared by the app, the worker and
+nginx, because the worker does the upgrade and the app has to be able to serve
+what it wrote — a container's own writable layer is invisible to its sibling
+and discarded on the next `up -d`. The image stays the source of truth: it
+carries its code at `/usr/src/ticktz` and the entrypoint copies it into the
+volume whenever the image is the newer of the two, so `docker compose pull`
+still works and a version installed from the browser is left alone. A
+bind-mounted source tree is never touched. See
+[D67](docs/decisions.md) for the trade this makes.
+
+**Upgrading an existing Docker install to 1.1.0** is the usual `docker compose
+pull && docker compose -f docker-compose.prod.yml up -d --build`. The new
+`code` volume is created and filled from the image on that first boot; the old
+`public` volume is no longer used and can be removed once you are happy.
+
 New permission: `updates.manage`. It is not `settings.manage` — replacing the
 application's code is a different kind of act from changing a preference.
 

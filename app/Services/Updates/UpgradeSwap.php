@@ -47,6 +47,21 @@ class UpgradeSwap
     ];
 
     /**
+     * What a release replaces.
+     *
+     * Public because the Docker entrypoint replaces the same set when it puts
+     * a newer image's code into the volume, and a test asserts the two lists
+     * have not drifted apart. Two ways of upgrading that leave different trees
+     * behind would mean only one of them is the tested one.
+     *
+     * @return array<int, string>
+     */
+    public static function owned(): array
+    {
+        return self::OWNED;
+    }
+
+    /**
      * Write the script and start it, detached.
      *
      * Returns the path of the file the script reports into. The caller polls
@@ -58,6 +73,8 @@ class UpgradeSwap
         $status = $workingDirectory.'/swap.status';
         $script = $workingDirectory.'/swap.php';
         $backup = $workingDirectory.'/previous';
+
+        $this->refuseMountedPaths($root);
 
         file_put_contents($script, $this->script($root, $newTree, $backup, $status));
         file_put_contents($status, "queued\n");
@@ -86,6 +103,36 @@ class UpgradeSwap
         return $status;
     }
 
+    /**
+     * Refuse before touching anything if the release owns a mount point.
+     *
+     * A directory somebody mounted a volume on cannot be moved aside: the
+     * kernel refuses to rename it and refuses to remove it once emptied. The
+     * swap would get halfway, roll back, and report a failure whose cause is
+     * nowhere in the message. Better to notice here, where the tree is still
+     * whole and the reason can be said plainly.
+     */
+    private function refuseMountedPaths(string $root): void
+    {
+        foreach (self::OWNED as $path) {
+            $live = $root.'/'.$path;
+
+            if (! is_dir($live)) {
+                continue;
+            }
+
+            $here = @stat($live);
+            $above = @stat($root);
+
+            if ($here !== false && $above !== false && $here['dev'] !== $above['dev']) {
+                throw new RuntimeException(
+                    "The release replaces {$path}, and something is mounted there. "
+                    .'Move that mount below `storage`, which an upgrade never replaces, or upgrade from the command line.'
+                );
+            }
+        }
+    }
+
     /** Whether this installation can start a process at all. */
     public static function isAvailable(): bool
     {
@@ -110,6 +157,9 @@ class UpgradeSwap
      */
     private function script(string $root, string $newTree, string $backup, string $status): string
     {
+        // Baked in rather than read at run time: by the time this matters the
+        // application that knows its own environment has been replaced.
+        $isProduction = var_export(app()->environment('production'), true);
         $owned = var_export(self::OWNED, true);
         $root = var_export($root, true);
         $newTree = var_export($newTree, true);
@@ -132,6 +182,7 @@ class UpgradeSwap
         \$backup = {$backup};
         \$status = {$statusFile};
         \$owned = {$owned};
+        \$production = {$isProduction};
 
         function say(string \$state, string \$line = ''): void
         {
@@ -272,6 +323,15 @@ class UpgradeSwap
 
         exec("cd " . escapeshellarg(\$root) . " && \$php \$artisan storage:link --no-interaction 2>&1");
         exec("cd " . escapeshellarg(\$root) . " && \$php \$artisan optimize:clear 2>&1");
+
+        // Rebuilding the caches the line above cleared. Best-effort on purpose:
+        // the application runs without them, just slower, so a failure here is
+        // not worth failing a successful upgrade over.
+        if (\$production) {
+            foreach (['config:cache', 'route:cache', 'event:cache'] as \$command) {
+                exec("cd " . escapeshellarg(\$root) . " && \$php \$artisan " . \$command . " 2>&1");
+            }
+        }
 
         say('installed', 'Done. The previous version is in ' . \$backup);
         PHP;

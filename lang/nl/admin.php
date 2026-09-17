@@ -307,6 +307,7 @@ return [
             'web_cannot_write' => 'De webserver kan de applicatiecode niet schrijven',
             'archive' => 'PHP kan zip-archieven lezen',
             'database' => 'De database antwoordt',
+            'code_persists' => 'Code die hier geschreven wordt overleeft een herstart',
             'disk_space' => 'Er is ruimte voor een release',
         ],
         'check_notes' => [
@@ -315,6 +316,7 @@ return [
             'web_cannot_write' => 'Je webserver kan de code schrijven die hij uitvoert. Dat komt niet door deze functie, en upgraden maakt het niet erger — maar het betekent dat elke schrijffout in elke applicatie op deze server een manier kan worden om code uit te voeren. Op zichzelf het oplossen waard.',
             'archive' => 'Installeer de PHP-extensie zip.',
             'database' => 'Zonder database kunnen de migraties niet draaien.',
+            'code_persists' => 'In Docker zijn de app en de worker aparte containers, en wat de één in zijn eigen laag schrijft ziet de ander nooit — en de volgende `docker compose up -d` gooit het weg. De meegeleverde productiestack zet de code daarom op een gedeeld volume; een stack zonder zo\'n volume kun je alleen upgraden door een nieuw image op te halen.',
             'disk_space' => 'Een release wordt naast de installatie uitgepakt voordat er iets vervangen wordt.',
         ],
         'passed' => 'In orde',

@@ -7,6 +7,19 @@
 # Differences from the development stack: the app image is self-contained
 # (vendor + compiled assets baked in, no bind mounts), there is no Vite dev
 # server and no mail sink, and MySQL/Redis are not published on the host.
+#
+# The application code lives in the `code` volume, shared by the app, the
+# worker and nginx, rather than in each container's own writable layer. That is
+# what makes Administration → Updates work here: the worker does the upgrade,
+# and the app has to be able to see what it did. A container's writable layer
+# is invisible to its siblings and gone on the next `up -d`, so an upgrade
+# written there would appear to succeed and silently revert.
+#
+# The image stays the source of truth. Its code sits at /usr/src/ticktz, and
+# the entrypoint copies it into the volume whenever the image is the newer of
+# the two — so `docker compose pull && up -d` still updates the code, and a
+# newer version installed from the browser is left alone. See
+# docker/php/entrypoint.sh.
 # ---------------------------------------------------------------------------
 
 name: ticktz
@@ -25,6 +38,7 @@ x-app-base: &app-base
     REDIS_HOST: redis
     REDIS_PORT: 6379
   volumes:
+    - code:/var/www/html
     - storage:/var/www/html/storage
   depends_on:
     mysql: { condition: service_healthy }
@@ -38,7 +52,9 @@ services:
       - "${TICKTZ_HTTP_PORT:-80}:80"
     volumes:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - public:/var/www/html/public:ro
+      # Read-only, and the same volume the app serves from — so an upgrade that
+      # replaces the compiled assets is visible to nginx without a restart.
+      - code:/var/www/html:ro
     depends_on:
       - app
     restart: unless-stopped
@@ -57,9 +73,6 @@ services:
       DB_PORT: 3306
       REDIS_HOST: redis
       REDIS_PORT: 6379
-    volumes:
-      - storage:/var/www/html/storage
-      - public:/var/www/html/public
     expose:
       - "9000"
 
@@ -77,6 +90,9 @@ services:
       TICKTZ_AUTO_MIGRATE: "false"
       TICKTZ_QUEUES: ${TICKTZ_QUEUES:-high,default,mail,webhooks,low}
       TICKTZ_QUEUE_WORKERS: ${TICKTZ_QUEUE_WORKERS:-4}
+      # The worker owns the code, which is what lets it replace it. The app
+      # container deliberately does not set this: see UpgradePreflight.
+      TICKTZ_SELF_UPGRADE: ${TICKTZ_SELF_UPGRADE:-true}
 
   mysql:
     # Pinned to the LTS, and to the same version the dev stack and CI run.
@@ -122,4 +138,6 @@ volumes:
   mysql:
   redis:
   storage:
-  public:
+  # The application's own code. Filled from the image on first boot and
+  # whenever the image is newer; written by the worker during an upgrade.
+  code:

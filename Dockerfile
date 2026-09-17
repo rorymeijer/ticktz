@@ -7,6 +7,16 @@
 # stage 3 assembles a slim php-fpm runtime that contains both. The same image
 # is used for the `app` (php-fpm) and `worker` (queue + scheduler) services;
 # the entrypoint decides which role to start based on CONTAINER_ROLE.
+#
+# The application tree lands in /usr/src/ticktz rather than /var/www/html, and
+# the entrypoint copies it into place on boot. That is what lets the production
+# stack put /var/www/html on a volume the app and the worker share — which is
+# what makes upgrading from the browser possible, since a container's own
+# writable layer is invisible to its sibling and gone on the next `up -d`.
+#
+# The pristine copy has to live somewhere a volume cannot shadow, or the image
+# would have no way to hand its code to a volume that already has older code in
+# it. That is the whole reason for the second path. See docker/php/entrypoint.sh.
 # ---------------------------------------------------------------------------
 
 # --- Stage 1: composer dependencies ----------------------------------------
@@ -102,14 +112,33 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-ticktz.ini
 COPY docker/php/www.conf /usr/local/etc/php-fpm.d/zz-ticktz.conf
 COPY docker/worker/supervisord.conf /etc/supervisor/conf.d/ticktz.conf
 COPY docker/php/entrypoint.sh /usr/local/bin/ticktz-entrypoint
-RUN chmod +x /usr/local/bin/ticktz-entrypoint
+COPY docker/php/place-code.sh /usr/local/bin/ticktz-place-code
+RUN chmod +x /usr/local/bin/ticktz-entrypoint /usr/local/bin/ticktz-place-code
 
-COPY --from=vendor /var/www/html /var/www/html
-COPY --from=assets /app/public/build /var/www/html/public/build
+COPY --from=vendor /var/www/html /usr/src/ticktz
+COPY --from=assets /app/public/build /usr/src/ticktz/public/build
 
-RUN mkdir -p storage/framework/{cache,sessions,testing,views} storage/logs bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R ug+rwx storage bootstrap/cache
+RUN mkdir -p /usr/src/ticktz/storage/framework/{cache,sessions,testing,views} \
+        /usr/src/ticktz/storage/logs \
+        /usr/src/ticktz/bootstrap/cache \
+    && chown -R www-data:www-data /usr/src/ticktz \
+    && chmod -R ug+rwx /usr/src/ticktz/storage /usr/src/ticktz/bootstrap/cache
+
+# The version this image was built from, for the entrypoint to compare against
+# whatever is in the volume. Read out of the code rather than passed as a build
+# argument, so it cannot disagree with what the application reports about
+# itself. The build fails here rather than shipping an image that cannot tell
+# the entrypoint what it is.
+RUN set -eu; \
+    version="$(sed -n "s/.*env('TICKTZ_VERSION', *'\([^']*\)').*/\1/p" /usr/src/ticktz/config/ticktz.php)"; \
+    test -n "$version"; \
+    mkdir -p /usr/local/share/ticktz; \
+    printf '%s' "$version" > /usr/local/share/ticktz/image-version
+
+# /var/www/html is filled by the entrypoint, from /usr/src/ticktz or from a
+# volume that already holds a newer version. It exists here so a container
+# started without any volume still has a working directory to be in.
+RUN mkdir -p /var/www/html && chown www-data:www-data /var/www/html
 
 ENV CONTAINER_ROLE=app
 

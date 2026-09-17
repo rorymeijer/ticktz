@@ -322,9 +322,38 @@ php artisan ticktz:upgrade             # install it, asking first
 
 ### Docker
 
-A Docker install cannot replace itself, and no setting makes it able to:
-recreating a running container needs the Docker daemon, and the web process
-must never be able to reach it. The screen shows you these instead.
+The bundled production stack **can** upgrade itself from the browser, and the
+arrangement that makes that possible is worth understanding before you rely on
+it.
+
+The app and the worker are two containers from one image. Only what they both
+mount is shared, so code written into a container's own writable layer is
+invisible to its sibling and thrown away the next time the container is
+recreated — an upgrade that reports success and silently reverts. So
+`docker-compose.prod.yml` puts `/var/www/html` on a `code` volume that the app,
+the worker and nginx all mount. The worker does the upgrade; the app serves
+what it wrote.
+
+The image is still the source of truth. Its code lives at `/usr/src/ticktz`,
+and the entrypoint copies it into the volume on first boot and whenever the
+image is the newer of the two. So:
+
+- `docker compose pull && up -d` with a newer image → the image's code wins.
+- A version installed from the browser → newer than the image, so it is left
+  alone on every restart until you pull something newer still.
+- A bind-mounted source tree, as in the development stack → never touched at
+  all, because the entrypoint only replaces code it put there itself.
+
+One consequence worth stating plainly: after a browser upgrade, `docker compose
+pull` no longer moves you to whatever the image has unless that image is
+*newer* than what you installed. The volume shadows nothing — the entrypoint
+compares versions — but the running version is the higher of the two, not
+whichever you pulled last.
+
+If you would rather keep the image immutable, remove the `code` volume from
+your own compose override. The readiness checks will then say the code does not
+persist and the button will be gone, which is correct: on that stack, these are
+the commands.
 
 ```bash
 cd /srv/ticktz

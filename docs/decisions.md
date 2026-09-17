@@ -1494,3 +1494,69 @@ reported as stuck, with the reason.
 the Docker daemon, and a web process must never be able to reach it. That is a
 deliberate limit rather than a missing feature, and the screen says so in those
 words instead of offering a button that would have to lie.
+
+## D67 — Making Docker upgradeable without letting the image stop mattering
+
+**Decision.** The production stack puts `/var/www/html` on a `code` volume
+shared by the app, the worker and nginx. The image carries its own copy at
+`/usr/src/ticktz`, and the entrypoint copies that into the volume on first boot
+and whenever the image is the newer of the two.
+
+**Why the obvious version does not work.** The app and the worker are two
+containers from one image. Before this, the only thing they shared was
+`storage` — which is precisely the one directory an upgrade must never replace.
+So the worker could faithfully replace every PHP file in its own filesystem and
+the app container, which is what nginx actually talks to, would see none of it.
+Add to that `opcache.validate_timestamps = 0`, which means PHP never re-reads a
+file it has already compiled, and a container's writable layer being discarded
+on `up -d`, and you have three independent reasons why "just replace the .php
+files" reports success and changes nothing. Any one of them alone would be a
+silent failure; together they are the worst kind, because the upgrade *looks*
+like it worked and reverts at the next restart.
+
+**Why the pristine copy exists.** A named volume is filled from the image only
+while it is still empty. Once there is code in it, the image's copy at the same
+path is shadowed and there is no way to hand a newer version over — which is
+exactly the trap that produced the `Trait "…" not found` failure earlier in
+this work ([D60](decisions.md)). Keeping the image's tree at a path no volume is
+mounted on is what keeps `docker compose pull` meaningful. It is what the
+Nextcloud image does, and for this reason.
+
+**Three cases, and the third is the careful one.** Nothing in the target →
+fill it. This entrypoint filled it before and the image is now newer → replace.
+Something is there that this entrypoint did not put there → never touch it,
+whatever the versions say. That last case is a developer's bind-mounted source
+tree, and copying an image over it would delete work in progress. The marker
+file is what separates them: its absence means somebody else owns this
+directory. Upgrading from the browser needs no case of its own — it writes a
+newer version into the volume, so the image stops being the newer of the two.
+
+**opcache is a feature during the swap and a problem after it.** While files
+are being replaced, requests already running are served from compiled memory
+and never touch the half-replaced disk — closer to atomic than the source
+install manages. Afterwards somebody has to say the code changed, and it has to
+be said in the process serving the web, not the one that did the upgrade: in
+this stack those are two containers with separate opcaches. `UpgradeMonitor`
+already runs on the first web request after a swap, so it resets there.
+
+**The preflight asks the filesystem, not the operator.** "Will code written
+here still be here" is answered by comparing the device of the application root
+with the device above it — a volume is a different device, and that is an
+observable fact. A configuration flag saying the same thing would only be
+somebody's belief about their own deployment, and the failure it is guarding
+against is one nobody notices until a restart.
+
+**The cost, stated plainly.** The image is no longer the only thing that
+determines which code runs. After a browser upgrade, pulling an older image
+changes nothing — the running version is the higher of the two, not whichever
+was pulled last. That is the trade the feature is: an operator who would rather
+keep an immutable image removes the `code` volume, and the readiness checks then
+say so and the button disappears.
+
+**The lists are kept honest by a test.** The entrypoint replaces the same set of
+paths a release does, and a test reads both and fails if they drift. Two ways of
+upgrading that leave different trees behind would mean only one of them is the
+tested one. The shell script that makes the decision has its own test suite
+(`tests/Shell/place-code.test.sh`) run in CI, and CI now starts the built image
+and checks both that it places its code and that a newer version in the volume
+survives a restart — the two things no unit test can prove about an image.

@@ -307,6 +307,7 @@ return [
             'web_cannot_write' => 'The web server cannot write the application code',
             'archive' => 'PHP can read zip archives',
             'database' => 'The database answers',
+            'code_persists' => 'Code written here survives a restart',
             'disk_space' => 'There is room for a release',
         ],
         'check_notes' => [
@@ -315,6 +316,7 @@ return [
             'web_cannot_write' => 'Your web server can write the code it executes. That is not something this feature introduced, and upgrading will not make it worse — but it means any file-write bug in any application on this server could become a way to run code. Worth fixing on its own account.',
             'archive' => 'Install the PHP zip extension.',
             'database' => 'The migrations cannot run without it.',
+            'code_persists' => 'In Docker the app and the worker are separate containers, and what one writes into its own layer the other never sees — and the next `docker compose up -d` throws away. The bundled production stack puts the code on a shared volume for exactly this reason; a stack without one can only be upgraded by pulling a new image.',
             'disk_space' => 'A release is unpacked beside the installation before anything is replaced.',
         ],
         'passed' => 'Passed',
