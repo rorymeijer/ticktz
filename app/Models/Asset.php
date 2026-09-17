@@ -171,13 +171,17 @@ class Asset extends Model
             $scoped->where('assets.asset_tag', 'like', $like)
                 ->orWhere('assets.serial_number', 'like', $like);
 
+            // The FULLTEXT index ranks on MySQL; the LIKE pass below runs
+            // beside it rather than instead of it. See the note on
+            // TicketFilter::applySearch() — short words, partial words and
+            // rows in an uncommitted transaction are all invisible to the
+            // index, and a search that cannot find "Latitude" inside
+            // "Dell Latitude 5440" is not a search.
             if ($scoped->getConnection()->getDriverName() === 'mysql') {
                 $scoped->orWhereFullText(
                     ['name', 'serial_number', 'model', 'manufacturer', 'location', 'notes'],
                     $term,
                 );
-
-                return;
             }
 
             foreach (['name', 'model', 'manufacturer', 'location', 'notes'] as $column) {

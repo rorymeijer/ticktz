@@ -1053,3 +1053,64 @@ person who just proved they control the server is verified by construction.
 
 The general point: every one of these passes code review. None of them survives
 one honest run.
+
+## D58 — Full-text ranks, LIKE guarantees
+
+Ticket, asset and knowledge base search all used MySQL's FULLTEXT index with a
+LIKE fallback *for other drivers*. Running the suite against MySQL rather than
+SQLite showed three tests failing that had passed for thirteen phases, and the
+cause was worth more than the fix.
+
+InnoDB full-text does not see what a person searching a service desk expects:
+
+- **Words below `innodb_ft_min_token_size`** — three by default, so "AD" never
+  matches anything and "VPN" sits on the edge.
+- **Stopwords**, which InnoDB has its own opinions about.
+- **Partial words.** "verbind" finds nothing in "verbinding"; "Latitude" was
+  found, but only because the term happened to be a whole token.
+- **Rows in an uncommitted transaction.** Which is what every test runs
+  inside — and how this surfaced at all.
+
+So the LIKE pass now runs *beside* the index rather than instead of it: the
+index ranks, and LIKE guarantees that what is on the screen can be found by
+typing part of it.
+
+It costs nothing. Every one of these queries already OR-ed a
+leading-wildcard LIKE next to the `MATCH … AGAINST` — for the ticket key, for
+the asset tag — so none of them could use the full-text index alone in the
+first place. The plan was already a scan; it is now a scan that returns the
+right rows.
+
+The wider lesson is about the test database. SQLite in memory is fast and it is
+not MySQL: it has no FULLTEXT, different NULL semantics in unique indexes, and
+different date arithmetic — all three have now bitten this project. CI runs the
+suite against MySQL 8 for exactly that reason, which is the check that caught
+this.
+
+## D59 — Thirteen phases of green CI that was not green
+
+The first pull request revealed that CI had been failing since phase 0, and
+nobody — me — had looked.
+
+Two failures, both real, both invisible from a working directory:
+
+**The Docker image had never built.** `directorytree/ldaprecord` declares
+`ext-ldap` as a hard requirement, and no stage of the Dockerfile installed it,
+so `composer install` refused to resolve the lock file and the build died
+before writing a package. I had been reporting "both compose files valid" as
+evidence that Docker was fine. `docker compose config` parses YAML. It does not
+build anything, and I knew that.
+
+**The test suite could not run from a clone.** `phpunit.xml` declares a `Unit`
+suite pointing at `tests/Unit`, git does not track empty directories, and the
+directory only existed on my machine. Pest exits 2 on a missing suite
+directory, before running a single test.
+
+Both are the same mistake in different clothes: verifying against the
+environment I was standing in rather than the one the code ships into. The
+local suite passing says nothing about a clone; a compose file parsing says
+nothing about an image building.
+
+What makes it worth recording rather than quietly fixing: the checks that
+caught these were already written and already running. They were not being
+read.

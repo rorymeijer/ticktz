@@ -187,17 +187,18 @@ class KbArticle extends Model
         }
 
         return $query->where(function (Builder $scoped) use ($term): void {
+            // On MySQL the FULLTEXT index ranks, and the LIKE pass below runs
+            // beside it rather than instead of it — see the note on
+            // TicketFilter::applySearch() for why the index alone is not
+            // enough, and why this costs nothing.
             if ($scoped->getConnection()->getDriverName() === 'mysql') {
-                $scoped->whereFullText(['title', 'excerpt', 'body_text'], $term)
-                    ->orWhere('kb_articles.title', 'like', self::like($term));
-
-                return;
+                $scoped->whereFullText(['title', 'excerpt', 'body_text'], $term);
             }
 
-            // The LIKE fallback has to tokenise the way the index does. A
-            // search term here is often a whole ticket subject — "Printer
-            // keeps jamming" — and matching that phrase verbatim against an
-            // article called "Printer paper jam" finds nothing at all.
+            // The LIKE pass tokenises the way the index does. A search term
+            // here is often a whole ticket subject — "Printer keeps jamming" —
+            // and matching that phrase verbatim against an article called
+            // "Printer paper jam" finds nothing at all.
             foreach (self::words($term) as $word) {
                 $like = self::like($word);
 

@@ -148,8 +148,23 @@ class TicketFilter
     }
 
     /**
-     * Free-text search. MySQL uses the FULLTEXT index added with the tickets
-     * table; other drivers (the SQLite test database) fall back to LIKE.
+     * Free-text search.
+     *
+     * On MySQL the FULLTEXT index does the ranking, with a LIKE pass beside
+     * it — not instead of it. InnoDB's full-text index misses things a person
+     * searching a service desk very much expects to find: words shorter than
+     * `innodb_ft_min_token_size` (three by default, so "VPN" is on the edge
+     * and "AD" never matches), stopwords, and partial words — "verbind" finds
+     * nothing in "verbinding". A search box that silently returns nothing for
+     * those is broken from the user's side, whatever the index thinks.
+     *
+     * It also cannot see rows written in an uncommitted transaction, which is
+     * what every test runs inside. That is how this was found: three tests
+     * passed on SQLite and failed on MySQL.
+     *
+     * The LIKE pass costs nothing extra in plan terms: the `key` match beside
+     * it is already a leading-wildcard LIKE, so this query never used the
+     * full-text index alone in the first place.
      *
      * @param  Builder<Ticket>  $query
      */
@@ -172,13 +187,10 @@ class TicketFilter
 
         $query->where(function (Builder $scoped) use ($term, $like): void {
             if ($scoped->getConnection()->getDriverName() === 'mysql') {
-                $scoped->whereFullText(['subject', 'description'], $term)
-                    ->orWhere('tickets.key', 'like', $like);
-
-                return;
+                $scoped->whereFullText(['subject', 'description'], $term);
             }
 
-            $scoped->where('tickets.subject', 'like', $like)
+            $scoped->orWhere('tickets.subject', 'like', $like)
                 ->orWhere('tickets.description', 'like', $like)
                 ->orWhere('tickets.key', 'like', $like);
         });
