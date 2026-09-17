@@ -83,6 +83,7 @@ export default function TicketCreate({ options }: { options: TicketOptions }) {
                             value={form.data.description}
                             onChange={(html) => form.setData('description', html)}
                             placeholder={t('tickets.placeholders.description')}
+                            images
                             minHeight="14rem"
                         />
 

@@ -42,6 +42,18 @@ return [
         'invalid' => 'That does not look like a web address.',
     ],
 
+    'image' => [
+        'add' => 'Add image',
+        'uploading' => 'Uploading image…',
+        'uploaded' => 'Image added.',
+        'alt' => 'Describe this image',
+        'alt_help' => 'What somebody would miss if they could not see it.',
+        'alt_apply' => 'Save description',
+        'rejected' => 'That file is not an image we accept, or it is too large.',
+        'too_many' => 'Too many uploads just now. Wait a moment and try again.',
+        'failed' => 'The image could not be uploaded.',
+    ],
+
     'history' => [
         'undo' => 'Undo',
         'redo' => 'Redo',

@@ -47,7 +47,7 @@ class RichTextSanitizer
         'ul', 'ol', 'li',
         'blockquote', 'pre', 'code', 'kbd', 'samp',
         'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
-        'a',
+        'a', 'img',
     ];
 
     /**
@@ -61,7 +61,7 @@ class RichTextSanitizer
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'small', 'var',
         'dl', 'dt', 'dd',
-        'img', 'figure', 'figcaption',
+        'figure', 'figcaption',
     ];
 
     /**
@@ -108,8 +108,11 @@ class RichTextSanitizer
      * and an IMAP reply arrives as text. Both should keep working, and both
      * should end up in the same shape as something typed into the editor.
      */
-    public function clean(string $value, RichTextProfile $profile = RichTextProfile::Basic): string
-    {
+    public function clean(
+        string $value,
+        RichTextProfile $profile = RichTextProfile::Basic,
+        bool $images = false,
+    ): string {
         if (! $this->looksLikeHtml($value)) {
             $value = $this->fromPlainText($value);
         }
@@ -118,7 +121,7 @@ class RichTextSanitizer
             $value = $this->demoteHeadings($value);
         }
 
-        $clean = trim($this->sanitizer($profile)->sanitize($value));
+        $clean = $this->dropSrclessImages(trim($this->sanitizer($profile, $images)->sanitize($value)));
 
         // An empty editor still posts `<p></p>`, and a body that sanitises down
         // to nothing but empty wrappers is empty. Storing the wrapper would
@@ -138,12 +141,15 @@ class RichTextSanitizer
      * @param  array<string, mixed>  $values
      * @return array<string, string>
      */
-    public function cleanEach(array $values, RichTextProfile $profile = RichTextProfile::Basic): array
-    {
+    public function cleanEach(
+        array $values,
+        RichTextProfile $profile = RichTextProfile::Basic,
+        bool $images = false,
+    ): array {
         $clean = [];
 
         foreach ($values as $locale => $value) {
-            $cleaned = is_string($value) ? $this->clean($value, $profile) : '';
+            $cleaned = is_string($value) ? $this->clean($value, $profile, $images) : '';
 
             if ($cleaned !== '') {
                 $clean[$locale] = $cleaned;
@@ -271,6 +277,28 @@ class RichTextSanitizer
     }
 
     /**
+     * Remove images left without a source.
+     *
+     * Symfony drops an attribute it refuses but keeps the element, so an
+     * `<img>` whose `src` was rejected comes out as `<img alt="…" />`. It
+     * loads nothing and is therefore harmless, but it is still an image the
+     * author did not get, and it will sit in the document forever confusing
+     * whoever edits it next.
+     *
+     * A regular expression is safe here in a way it would not be on the input:
+     * this runs on the sanitiser's own serialised output, where every tag is
+     * well-formed and nothing is left to interpret.
+     */
+    private function dropSrclessImages(string $html): string
+    {
+        if (! str_contains($html, '<img')) {
+            return $html;
+        }
+
+        return (string) preg_replace('#<img\b(?![^>]*\ssrc=)[^>]*>#i', '', $html);
+    }
+
+    /**
      * Turn headings into a bold lead line.
      *
      * The message profile has no headings, and simply unwrapping one would
@@ -303,16 +331,18 @@ class RichTextSanitizer
         return preg_match('/<(\/?[a-z][a-z0-9]*)\b[^>]*>/i', $value) === 1;
     }
 
-    private function sanitizer(RichTextProfile $profile): HtmlSanitizer
+    private function sanitizer(RichTextProfile $profile, bool $images): HtmlSanitizer
     {
-        return $this->sanitizers[$profile->value] ??= new HtmlSanitizer($this->config($profile));
+        $key = $profile->value.($images ? ':img' : '');
+
+        return $this->sanitizers[$key] ??= new HtmlSanitizer($this->config($profile, $images));
     }
 
-    private function config(RichTextProfile $profile): HtmlSanitizerConfig
+    private function config(RichTextProfile $profile, bool $images): HtmlSanitizerConfig
     {
         $config = new HtmlSanitizerConfig;
 
-        foreach ($this->allowed($profile) as $element) {
+        foreach ($this->allowed($profile, $images) as $element) {
             $config = $config->allowElement($element, $this->attributesFor($element));
         }
 
@@ -321,7 +351,7 @@ class RichTextSanitizer
         // what a field offers, not about what is dangerous — so a reply pasted
         // out of a Word document loses its heading and keeps its sentence.
         // Only the REMOVED list below takes content with it.
-        $unwrapped = [...self::UNWRAPPED, ...array_diff(self::ARTICLE, $this->allowed($profile))];
+        $unwrapped = [...self::UNWRAPPED, ...array_diff(self::ARTICLE, $this->allowed($profile, $images))];
 
         foreach ($unwrapped as $element) {
             // `blockElement` keeps the text and throws away the tag.
@@ -331,6 +361,13 @@ class RichTextSanitizer
         foreach (self::REMOVED as $element) {
             // `dropElement` takes the content with it.
             $config = $config->dropElement($element);
+        }
+
+        if ($images && $profile === RichTextProfile::Basic) {
+            // A message may show an image this instance is serving, and no
+            // other. See OwnImagesOnly for why that is not the same rule an
+            // article gets.
+            $config = $config->withAttributeSanitizer(new OwnImagesOnly);
         }
 
         return $config
@@ -346,12 +383,14 @@ class RichTextSanitizer
     }
 
     /** @return array<int, string> */
-    private function allowed(RichTextProfile $profile): array
+    private function allowed(RichTextProfile $profile, bool $images): array
     {
-        return match ($profile) {
+        $allowed = match ($profile) {
             RichTextProfile::Article => self::ARTICLE,
             RichTextProfile::Basic => self::BASIC,
         };
+
+        return $images ? $allowed : array_values(array_diff($allowed, ['img']));
     }
 
     /**

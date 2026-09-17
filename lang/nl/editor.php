@@ -42,6 +42,18 @@ return [
         'invalid' => 'Dat ziet er niet uit als een webadres.',
     ],
 
+    'image' => [
+        'add' => 'Afbeelding toevoegen',
+        'uploading' => 'Afbeelding uploaden…',
+        'uploaded' => 'Afbeelding toegevoegd.',
+        'alt' => 'Beschrijf deze afbeelding',
+        'alt_help' => 'Wat iemand mist die hem niet kan zien.',
+        'alt_apply' => 'Beschrijving opslaan',
+        'rejected' => 'Dit bestand is geen afbeelding die we accepteren, of het is te groot.',
+        'too_many' => 'Te veel uploads op dit moment. Wacht even en probeer opnieuw.',
+        'failed' => 'De afbeelding kon niet worden geüpload.',
+    ],
+
     'history' => [
         'undo' => 'Ongedaan maken',
         'redo' => 'Opnieuw',

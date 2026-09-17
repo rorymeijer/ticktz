@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\BindsRichTextImages;
 use Database\Factories\KbArticleFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,7 +34,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class KbArticle extends Model
 {
     /** @use HasFactory<KbArticleFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, BindsRichTextImages, HasFactory, SoftDeletes;
 
     public const DRAFT = 'draft';
 
@@ -56,6 +57,17 @@ class KbArticle extends Model
         'status', 'visibility', 'locale', 'author_id', 'last_edited_by',
         'published_at', 'position',
     ];
+
+    /**
+     * Sanitised by ArticleService rather than by HasRichText, so only the
+     * image binding is wired up here. See BindsRichTextImages.
+     *
+     * @return array<int, string>
+     */
+    protected static function richTextImageColumns(): array
+    {
+        return ['body'];
+    }
 
     protected function casts(): array
     {

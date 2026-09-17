@@ -1,3 +1,4 @@
+import Image from '@tiptap/extension-image';
 import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -6,6 +7,12 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { cn } from '@/lib/cn';
 import { editorValue, isBlankHtml, normaliseUrl } from '@/lib/richtext';
+import {
+    imageFilesIn,
+    RichTextUploadError,
+    uploadRichTextImage,
+    type UploadFailure,
+} from '@/lib/richTextUpload';
 
 import { toolbarItems, type RichTextProfile, type ToolbarState } from './toolbar';
 
@@ -42,6 +49,8 @@ export function RichTextEditor({
     invalid,
     placeholder,
     disabled,
+    images = false,
+    internal = false,
     minHeight = '10rem',
     className,
 }: {
@@ -55,6 +64,14 @@ export function RichTextEditor({
     invalid?: boolean;
     placeholder?: string;
     disabled?: boolean;
+    /**
+     * Whether this field can hold images. Off by default and set only where
+     * the server says the same — a field whose readership is not defined
+     * cannot decide who may see a screenshot pasted into it.
+     */
+    images?: boolean;
+    /** Pasting into an internal note; travels with the upload. */
+    internal?: boolean;
     minHeight?: string;
     className?: string;
 }) {
@@ -64,6 +81,17 @@ export function RichTextEditor({
     const hintId = `${editorId}-hint`;
 
     const [linkOpen, setLinkOpen] = useState(false);
+    const [altOpen, setAltOpen] = useState(false);
+    /**
+     * What the editor is doing with an image, announced politely.
+     *
+     * An upload that takes two seconds and then silently succeeds is fine to
+     * look at and invisible to listen to, so the state is a message rather
+     * than a spinner.
+     */
+    const [imageStatus, setImageStatus] = useState<'idle' | 'uploading' | UploadFailure>('idle');
+    const filePicker = useRef<HTMLInputElement>(null);
+    const editorRef = useRef<Editor | null>(null);
 
     const editor = useEditor(
         {
@@ -83,9 +111,51 @@ export function RichTextEditor({
                     },
                 }),
                 Placeholder.configure({ placeholder: placeholder ?? '' }),
+                ...(images
+                    ? [
+                          Image.configure({
+                              // Never base64. An inline data URI would put the
+                              // whole file in the ticket body, past every size
+                              // limit and out of reach of the policy that
+                              // decides who may see it.
+                              allowBase64: false,
+                              HTMLAttributes: { loading: 'lazy' },
+                          }),
+                      ]
+                    : []),
             ],
             content: value,
             editorProps: {
+                /*
+                 * Paste and drop both end up in the same place. Returning true
+                 * tells ProseMirror we have taken the event, which is what
+                 * stops a pasted screenshot also being inserted as whatever
+                 * the clipboard's text flavour happened to be.
+                 */
+                handlePaste: (_view, event) => {
+                    const files = images ? imageFilesIn(event.clipboardData?.items) : [];
+
+                    if (files.length === 0) {
+                        return false;
+                    }
+
+                    event.preventDefault();
+                    void insertImages(files);
+
+                    return true;
+                },
+                handleDrop: (_view, event) => {
+                    const files = images ? imageFilesIn((event as DragEvent).dataTransfer?.files) : [];
+
+                    if (files.length === 0) {
+                        return false;
+                    }
+
+                    event.preventDefault();
+                    void insertImages(files);
+
+                    return true;
+                },
                 attributes: {
                     // ProseMirror's contenteditable is the text box. Naming it
                     // explicitly is what makes it announce as one field rather
@@ -126,6 +196,45 @@ export function RichTextEditor({
         editor.commands.setContent(incoming, { emitUpdate: false });
     }, [editor, value]);
 
+    editorRef.current = editor;
+
+    /**
+     * Upload each image and drop it into the document where the caret is.
+     *
+     * Sequential rather than parallel: three screenshots pasted at once should
+     * land in the order they were pasted, and a rate limit that refuses the
+     * third should not also have refused the second.
+     *
+     * `alt` starts as the file name. It is a poor description and a far better
+     * starting point than nothing — a screen reader announcing
+     * "Screenshot 2026-09-17.png" at least says an image is there, and the
+     * author can replace it with the alt text box.
+     */
+    const insertImages = useCallback(
+        async (files: File[]) => {
+            setImageStatus('uploading');
+
+            for (const file of files) {
+                try {
+                    const uploaded = await uploadRichTextImage(file, internal);
+
+                    editorRef.current
+                        ?.chain()
+                        .focus()
+                        .setImage({ src: uploaded.url, alt: uploaded.name })
+                        .run();
+
+                    setImageStatus('idle');
+                } catch (error) {
+                    setImageStatus(error instanceof RichTextUploadError ? error.kind : 'failed');
+
+                    return;
+                }
+            }
+        },
+        [internal],
+    );
+
     const focusToolbar = useCallback(() => {
         const first = document
             .getElementById(`${editorId}-toolbar`)
@@ -157,14 +266,42 @@ export function RichTextEditor({
                 disabled={disabled}
                 linkOpen={linkOpen}
                 onLink={() => setLinkOpen(true)}
+                onImage={images ? () => filePicker.current?.click() : null}
                 onEscape={() => editor.commands.focus()}
             />
+
+            {images ? (
+                <input
+                    ref={filePicker}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="sr-only"
+                    aria-label={t('editor.image.add')}
+                    onChange={(event) => {
+                        void insertImages(Array.from(event.target.files ?? []));
+                        // Cleared so picking the same file twice in a row
+                        // still fires a change event.
+                        event.target.value = '';
+                    }}
+                />
+            ) : null}
 
             {linkOpen ? (
                 <LinkRow
                     editor={editor}
                     onClose={() => {
                         setLinkOpen(false);
+                        editor.commands.focus();
+                    }}
+                />
+            ) : null}
+
+            {altOpen ? (
+                <AltTextRow
+                    editor={editor}
+                    onClose={() => {
+                        setAltOpen(false);
                         editor.commands.focus();
                     }}
                 />
@@ -185,6 +322,36 @@ export function RichTextEditor({
                 }}
             />
 
+            {images && editor.isActive('image') ? (
+                <div className="border-t border-slate-200 bg-slate-50 px-2 py-1.5">
+                    <button
+                        type="button"
+                        onClick={() => setAltOpen(true)}
+                        className="rounded-md px-2 py-1 text-xs font-medium text-brand-700 hover:bg-slate-200"
+                    >
+                        {t('editor.image.alt')}
+                    </button>
+                </div>
+            ) : null}
+
+            {/*
+             * Polite rather than assertive: an upload finishing is worth
+             * knowing and not worth interrupting a sentence for. Always in the
+             * DOM so the region exists before it has anything to say —
+             * announcing from a node that has only just appeared is
+             * unreliable in several screen readers.
+             */}
+            <p className="sr-only" role="status" aria-live="polite">
+                {imageStatus === 'uploading' ? t('editor.image.uploading') : null}
+                {imageStatus !== 'idle' && imageStatus !== 'uploading' ? t(`editor.image.${imageStatus}`) : null}
+            </p>
+
+            {imageStatus !== 'idle' && imageStatus !== 'uploading' ? (
+                <p className="border-t border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700">
+                    {t(`editor.image.${imageStatus}`)}
+                </p>
+            ) : null}
+
             <p id={hintId} className="sr-only">
                 {t('editor.hint')}
             </p>
@@ -203,6 +370,7 @@ function Toolbar({
     disabled,
     linkOpen,
     onLink,
+    onImage,
     onEscape,
 }: {
     editor: Editor;
@@ -212,6 +380,7 @@ function Toolbar({
     disabled?: boolean;
     linkOpen: boolean;
     onLink: () => void;
+    onImage: (() => void) | null;
     onEscape: () => void;
 }) {
     const { t } = useTranslations();
@@ -248,7 +417,7 @@ function Toolbar({
         }),
     });
 
-    const items = toolbarItems(editor, profile, state, onLink);
+    const items = toolbarItems(editor, profile, state, onLink, onImage);
     const stops = items.filter((item) => item.kind !== 'separator');
 
     const move = (delta: number) => {
@@ -504,6 +673,84 @@ function LinkRow({ editor, onClose }: { editor: Editor; onClose: () => void }) {
                     {t('editor.link.invalid')}
                 </p>
             ) : null}
+        </div>
+    );
+}
+
+/**
+ * The alt text box.
+ *
+ * A pasted screenshot arrives with its file name as its description, which
+ * says an image is there and nothing about what is in it. This is where that
+ * gets fixed, and it exists because the alternative — shipping images with no
+ * way to describe them — makes every ticket containing one unreadable to
+ * somebody, and makes the accessibility gate a thing we pass rather than a
+ * thing we mean.
+ */
+function AltTextRow({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+    const { t } = useTranslations();
+    const inputId = useId();
+    const helpId = `${inputId}-help`;
+    const input = useRef<HTMLInputElement>(null);
+
+    const [alt, setAlt] = useState(() => (editor.getAttributes('image').alt as string | undefined) ?? '');
+
+    useEffect(() => {
+        input.current?.focus();
+        input.current?.select();
+    }, []);
+
+    const apply = () => {
+        editor.chain().focus().updateAttributes('image', { alt: alt.trim() }).run();
+        onClose();
+    };
+
+    return (
+        <div
+            className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-2 py-2"
+            onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    onClose();
+                }
+            }}
+        >
+            <label htmlFor={inputId} className="text-xs font-medium text-slate-700">
+                {t('editor.image.alt')}
+            </label>
+            <input
+                ref={input}
+                id={inputId}
+                type="text"
+                value={alt}
+                maxLength={250}
+                aria-describedby={helpId}
+                onChange={(event) => setAlt(event.target.value)}
+                onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        apply();
+                    }
+                }}
+                className="min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+            />
+            <button
+                type="button"
+                onClick={apply}
+                className="rounded-md bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700"
+            >
+                {t('editor.image.alt_apply')}
+            </button>
+            <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-900"
+            >
+                {t('editor.link.cancel')}
+            </button>
+            <p id={helpId} className="w-full text-xs text-slate-500">
+                {t('editor.image.alt_help')}
+            </p>
         </div>
     );
 }

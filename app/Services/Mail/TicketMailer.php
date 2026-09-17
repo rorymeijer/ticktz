@@ -8,6 +8,7 @@ use App\Mail\TicketNotification;
 use App\Models\Comment;
 use App\Models\EmailChannel;
 use App\Models\EmailTemplate;
+use App\Models\RichTextImage;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\RichText\RichTextSanitizer;
@@ -54,12 +55,15 @@ class TicketMailer
 
         [$subject, $html, $text] = $this->render($templateKey, $ticket, $recipient, $comment, $channel, $locale, $extra);
 
+        [$html, $embeds] = $this->embedImages($html, $recipient);
+
         $mailable = new TicketNotification(
             ticket: $ticket,
             channel: $channel,
             renderedSubject: $subject,
             renderedBody: $html,
             renderedText: $text,
+            inlineImages: $embeds,
             messageId: $this->messageId($ticket, $comment),
             inReplyTo: $this->inReplyTo($ticket),
             locale: $locale,
@@ -131,6 +135,63 @@ class TicketMailer
             $this->renderHtml($body, $values, $this->richPlaceholders($ticket, $comment)),
             EmailTemplate::render($body, $values),
         ];
+    }
+
+    /**
+     * Turn the images in a notification into parts of the message itself.
+     *
+     * An `<img src="/rich-text/images/…">` is a relative path behind a policy.
+     * A mail client has neither our hostname nor our session, so left alone it
+     * renders as a broken image in the customer's inbox — which is worse than
+     * no image, because it looks like the desk sent something and lost it.
+     *
+     * So each one is attached to the message and referenced by `cid:`. That
+     * also means the picture arrives with the mail rather than being fetched
+     * when it is opened, which is the same reason mail clients block remote
+     * images in the first place.
+     *
+     * **Per recipient, through the policy.** The same notification goes to
+     * agents and to the requester, and an internal note's screenshot is mailed
+     * to the first and must never reach the second. An image this recipient
+     * may not see is removed from their copy rather than attached to it.
+     *
+     * @return array{0: string, 1: array<string, RichTextImage>}
+     */
+    private function embedImages(string $html, User $recipient): array
+    {
+        $uuids = RichTextImage::referencedIn($html);
+
+        if ($uuids === []) {
+            return [$html, []];
+        }
+
+        $embeds = [];
+
+        foreach (RichTextImage::query()->whereIn('uuid', $uuids)->get() as $image) {
+            $path = '/rich-text/images/'.$image->uuid;
+
+            if (! $recipient->can('view', $image)) {
+                // Not theirs to see. Take the element out entirely; an <img>
+                // with a dead src is a question in somebody's inbox.
+                $html = (string) preg_replace(
+                    '#<img\b[^>]*'.preg_quote($path, '#').'[^>]*>#i',
+                    '',
+                    $html,
+                );
+
+                continue;
+            }
+
+            $cid = 'rti-'.$image->uuid;
+            $embeds[$cid] = $image;
+
+            $html = str_replace($path, 'cid:'.$cid, $html);
+        }
+
+        // Anything still pointing at the path is an image whose row is gone.
+        $html = (string) preg_replace('#<img\b[^>]*/rich-text/images/[^>]*>#i', '', $html);
+
+        return [$html, $embeds];
     }
 
     /**

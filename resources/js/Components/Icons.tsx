@@ -262,3 +262,11 @@ export const IconRedo = (p: IconProps) => (
         <path d="M20 9H10a6 6 0 0 0 0 12h5" />
     </Icon>
 );
+
+export const IconImage = (p: IconProps) => (
+    <Icon {...p}>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <circle cx="8.5" cy="9.5" r="1.5" />
+        <path d="m4 17 4.5-4.5a2 2 0 0 1 2.8 0L16 17M14 15l1.6-1.6a2 2 0 0 1 2.8 0L20 15" />
+    </Icon>
+);

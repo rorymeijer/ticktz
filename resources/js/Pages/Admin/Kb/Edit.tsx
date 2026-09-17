@@ -135,6 +135,7 @@ export default function AdminKbEdit({
                             <RichTextField
                                 label={t('kb.fields.body')}
                                 profile="article"
+                                images
                                 value={form.data.body}
                                 onChange={(html) => form.setData('body', html)}
                                 error={form.errors.body}

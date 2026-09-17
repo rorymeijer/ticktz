@@ -38,5 +38,17 @@ final readonly class RichTextAttribute
          * Dutch version of an instruction as the way in.
          */
         public ?string $translations = null,
+        /**
+         * Whether this field may hold images at all.
+         *
+         * A property of the field, not of the profile: the two are orthogonal.
+         * Tickets, comments and articles are where people paste screenshots,
+         * and they are also the three things whose readership is defined well
+         * enough to decide who may see one. An asset note has a vocabulary but
+         * no audience of its own, so an image pasted into it would be bound to
+         * a record nothing can authorise — a broken image at best, and a
+         * question about who may read it at worst. Off unless said otherwise.
+         */
+        public bool $images = false,
     ) {}
 }

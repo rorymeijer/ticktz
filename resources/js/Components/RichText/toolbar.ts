@@ -6,6 +6,7 @@ import {
     IconBulletList,
     IconCode,
     IconCodeBlock,
+    IconImage,
     IconItalic,
     IconLink,
     IconOrderedList,
@@ -73,6 +74,7 @@ export function toolbarItems(
     profile: RichTextProfile,
     state: ToolbarState,
     onLink: () => void,
+    onImage: (() => void) | null,
 ): ToolbarItem[] {
     const items: ToolbarItem[] = [];
 
@@ -186,6 +188,18 @@ export function toolbarItems(
             disabled: !state.link,
             run: () => editor.chain().focus().extendMarkRange('link').unsetLink().run(),
         },
+
+        ...(onImage
+            ? ([
+                  {
+                      kind: 'button',
+                      id: 'image',
+                      labelKey: 'editor.image.add',
+                      icon: IconImage,
+                      run: onImage,
+                  },
+              ] as ToolbarItem[])
+            : []),
         { kind: 'separator', id: 'sep-link' },
         {
             kind: 'button',

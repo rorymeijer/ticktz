@@ -10,6 +10,7 @@ use App\Models\Attachment;
 use App\Models\Comment;
 use App\Models\Organization;
 use App\Models\Queue;
+use App\Models\RichTextImage;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\Ticket;
@@ -20,6 +21,7 @@ use App\Policies\AttachmentPolicy;
 use App\Policies\CommentPolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\QueuePolicy;
+use App\Policies\RichTextImagePolicy;
 use App\Policies\RolePolicy;
 use App\Policies\TeamPolicy;
 use App\Policies\TicketPolicy;
@@ -60,6 +62,7 @@ class AuthServiceProvider extends ServiceProvider
         Comment::class => CommentPolicy::class,
         Queue::class => QueuePolicy::class,
         Attachment::class => AttachmentPolicy::class,
+        RichTextImage::class => RichTextImagePolicy::class,
     ];
 
     public function boot(): void
