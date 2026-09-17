@@ -9,6 +9,49 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.1.1
+
+**Fixes a Docker first boot that could end in a crash loop.** The app and the
+worker mount the same code volume and start at the same time, and both ran the
+placement — two `rm -rf vendor && cp -a` over each other, leaving a vendor
+missing files and php-fpm dying on them. nginx answered 502.
+
+Worse, it could not recover: the marker recording which image placed the code
+was written when the copy started rather than when it finished, so every
+restart read `1.1.0`, concluded there was nothing to do, and crashed again on
+the same file.
+
+Three changes. Placement takes a lock, so one container does it and the others
+wait. The marker is written only after the copied tree is verified to load its
+own autoloader, and a tree that claims to be placed but cannot load is replaced
+rather than trusted. And nginx now waits for php-fpm to accept connections
+instead of merely for the container to exist, which closes the window where a
+first boot answers 502 while it is still copying.
+
+Recovering an instance already stuck this way is in
+[`docs/self-hosting.md`](docs/self-hosting.md).
+
+**Adds the `.dockerignore` that should always have been there.** `docker build`
+copies the directory you build from, not what is committed, so everything
+gitignored but present on disk went into the image:
+
+- **`.env`** — your database password, `APP_KEY` and mail credentials, baked
+  into an image you might push to a registry. Rotate those if you have pushed
+  an image built before this.
+- **`public/hot`** — written by the Vite dev server, and it makes Laravel point
+  every browser at `http://localhost:5173` for its JavaScript. The page comes
+  up white with nothing in any server log to explain it. If you are seeing that
+  now, `docker compose exec app rm -f public/hot` fixes it immediately.
+- **`vendor`** — and this one is worse than size. In the build, `COPY . .` runs
+  *after* `composer install --no-dev`, so a local vendor directory overwrote
+  the clean production one. Images built from a working checkout shipped the
+  development dependencies.
+
+The image also strips `public/hot`, `.env` and `bootstrap/cache` itself, so the
+two ways of shipping Ticktz produce the same tree. CI plants all three in the
+build context before building and fails if any reaches the image — a guard that
+cannot fail guards nothing.
+
 ## 1.1.0
 
 **Upgrade from the browser.** Administration → Updates shows which version this
