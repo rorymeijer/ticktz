@@ -275,7 +275,17 @@ jobs:
             # And the placed tree inherits that, since it is a copy of it.
             /usr/local/bin/ticktz-place-code >/dev/null
             test ! -e /var/www/html/public/hot
-            test ! -e /var/www/html/.env
+
+            # /var/www/html/.env is NOT checked for absence: an instance with
+            # no APP_KEY in its environment writes one there, which is the
+            # point of it. What must be true is narrower and more useful —
+            # the password planted in the build context appears nowhere, in
+            # the image or in the tree placed from it.
+            if grep -rq "hunter2" /usr/src/ticktz /var/www/html 2>/dev/null; then
+                echo "THE BUILD CONTEXT SECRET REACHED THE IMAGE" >&2
+                exit 1
+            fi
+
             echo "clean"
           '
 
