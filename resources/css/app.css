@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Brand palette. Overridable at runtime: the portal branding settings inject a
+ * <style> block that redefines these variables, so re-branding never requires
+ * a rebuild. Values are space separated RGB channels for Tailwind's
+ * `rgb(var(--x) / <alpha-value>)` syntax.
+ */
+:root {
+    --brand-50: 238 242 255;
+    --brand-100: 224 231 255;
+    --brand-200: 199 210 254;
+    --brand-300: 165 180 252;
+    --brand-400: 129 140 248;
+    --brand-500: 99 102 241;
+    --brand-600: 79 70 229;
+    --brand-700: 67 56 202;
+    --brand-800: 55 48 163;
+    --brand-900: 49 46 129;
+    --brand-950: 30 27 75;
+}
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-slate-50 text-slate-900 antialiased;
+    }
+
+    /* Keyboard focus must always be visible — accessibility baseline. */
+    :focus-visible {
+        @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white;
+    }
+}
+
+@layer components {
+    .ticktz-skip-link {
+        @apply sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50
+            focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold
+            focus:text-brand-700 focus:shadow-popover;
+    }
+
+    .ticktz-prose {
+        @apply text-sm leading-6 text-slate-700;
+    }
+
+    .ticktz-prose h1 { @apply mb-3 mt-6 text-xl font-semibold text-slate-900 first:mt-0; }
+    .ticktz-prose h2 { @apply mb-2 mt-6 text-lg font-semibold text-slate-900 first:mt-0; }
+    .ticktz-prose h3 { @apply mb-2 mt-5 text-base font-semibold text-slate-900 first:mt-0; }
+    .ticktz-prose p { @apply mb-3; }
+    .ticktz-prose ul { @apply mb-3 list-disc space-y-1 pl-5; }
+    .ticktz-prose ol { @apply mb-3 list-decimal space-y-1 pl-5; }
+    .ticktz-prose a { @apply font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700; }
+    .ticktz-prose code { @apply rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.8em] text-slate-800; }
+    .ticktz-prose pre { @apply mb-3 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100; }
+    .ticktz-prose pre code { @apply bg-transparent p-0 text-inherit; }
+    .ticktz-prose blockquote { @apply mb-3 border-l-2 border-slate-300 pl-3 italic text-slate-600; }
+    .ticktz-prose table { @apply mb-3 w-full border-collapse text-left; }
+    .ticktz-prose th, .ticktz-prose td { @apply border border-slate-200 px-2 py-1; }
+
+    /*
+     * Knowledge base articles. Everything the sanitiser allows needs a style,
+     * or an author's heading silently renders as body text. Set on top of
+     * .ticktz-prose rather than replacing it, so a comment and an article
+     * still read as the same product.
+     */
+    .ticktz-article { @apply text-[0.9375rem] leading-7; }
+    .ticktz-article h4 { @apply mb-1.5 mt-4 text-sm font-semibold text-slate-900 first:mt-0; }
+    .ticktz-article h5, .ticktz-article h6 { @apply mb-1.5 mt-4 text-sm font-semibold text-slate-700 first:mt-0; }
+    .ticktz-article hr { @apply my-5 border-slate-200; }
+    .ticktz-article img { @apply my-3 max-w-full rounded-lg border border-slate-200; }
+    .ticktz-article figure { @apply my-4; }
+    .ticktz-article figcaption { @apply mt-1 text-xs text-slate-500; }
+    .ticktz-article dl { @apply mb-3; }
+    .ticktz-article dt { @apply font-semibold text-slate-900; }
+    .ticktz-article dd { @apply mb-2 pl-4; }
+    .ticktz-article th { @apply bg-slate-50 font-semibold text-slate-700; }
+    .ticktz-article li > ul, .ticktz-article li > ol { @apply mb-0 mt-1; }
+    /* A wide table must scroll rather than stretch the article column. */
+    .ticktz-article table { @apply block overflow-x-auto sm:table; }
+}
+
+/* Quoted e-mail history inside ticket comments. */
+.ticktz-quote {
+    @apply mt-3 border-l-2 border-slate-200 pl-3 text-xs text-slate-500;
+}
+
+@media print {
+    .ticktz-no-print {
+        display: none !important;
+    }
+}

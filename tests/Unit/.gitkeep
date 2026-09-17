@@ -1,0 +1,11 @@
+Keeps this directory in git.
+
+phpunit.xml declares a `Unit` test suite pointing here, and git does not track
+empty directories — so without this file a fresh clone has no tests/Unit, and
+Pest exits 2 with "Test directory not found" before running anything. Which is
+exactly what CI did.
+
+Every PHP test in this project is currently a feature test: they all exercise
+HTTP, the container or the database. This slot stays declared so that a unit
+test added later runs without anybody having to remember to re-register the
+suite.

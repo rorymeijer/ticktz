@@ -1,0 +1,1096 @@
+openapi: 3.1.0
+
+info:
+  title: Ticktz API
+  version: "1.0"
+  description: |
+    The public REST API of a Ticktz service desk.
+
+    **Authentication.** Every endpoint takes a personal access token as
+    `Authorization: Bearer <token>`. Tokens are minted per person under
+    *Settings → API tokens* and carry **scopes**. A token is the intersection
+    of the scopes it was issued with and the permissions its owner holds
+    today — it can never do more than the person it belongs to, and it narrows
+    on its own when their role is reduced.
+
+    **Errors** all share one shape, whatever went wrong:
+
+    ```json
+    { "error": { "code": "validation_failed", "message": "...", "fields": {} } }
+    ```
+
+    `code` is a stable string. Branch on it rather than on the HTTP status
+    where you need to tell two cases apart.
+
+    **Rate limiting** is per token. `X-RateLimit-Limit` and
+    `X-RateLimit-Remaining` come back on every response; exceeding the limit
+    gives `429` with `Retry-After`.
+
+    **Pagination.** Every list endpoint paginates, `?page=` and `?per_page=`
+    (maximum 100), and answers with `data`, `links` and `meta`.
+  license:
+    name: AGPL-3.0-or-later
+
+servers:
+  - url: https://ticktz.example.com/api/v1
+    description: Your own instance
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Meta
+    description: Discovering what a token may do.
+  - name: Tickets
+  - name: Comments
+  - name: Queues
+  - name: Assets
+  - name: Knowledge base
+  - name: Webhooks
+
+paths:
+  /me:
+    get:
+      tags: [Meta]
+      summary: The account and token behind this request
+      description: |
+        The first call to make. It answers with the token's scopes, the
+        permissions behind them and the rate limit in force — which turns a
+        `403` from "it does not work" into a specific missing scope or a
+        missing permission.
+
+        Outside the scope middleware on purpose: a token with no usable scopes
+        must still be able to find that out.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          id: { type: integer }
+                          name: { type: string }
+                          email: { type: string, format: email }
+                          locale: { type: string, nullable: true }
+                          scope_level:
+                            type: string
+                            enum: [admin, agent, requester]
+                      token:
+                        type: object
+                        nullable: true
+                        properties:
+                          id: { type: integer }
+                          name: { type: string }
+                          scopes:
+                            type: array
+                            items: { type: string }
+                          rate_limit: { type: integer }
+                          expires_at: { type: string, format: date-time, nullable: true }
+                      permissions:
+                        type: array
+                        items: { type: string }
+                      version: { type: string }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /tickets:
+    get:
+      tags: [Tickets]
+      summary: List tickets
+      description: |
+        Only what the token's owner could see in the browser. The same
+        visibility rules as the agent console and the portal, applied by the
+        same query scope.
+      security:
+        - bearerAuth: [tickets.read]
+      parameters:
+        - { name: search, in: query, schema: { type: string }, description: Free text over key, subject and body }
+        - { name: status, in: query, schema: { type: string }, description: Status id, or several separated by commas }
+        - name: status_category
+          in: query
+          schema: { type: string, enum: [new, open, pending, resolved, closed] }
+        - { name: priority, in: query, schema: { type: string } }
+        - { name: assignee, in: query, schema: { type: string }, description: "User id, or `me`, or `none`" }
+        - { name: team, in: query, schema: { type: string } }
+        - { name: queue, in: query, schema: { type: string } }
+        - { name: organization, in: query, schema: { type: string } }
+        - { name: label, in: query, schema: { type: string } }
+        - { name: source, in: query, schema: { type: string, enum: [portal, email, agent, api, automation] } }
+        - { name: created_from, in: query, schema: { type: string, format: date } }
+        - { name: created_to, in: query, schema: { type: string, format: date } }
+        - name: sla
+          in: query
+          schema: { type: string, enum: [breached, at_risk, running, paused, none] }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [created_at, updated_at, last_activity_at], default: last_activity_at }
+        - { name: direction, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Ticket" }
+                  links: { $ref: "#/components/schemas/PaginationLinks" }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+    post:
+      tags: [Tickets]
+      summary: File a ticket
+      description: |
+        Goes through the same service the console and the mail poller use, so
+        the ticket gets its key, its opening status from the workflow, its SLA
+        clocks, its watchers and its audit entry exactly as one filed by hand.
+
+        `source` is always stamped `api`; it cannot be set by the caller.
+
+        Omit `requester_id`/`requester_email` and the ticket is filed for the
+        token's owner. Naming somebody else needs the `tickets.create`
+        permission — otherwise this is impersonation with an audit trail
+        pointing at the wrong person.
+      security:
+        - bearerAuth: [tickets.write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject]
+              properties:
+                subject: { type: string, maxLength: 255 }
+                description: { type: string, nullable: true }
+                requester_id: { type: integer, nullable: true }
+                requester_email: { type: string, format: email, nullable: true }
+                priority_id: { type: integer, nullable: true }
+                queue_id: { type: integer, nullable: true }
+                team_id: { type: integer, nullable: true }
+                request_type_id: { type: integer, nullable: true }
+                assignee_id: { type: integer, nullable: true }
+                label_ids:
+                  type: array
+                  maxItems: 20
+                  items: { type: integer }
+            examples:
+              monitoring:
+                summary: An alert from a monitoring system
+                value:
+                  subject: "Disk usage above 90% on db-01"
+                  description: "/var is at 94%. Triggered at 03:14 UTC."
+                  priority_id: 2
+      responses:
+        "201":
+          description: Created
+          headers:
+            Location:
+              schema: { type: string }
+              description: The new ticket's URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Ticket" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /tickets/{ticket}:
+    parameters:
+      - name: ticket
+        in: path
+        required: true
+        schema: { type: string }
+        description: The ticket key, e.g. `SUP-1042`
+    get:
+      tags: [Tickets]
+      summary: Read one ticket
+      description: |
+        A ticket the token's owner may not see answers `404`, not `403`.
+        Telling the two apart would make the key space enumerable.
+      security:
+        - bearerAuth: [tickets.read]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Ticket" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Tickets]
+      summary: Edit a ticket
+      description: |
+        Every field is optional and only what you send is touched — so reading
+        a ticket, changing one field and sending the whole object back cannot
+        overwrite what somebody else changed in between.
+
+        Status is not editable here; it has to respect the workflow, so it has
+        its own endpoint. Setting `assignee_id` additionally needs the
+        `tickets.assign` permission.
+      security:
+        - bearerAuth: [tickets.write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject: { type: string }
+                description: { type: string, nullable: true }
+                priority_id: { type: integer }
+                queue_id: { type: integer, nullable: true }
+                team_id: { type: integer, nullable: true }
+                organization_id: { type: integer, nullable: true }
+                assignee_id: { type: integer, nullable: true }
+                label_ids:
+                  type: array
+                  items: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Ticket" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /tickets/{ticket}/transition:
+    parameters:
+      - { name: ticket, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Tickets]
+      summary: Move a ticket to another status
+      description: |
+        The workflow decides which moves are legal, and an outstanding approval
+        can stand in the way of one. Both refusals come back as `422` with the
+        reason in `error.message` — the move is not allowed *yet*, which is a
+        different thing from the request being malformed.
+      security:
+        - bearerAuth: [tickets.write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  description: The target status slug (or its id)
+                  example: resolved
+                comment:
+                  type: string
+                  nullable: true
+                  description: Posted as a public reply alongside the move
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Ticket" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: The move is not legal, or an approval is outstanding
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              examples:
+                illegal:
+                  value:
+                    error:
+                      code: transition_refused
+                      message: "A ticket cannot go from New to Closed."
+                approval:
+                  value:
+                    error:
+                      code: transition_refused
+                      message: "Closed needs an approval that has not been granted."
+
+  /tickets/{ticket}/comments:
+    parameters:
+      - { name: ticket, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Comments]
+      summary: Read the conversation
+      description: |
+        Internal notes are included only for a token whose owner holds
+        `tickets.comment.internal`. Everyone else gets the public thread.
+      security:
+        - bearerAuth: [tickets.read]
+      parameters:
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Comment" }
+                  meta: { $ref: "#/components/schemas/PaginationMeta" }
+    post:
+      tags: [Comments]
+      summary: Post a reply or a note
+      description: |
+        `internal: true` needs the `tickets.comment.internal` permission and is
+        **refused** without it rather than quietly downgraded to a public
+        reply — a note meant to stay inside that reaches the customer is the
+        one mistake this endpoint must not make for you.
+      security:
+        - bearerAuth: [comments.write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string }
+                internal: { type: boolean, default: false }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Comment" }
+        "403":
+          description: An internal note without the permission for one
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /queues:
+    get:
+      tags: [Queues]
+      summary: List queues
+      description: |
+        Read these to discover how a desk is organised. `filters` is the queue's
+        own filter definition — pass it back to `GET /tickets` to get what the
+        queue would show.
+      security:
+        - bearerAuth: [queues.read]
+      parameters:
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Queue" }
+
+  /queues/{queue}:
+    parameters:
+      - { name: queue, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Queues]
+      summary: Read one queue
+      security:
+        - bearerAuth: [queues.read]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Queue" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /assets:
+    get:
+      tags: [Assets]
+      summary: List assets
+      security:
+        - bearerAuth: [assets.read]
+      parameters:
+        - { name: search, in: query, schema: { type: string }, description: Matches name, tag and serial number }
+        - name: status
+          in: query
+          schema: { type: string, enum: [in_stock, in_use, in_repair, retired, disposed] }
+        - { name: type, in: query, schema: { type: string }, description: Asset type slug }
+        - { name: assigned_to, in: query, schema: { type: integer } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Asset" }
+    post:
+      tags: [Assets]
+      summary: Create an asset
+      security:
+        - bearerAuth: [assets.write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssetInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Asset" }
+
+  /asset-types:
+    get:
+      tags: [Assets]
+      summary: List asset types
+      description: |
+        So a sync script can map its own vocabulary onto this instance's
+        without an administrator reading ids out of the database.
+      security:
+        - bearerAuth: [assets.read]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        slug: { type: string }
+                        name: { type: string }
+
+  /assets/{asset}:
+    parameters:
+      - { name: asset, in: path, required: true, schema: { type: string }, description: The asset tag }
+    get:
+      tags: [Assets]
+      summary: Read one asset
+      security:
+        - bearerAuth: [assets.read]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Asset" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /assets/tag/{tag}:
+    parameters:
+      - { name: tag, in: path, required: true, schema: { type: string } }
+    put:
+      tags: [Assets]
+      summary: Create or update an asset by tag
+      description: |
+        The shape an inventory sync needs. Addressing by tag rather than by id
+        makes the call idempotent without the caller tracking our identifiers,
+        so a script can run twice, or run again after a restore, and end up in
+        the same place.
+
+        `201` when the tag was new, `200` when it already existed — which is
+        how a script reports "added 3, updated 112" without diffing anything.
+      security:
+        - bearerAuth: [assets.write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssetInput" }
+      responses:
+        "200":
+          description: The asset already existed and was updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Asset" }
+        "201":
+          description: The tag was new, so the asset was created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Asset" }
+
+  /kb/articles:
+    get:
+      tags: [Knowledge base]
+      summary: Search knowledge base articles
+      description: |
+        Internal articles and drafts appear only for a token whose owner is
+        entitled to them. Bodies are not included — ask for one article.
+      security:
+        - bearerAuth: [kb.read]
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string }, description: Category slug }
+        - { name: locale, in: query, schema: { type: string, enum: [en, nl] } }
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/KbArticle" }
+
+  /kb/articles/{slug}:
+    parameters:
+      - { name: slug, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Knowledge base]
+      summary: Read one article, with its body
+      security:
+        - bearerAuth: [kb.read]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/KbArticle" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /webhooks:
+    get:
+      tags: [Webhooks]
+      summary: List webhook subscriptions
+      security:
+        - bearerAuth: [webhooks.manage]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/WebhookSubscription" }
+    post:
+      tags: [Webhooks]
+      summary: Register an endpoint
+      description: |
+        The signing secret is generated here and returned **once**, in this
+        response. It is never readable again — a secret that can be fetched
+        from a list is one that will be read by somebody who should not have
+        it.
+
+        The URL must be `https` outside local development. A signed payload is
+        still a ticket's subject and a requester's e-mail address crossing the
+        network in the clear.
+      security:
+        - bearerAuth: [webhooks.manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, url, events]
+              properties:
+                name: { type: string }
+                description: { type: string, nullable: true }
+                url: { type: string, format: uri }
+                events:
+                  type: array
+                  minItems: 1
+                  items: { $ref: "#/components/schemas/WebhookEvent" }
+                is_active: { type: boolean, default: true }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - { $ref: "#/components/schemas/WebhookSubscription" }
+                      - type: object
+                        properties:
+                          secret:
+                            type: string
+                            description: Shown exactly once. Store it now.
+
+  /webhooks/{webhook}:
+    parameters:
+      - { name: webhook, in: path, required: true, schema: { type: integer } }
+    patch:
+      tags: [Webhooks]
+      summary: Edit a subscription
+      security:
+        - bearerAuth: [webhooks.manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string, nullable: true }
+                url: { type: string, format: uri }
+                events:
+                  type: array
+                  items: { $ref: "#/components/schemas/WebhookEvent" }
+                is_active: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/WebhookSubscription" }
+    delete:
+      tags: [Webhooks]
+      summary: Remove a subscription
+      description: Its delivery history goes with it.
+      security:
+        - bearerAuth: [webhooks.manage]
+      responses:
+        "204": { description: Deleted }
+
+  /webhooks/{webhook}/deliveries:
+    parameters:
+      - { name: webhook, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Webhooks]
+      summary: The delivery log for one subscription
+      description: |
+        What was sent, what came back and how long it took. This is the
+        endpoint that answers "their system says it never arrived".
+      security:
+        - bearerAuth: [webhooks.manage]
+      parameters:
+        - { $ref: "#/components/parameters/Page" }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/WebhookDelivery" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        A personal access token from *Settings → API tokens*. The scopes listed
+        on each operation must be on the token **and** backed by permissions
+        its owner holds.
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PerPage:
+      name: per_page
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+
+  responses:
+    Unauthenticated:
+      description: No token, an unknown token, or an expired one
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: unauthenticated
+              message: "This endpoint needs a personal access token."
+    Forbidden:
+      description: |
+        The token lacks the scope (`missing_scope`), or its owner lacks the
+        permission behind it (`forbidden`), or the account is deactivated
+        (`account_inactive`).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: missing_scope
+              message: "This token was not issued with the tickets.write scope."
+              required_scope: tickets.write
+    NotFound:
+      description: |
+        No such record — or one the token's owner may not see. The two are
+        deliberately indistinguishable.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ValidationFailed:
+      description: The request was understood but could not be accepted
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: validation_failed
+              message: "The request could not be processed."
+              fields:
+                subject: ["The subject field is required."]
+    RateLimited:
+      description: This token's per-minute limit is spent
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: A stable machine-readable identifier
+            message: { type: string }
+            fields:
+              type: object
+              description: Present on validation failures only
+              additionalProperties:
+                type: array
+                items: { type: string }
+
+    PaginationLinks:
+      type: object
+      properties:
+        first: { type: string, nullable: true }
+        last: { type: string, nullable: true }
+        prev: { type: string, nullable: true }
+        next: { type: string, nullable: true }
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page: { type: integer }
+        last_page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+
+    UserStub:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+
+    Ticket:
+      type: object
+      properties:
+        id: { type: integer }
+        key: { type: string, example: "SUP-1042" }
+        subject: { type: string }
+        description: { type: string, nullable: true }
+        source: { type: string, enum: [portal, email, agent, api, automation] }
+        status:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            slug: { type: string }
+            category: { type: string, enum: [new, open, pending, resolved, closed] }
+            is_open: { type: boolean }
+        priority:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            slug: { type: string }
+            level: { type: integer, description: "1 is the most urgent" }
+        queue:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            slug: { type: string }
+        requester: { $ref: "#/components/schemas/UserStub" }
+        assignee:
+          oneOf:
+            - { $ref: "#/components/schemas/UserStub" }
+            - { type: "null" }
+        team:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+        organization:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+        labels:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              name: { type: string }
+        approval_state:
+          type: string
+          nullable: true
+          enum: [pending, approved, rejected, cancelled, null]
+        sla:
+          type: object
+          properties:
+            due_at: { type: string, format: date-time, nullable: true }
+            breached: { type: boolean }
+        first_response_at: { type: string, format: date-time, nullable: true }
+        resolved_at: { type: string, format: date-time, nullable: true }
+        closed_at: { type: string, format: date-time, nullable: true }
+        reopen_count: { type: integer }
+        last_activity_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    Comment:
+      type: object
+      properties:
+        id: { type: integer }
+        ticket_id: { type: integer }
+        body: { type: string }
+        is_internal: { type: boolean }
+        source: { type: string }
+        author:
+          oneOf:
+            - { $ref: "#/components/schemas/UserStub" }
+            - { type: "null" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    Queue:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        filters:
+          type: object
+          description: Pass this back to GET /tickets to reproduce the queue
+          additionalProperties: true
+        sort_by: { type: string }
+        sort_direction: { type: string, enum: [asc, desc] }
+        team:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+        open_tickets: { type: integer }
+
+    Asset:
+      type: object
+      properties:
+        id: { type: integer }
+        asset_tag: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [in_stock, in_use, in_repair, retired, disposed] }
+        serial_number: { type: string, nullable: true }
+        manufacturer: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        type:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            slug: { type: string }
+            name: { type: string }
+        assignee:
+          oneOf:
+            - { $ref: "#/components/schemas/UserStub" }
+            - { type: "null" }
+        organization:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+        purchased_at: { type: string, format: date, nullable: true }
+        warranty_ends_at: { type: string, format: date, nullable: true }
+        purchase_cost:
+          type: integer
+          nullable: true
+          description: In minor units (cents) of `currency`
+        currency: { type: string, nullable: true, example: EUR }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AssetInput:
+      type: object
+      properties:
+        name: { type: string }
+        asset_type_id: { type: integer }
+        status: { type: string, enum: [in_stock, in_use, in_repair, retired, disposed] }
+        serial_number: { type: string, nullable: true }
+        manufacturer: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        assigned_to: { type: integer, nullable: true }
+        organization_id: { type: integer, nullable: true }
+        team_id: { type: integer, nullable: true }
+        purchased_at: { type: string, format: date, nullable: true }
+        warranty_ends_at: { type: string, format: date, nullable: true }
+        purchase_cost: { type: integer, nullable: true }
+        currency: { type: string, minLength: 3, maxLength: 3, nullable: true }
+
+    KbArticle:
+      type: object
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        title: { type: string }
+        excerpt: { type: string, nullable: true }
+        locale:
+          type: string
+          nullable: true
+          description: "`null` means the article applies to every language"
+        visibility: { type: string, enum: [public, internal] }
+        status: { type: string, enum: [draft, published, archived] }
+        category:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            slug: { type: string }
+        body:
+          type: string
+          description: Only from the single-article endpoint
+        published_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time }
+
+    WebhookEvent:
+      type: string
+      enum:
+        - ticket.created
+        - ticket.updated
+        - ticket.assigned
+        - ticket.transitioned
+        - ticket.commented
+        - sla.breached
+        - approval.completed
+
+    WebhookSubscription:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        url: { type: string, format: uri }
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/WebhookEvent" }
+        is_active: { type: boolean }
+        signed:
+          type: boolean
+          description: Whether deliveries carry a signature. The secret itself is never returned.
+        last_delivered_at: { type: string, format: date-time, nullable: true }
+        last_failed_at: { type: string, format: date-time, nullable: true }
+        consecutive_failures: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    WebhookDelivery:
+      type: object
+      properties:
+        id: { type: integer }
+        event: { $ref: "#/components/schemas/WebhookEvent" }
+        status: { type: string, enum: [pending, delivered, failed] }
+        attempts: { type: integer }
+        response_status: { type: integer, nullable: true }
+        response_body:
+          type: string
+          nullable: true
+          description: Truncated to 2000 characters
+        error: { type: string, nullable: true }
+        duration_ms: { type: integer, nullable: true }
+        delivered_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
