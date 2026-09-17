@@ -2,9 +2,11 @@ import { useForm } from '@inertiajs/react';
 import { useRef, useState, type FormEventHandler } from 'react';
 
 import { IconLock, IconPaperclip, IconX } from '@/Components/Icons';
-import { Button, Textarea } from '@/Components/UI';
+import { RichTextEditor } from '@/Components/RichText/RichTextEditor';
+import { Button } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import { cn } from '@/lib/cn';
+import { isBlankHtml } from '@/lib/richtext';
 
 /**
  * Reply / internal note composer.
@@ -83,13 +85,20 @@ export function ReplyBox({
             </div>
 
             <div className="p-3">
-                <Textarea
+                <RichTextEditor
+                    /*
+                     * Keyed on the tab so switching between a reply and an
+                     * internal note starts a fresh editor rather than carrying
+                     * the draft across. Sending the customer a half-written
+                     * internal note is the mistake this prevents.
+                     */
+                    key={internal ? 'note' : 'reply'}
                     value={form.data.body}
-                    onChange={(event) => form.setData('body', event.target.value)}
-                    rows={internal ? 4 : 5}
-                    required
-                    aria-label={internal ? t('tickets.actions.internal_note') : t('tickets.actions.reply')}
+                    onChange={(html) => form.setData('body', html)}
+                    label={internal ? t('tickets.actions.internal_note') : t('tickets.actions.reply')}
                     placeholder={internal ? t('tickets.placeholders.note') : t('tickets.placeholders.reply')}
+                    invalid={Boolean(form.errors.body)}
+                    minHeight={internal ? '6rem' : '8rem'}
                     className={cn(internal && 'bg-amber-50/40')}
                 />
 
@@ -141,7 +150,7 @@ export function ReplyBox({
 
                     <Button
                         type="submit"
-                        disabled={form.processing || form.data.body.trim() === ''}
+                        disabled={form.processing || isBlankHtml(form.data.body)}
                         variant={internal ? 'secondary' : 'primary'}
                     >
                         {internal ? t('tickets.actions.save_note') : t('tickets.actions.send_reply')}

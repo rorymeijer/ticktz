@@ -15,10 +15,10 @@ import {
     PageHeader,
     Select,
     TextInput,
-    Textarea,
 } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import type { TicketOptions } from '@/types/tickets';
+import { RichTextField } from '@/Components/RichText/RichTextField';
 
 export default function TicketCreate({ options }: { options: TicketOptions }) {
     const { t } = useTranslations();
@@ -77,17 +77,14 @@ export default function TicketCreate({ options }: { options: TicketOptions }) {
                             )}
                         </Field>
 
-                        <Field label={t('tickets.fields.description')} error={form.errors.description}>
-                            {(props) => (
-                                <Textarea
-                                    {...props}
-                                    rows={10}
-                                    value={form.data.description}
-                                    placeholder={t('tickets.placeholders.description')}
-                                    onChange={(event) => form.setData('description', event.target.value)}
-                                />
-                            )}
-                        </Field>
+                        <RichTextField
+                            label={t('tickets.fields.description')}
+                            error={form.errors.description}
+                            value={form.data.description}
+                            onChange={(html) => form.setData('description', html)}
+                            placeholder={t('tickets.placeholders.description')}
+                            minHeight="14rem"
+                        />
 
                         <div>
                             <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900">

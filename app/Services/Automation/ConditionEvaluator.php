@@ -110,7 +110,11 @@ class ConditionEvaluator
             'email_channel' => $ticket->email_channel_id,
             'source' => $ticket->source,
             'subject' => $ticket->subject,
-            'description' => $ticket->description,
+            // The flattened text, not the markup. A rule saying "description
+            // contains password" means the word — matched against the stored
+            // HTML it would also fire on a rule looking for "code" in a ticket
+            // that merely contains a code block.
+            'description' => $ticket->description_text,
             'label' => $ticket->relationLoaded('labels')
                 ? $ticket->labels->pluck('id')->all()
                 : $ticket->labels()->pluck('labels.id')->all(),
@@ -127,7 +131,8 @@ class ConditionEvaluator
 
             // Trigger payload rather than ticket state.
             'comment_is_internal' => Arr::get($context, 'comment.is_internal'),
-            'comment_body' => Arr::get($context, 'comment.body'),
+            'comment_body' => Arr::get($context, 'comment.body_text')
+                ?? Arr::get($context, 'comment.body'),
             'changed_field' => Arr::get($context, 'changed_fields', []),
 
             default => null,

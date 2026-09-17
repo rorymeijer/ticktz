@@ -13,6 +13,7 @@ import type { Approval } from '@/types/approvals';
 import { cn } from '@/lib/cn';
 import { formatDate, formatDateTime } from '@/lib/datetime';
 import type { AttachmentSummary, StatusSummary, UserSummary } from '@/types/tickets';
+import { RichText } from '@/Components/RichText/RichText';
 
 interface PortalComment {
     id: number;
@@ -97,8 +98,8 @@ export default function PortalRequestShow({
                 <div className="space-y-4">
                     {request.description ? (
                         <Card>
-                            <CardBody className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
-                                {request.description}
+                            <CardBody>
+                                <RichText html={request.description} className="break-words" />
                             </CardBody>
                         </Card>
                     ) : null}
@@ -189,9 +190,7 @@ export default function PortalRequestShow({
                                                         {formatDateTime(comment.created_at, locale)}
                                                     </time>
                                                 </div>
-                                                <div className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
-                                                    {comment.body}
-                                                </div>
+                                                <RichText html={comment.body} className="mt-1.5 break-words" />
                                                 {comment.attachments.length > 0 ? (
                                                     <AttachmentList files={comment.attachments} />
                                                 ) : null}

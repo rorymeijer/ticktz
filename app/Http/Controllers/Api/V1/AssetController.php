@@ -114,7 +114,7 @@ class AssetController extends ApiController
             'manufacturer' => ['sometimes', 'nullable', 'string', 'max:255'],
             'model' => ['sometimes', 'nullable', 'string', 'max:255'],
             'location' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'notes' => ['sometimes', 'nullable', 'string', 'max:65000'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:100000'],
             'assigned_to' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
             'organization_id' => ['sometimes', 'nullable', 'integer', 'exists:organizations,id'],
             'team_id' => ['sometimes', 'nullable', 'integer', 'exists:teams,id'],

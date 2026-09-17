@@ -32,7 +32,7 @@ class StoreApiTicketRequest extends FormRequest
     {
         return [
             'subject' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:65000'],
+            'description' => ['nullable', 'string', 'max:100000'],
             'requester_id' => ['nullable', 'integer', 'exists:users,id'],
             'requester_email' => ['nullable', 'email', 'max:255'],
             'priority_id' => ['nullable', 'integer', 'exists:priorities,id'],

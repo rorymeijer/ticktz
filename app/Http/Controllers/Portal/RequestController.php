@@ -10,6 +10,7 @@ use App\Models\Comment;
 use App\Models\Ticket;
 use App\Models\TicketStatus;
 use App\Models\User;
+use App\Rules\RichText;
 use App\Services\Tickets\AttachmentService;
 use App\Services\Tickets\TicketService;
 use Illuminate\Http\RedirectResponse;
@@ -139,7 +140,7 @@ class RequestController extends Controller
         $this->authorize('comment', $ticket);
 
         $data = $request->validate([
-            'body' => ['required', 'string', 'max:65000'],
+            'body' => ['required', 'string', new RichText],
             'attachments' => ['array', 'max:5'],
             'attachments.*' => AttachmentService::rules(),
         ]);

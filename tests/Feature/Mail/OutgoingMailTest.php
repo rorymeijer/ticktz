@@ -150,7 +150,9 @@ it('writes to each person in the language they read', function (): void {
     $requester = makeRequester(['email' => 'nina@example.test', 'locale' => 'nl']);
     $ticket = Ticket::factory()->forRequester($requester)->create();
 
-    [$subject, $body] = app(TicketMailer::class)->render(
+    // The text part: this is about which language the mail is written in, not
+    // about which tags it carries.
+    [$subject, , $body] = app(TicketMailer::class)->render(
         'ticket.created.requester',
         $ticket,
         $requester,
@@ -159,7 +161,7 @@ it('writes to each person in the language they read', function (): void {
         'nl',
     );
 
-    [, $englishBody] = app(TicketMailer::class)->render(
+    [, , $englishBody] = app(TicketMailer::class)->render(
         'ticket.created.requester',
         $ticket,
         $requester,
@@ -279,7 +281,8 @@ it('suppresses auto-responders on everything it sends', function (): void {
         ticket: $ticket,
         channel: $this->channel,
         renderedSubject: 'Subject',
-        renderedBody: 'Body',
+        renderedBody: '<p>Body</p>',
+        renderedText: 'Body',
         messageId: 'ticktz.'.$ticket->key.'.0.abcd1234@ticktz.test',
     );
 

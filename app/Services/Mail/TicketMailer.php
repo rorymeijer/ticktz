@@ -10,6 +10,7 @@ use App\Models\EmailChannel;
 use App\Models\EmailTemplate;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\RichText\RichTextSanitizer;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -27,6 +28,8 @@ use Illuminate\Support\Str;
  */
 class TicketMailer
 {
+    public function __construct(private readonly RichTextSanitizer $sanitizer) {}
+
     /**
      * Send one notification to one person.
      *
@@ -49,13 +52,14 @@ class TicketMailer
         $channel ??= $this->channelFor($ticket);
         $locale = $recipient->locale ?: (string) config('app.locale');
 
-        [$subject, $body] = $this->render($templateKey, $ticket, $recipient, $comment, $channel, $locale, $extra);
+        [$subject, $html, $text] = $this->render($templateKey, $ticket, $recipient, $comment, $channel, $locale, $extra);
 
         $mailable = new TicketNotification(
             ticket: $ticket,
             channel: $channel,
             renderedSubject: $subject,
-            renderedBody: $body,
+            renderedBody: $html,
+            renderedText: $text,
             messageId: $this->messageId($ticket, $comment),
             inReplyTo: $this->inReplyTo($ticket),
             locale: $locale,
@@ -99,7 +103,7 @@ class TicketMailer
      * and fill in its placeholders.
      *
      * @param  array<string, string>  $extra
-     * @return array{0: string, 1: string}
+     * @return array{0: string, 1: string, 2: string} subject, HTML body, text body
      */
     public function render(
         string $templateKey,
@@ -124,8 +128,68 @@ class TicketMailer
 
         return [
             EmailTemplate::render($subject, $values),
+            $this->renderHtml($body, $values, $this->richPlaceholders($ticket, $comment)),
             EmailTemplate::render($body, $values),
         ];
+    }
+
+    /**
+     * The two placeholders that stand for a block of somebody's writing rather
+     * than a word.
+     *
+     * Everything else in a template — a name, a key, a status — is a phrase
+     * that belongs inside a sentence, and is escaped into the HTML part like
+     * any other text. These two are the rich text itself, already sanitised,
+     * and go in as markup.
+     *
+     * @return array<string, string>
+     */
+    private function richPlaceholders(Ticket $ticket, ?Comment $comment): array
+    {
+        return array_filter([
+            'ticket.description' => (string) $ticket->description,
+            'comment.body' => (string) $comment?->body,
+        ], static fn (string $value): bool => $value !== '');
+    }
+
+    /**
+     * Build the HTML part of a notification from a plain-text template.
+     *
+     * A template is written in a textarea by an administrator, as plain text
+     * with placeholders — that is what it has always been, and making it rich
+     * text would mean asking somebody editing a notification to think about
+     * markup. So the template is converted the same way any other plain text
+     * is: blank lines become paragraphs, single newlines become breaks, and
+     * everything in it is escaped.
+     *
+     * The placeholders are then filled in under one rule:
+     *
+     *   **A placeholder alone in a paragraph is replaced by the block it
+     *   stands for. A placeholder inside a sentence is replaced by its text.**
+     *
+     * Which is exactly how the shipped templates read — `{{ ticket.description }}`
+     * sits on its own line, `{{ requester.first_name }}` sits in "Hello …" —
+     * and it is what keeps a formatted reply from landing inside a paragraph
+     * as `<p><p>…</p></p>`, which is invalid and which mail clients each
+     * recover from differently.
+     *
+     * @param  array<string, string>  $values
+     * @param  array<string, string>  $rich
+     */
+    private function renderHtml(string $template, array $values, array $rich): string
+    {
+        $html = $this->sanitizer->fromPlainText($template);
+
+        foreach ($rich as $key => $markup) {
+            $html = str_replace('<p>{{ '.$key.' }}</p>', $markup, $html);
+        }
+
+        // Whatever is left is inline, and inline means text: a description
+        // referenced mid-sentence renders as the words it contains.
+        return EmailTemplate::render($html, array_map(
+            static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            $values,
+        ));
     }
 
     /**
@@ -162,7 +226,9 @@ class TicketMailer
         return [
             'ticket.key' => $ticket->key,
             'ticket.subject' => $ticket->subject,
-            'ticket.description' => (string) $ticket->description,
+            // The flattened text. The rich versions are handed to the HTML
+            // part separately; see richPlaceholders().
+            'ticket.description' => (string) $ticket->description_text,
             'ticket.status' => (string) $ticket->status?->translatedName($locale),
             'ticket.priority' => (string) $ticket->priority?->translatedName($locale),
             'ticket.queue' => (string) ($ticket->queue?->name ?? $ticket->team?->name ?? ''),
@@ -174,7 +240,7 @@ class TicketMailer
             'assignee.name' => (string) $ticket->assignee?->name,
             'recipient.name' => (string) $recipient?->name,
             'recipient.first_name' => $this->firstName($recipient?->name),
-            'comment.body' => (string) $comment?->body,
+            'comment.body' => (string) $comment?->body_text,
             'comment.author' => (string) ($comment?->author?->name ?? __('tickets.timeline.system')),
             'app.name' => (string) config('app.name'),
         ];

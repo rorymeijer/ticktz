@@ -4,6 +4,7 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/datetime';
 import type { AttachmentSummary, TimelineItem } from '@/types/tickets';
+import { RichText } from '@/Components/RichText/RichText';
 
 /**
  * The ticket conversation: replies, internal notes and system events in one
@@ -74,9 +75,7 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
                                     </time>
                                 </div>
 
-                                <div className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
-                                    {item.body}
-                                </div>
+                                <RichText html={item.body} className="mt-1.5 break-words" />
 
                                 {item.attachments.length > 0 ? <AttachmentList files={item.attachments} /> : null}
                             </div>

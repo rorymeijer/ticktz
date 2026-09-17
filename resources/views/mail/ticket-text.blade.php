@@ -1,6 +1,6 @@
 {{ $ticket->key }} — {{ $ticket->subject }}
 
-{{ $body }}
+{{ $text }}
 
 --
 {{ __('mail.footer.reply_hint') }}

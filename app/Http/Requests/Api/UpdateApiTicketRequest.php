@@ -31,7 +31,7 @@ class UpdateApiTicketRequest extends FormRequest
     {
         return [
             'subject' => ['sometimes', 'string', 'max:255'],
-            'description' => ['sometimes', 'nullable', 'string', 'max:65000'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:100000'],
             'priority_id' => ['sometimes', 'integer', 'exists:priorities,id'],
             'queue_id' => ['sometimes', 'nullable', 'integer', 'exists:queues,id'],
             'team_id' => ['sometimes', 'nullable', 'integer', 'exists:teams,id'],

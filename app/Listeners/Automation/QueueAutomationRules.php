@@ -55,6 +55,11 @@ class QueueAutomationRules
             'comment' => [
                 'id' => $event->comment->id,
                 'body' => $event->comment->body,
+                // Conditions match on the words, not the markup — see
+                // ConditionEvaluator. Carried in the payload rather than
+                // re-derived, because the job runs after the fact and the
+                // comment may have been edited by then.
+                'body_text' => $event->comment->body_text,
                 'is_internal' => $event->comment->is_internal,
                 'source' => $event->comment->source,
                 'user_id' => $event->comment->user_id,

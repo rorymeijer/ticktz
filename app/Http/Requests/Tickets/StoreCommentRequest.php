@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Tickets;
 
 use App\Models\Ticket;
+use App\Rules\RichText;
 use App\Services\Tickets\AttachmentService;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -31,7 +32,7 @@ class StoreCommentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'body' => ['required', 'string', 'max:65000'],
+            'body' => ['required', 'string', new RichText],
             'is_internal' => ['boolean'],
             'attachments' => ['array', 'max:10'],
             'attachments.*' => AttachmentService::rules(),

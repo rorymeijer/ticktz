@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasRichText;
+use App\Services\RichText\RichTextAttribute;
 use Database\Factories\CommentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,9 +30,23 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Comment extends Model
 {
     /** @use HasFactory<CommentFactory> */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasFactory, HasRichText, SoftDeletes;
 
     protected $fillable = ['ticket_id', 'user_id', 'body', 'is_internal', 'source', 'email_message_id'];
+
+    /**
+     * A comment's body is never null — a reply with nothing in it is not a
+     * reply — so an empty one is stored as an empty string and refused by
+     * validation rather than quietly becoming NULL.
+     *
+     * @return array<string, RichTextAttribute>
+     */
+    protected static function richTextAttributes(): array
+    {
+        return [
+            'body' => new RichTextAttribute(text: 'body_text', nullable: false),
+        ];
+    }
 
     protected function casts(): array
     {

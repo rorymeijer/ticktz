@@ -17,6 +17,7 @@ import type { Approval, ApprovalWorkflowSummary } from '@/types/approvals';
 import type { AssetSummary } from '@/types/assets';
 import type { KbArticleSummary } from '@/types/kb';
 import type { TicketDetail, TicketOptions, TimelineItem, TransitionOption } from '@/types/tickets';
+import { RichText } from '@/Components/RichText/RichText';
 
 export default function TicketShow({
     ticket,
@@ -121,9 +122,10 @@ export default function TicketShow({
                             </div>
 
                             {ticket.description ? (
-                                <div className="mt-4 whitespace-pre-wrap break-words border-t border-slate-100 pt-4 text-sm leading-6 text-slate-700">
-                                    {ticket.description}
-                                </div>
+                                <RichText
+                                    html={ticket.description}
+                                    className="mt-4 break-words border-t border-slate-100 pt-4"
+                                />
                             ) : null}
                         </CardBody>
                     </Card>

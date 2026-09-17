@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Resources\Api\CommentResource;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Rules\RichText;
 use App\Services\Tickets\TicketService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -59,7 +60,7 @@ class CommentController extends ApiController
         $this->authorize('comment', $ticket);
 
         $validated = $request->validate([
-            'body' => ['required', 'string', 'max:65000'],
+            'body' => ['required', 'string', new RichText],
             'internal' => ['sometimes', 'boolean'],
         ]);
 

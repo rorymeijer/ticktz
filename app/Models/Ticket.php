@@ -7,6 +7,8 @@ namespace App\Models;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\HasAssets;
 use App\Models\Concerns\HasCustomFields;
+use App\Models\Concerns\HasRichText;
+use App\Services\RichText\RichTextAttribute;
 use Database\Factories\TicketFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -31,7 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Ticket extends Model
 {
     /** @use HasFactory<TicketFactory> */
-    use Auditable, HasAssets, HasCustomFields, HasFactory, SoftDeletes;
+    use Auditable, HasAssets, HasCustomFields, HasFactory, HasRichText, SoftDeletes;
 
     public const SOURCES = ['portal', 'email', 'agent', 'api', 'automation'];
 
@@ -41,6 +43,16 @@ class Ticket extends Model
         'assignee_id', 'team_id', 'organization_id', 'created_by', 'source',
         'sla_policy_id',
     ];
+
+    /**
+     * @return array<string, RichTextAttribute>
+     */
+    protected static function richTextAttributes(): array
+    {
+        return [
+            'description' => new RichTextAttribute(text: 'description_text'),
+        ];
+    }
 
     protected function casts(): array
     {

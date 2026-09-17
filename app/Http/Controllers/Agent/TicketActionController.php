@@ -66,7 +66,7 @@ class TicketActionController extends Controller
 
         $data = $request->validate([
             'status_id' => ['required', 'integer', Rule::exists('ticket_statuses', 'id')],
-            'comment' => ['nullable', 'string', 'max:65000'],
+            'comment' => ['nullable', 'string', 'max:100000'],
         ]);
 
         $target = TicketStatus::query()->findOrFail($data['status_id']);

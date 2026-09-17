@@ -33,7 +33,9 @@ class TicketResource extends JsonResource
             'id' => $this->id,
             'key' => $this->key,
             'subject' => $this->subject,
+            // See CommentResource on why both shapes are returned.
             'description' => $this->description,
+            'description_text' => $this->description_text,
             'source' => $this->source,
             'status' => $this->whenLoaded('status', fn () => [
                 'id' => $this->status->id,

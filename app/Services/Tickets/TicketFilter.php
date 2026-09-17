@@ -185,13 +185,18 @@ class TicketFilter
 
         $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $term).'%';
 
+        // `description_text`, never `description`. The description column holds
+        // markup now, and searching it would match tag names: "code" would
+        // find every ticket containing a code block and "strong" would find
+        // half the desk. The text column is the same content with the markup
+        // taken out, written in the same save.
         $query->where(function (Builder $scoped) use ($term, $like): void {
             if ($scoped->getConnection()->getDriverName() === 'mysql') {
-                $scoped->whereFullText(['subject', 'description'], $term);
+                $scoped->whereFullText(['subject', 'description_text'], $term);
             }
 
             $scoped->orWhere('tickets.subject', 'like', $like)
-                ->orWhere('tickets.description', 'like', $like)
+                ->orWhere('tickets.description_text', 'like', $like)
                 ->orWhere('tickets.key', 'like', $like);
         });
     }
