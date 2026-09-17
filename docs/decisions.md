@@ -1114,3 +1114,36 @@ nothing about an image building.
 What makes it worth recording rather than quietly fixing: the checks that
 caught these were already written and already running. They were not being
 read.
+
+## D60 — Four LDAP tests that had never run
+
+The same pull request turned up four failing tests in
+`LdapAuthenticationTest`, all reporting nothing more useful than "These
+credentials do not match our records". They had been red since phase 1 and
+invisible locally, because the file skips itself when `ext-ldap` is missing and
+the extension was not installed in the development container. A skipped test
+looks exactly like a passing one at the bottom of the run.
+
+Building the extension and running them turned one symptom into two bugs.
+
+**The distinguished name is an attribute like any other.** A raw LDAP search
+result is a bag of multi-valued attributes, and `dn` is not exempt: some
+servers return the plain string, others return `['count' => 1, 0 => '…']`.
+Casting the array form to string is a PHP warning, Laravel promotes warnings to
+`ErrorException`, and `LdapAuthenticator::attempt()` catches `Throwable` so one
+directory being unreachable cannot block local sign-in. The result was a
+sign-in that failed with a generic message and a log line reading "Array to
+string conversion". Both shapes are now normalised at the single point where
+the entry enters the application.
+
+**A revoked group has to revoke the role.** Group mapping recomputed roles when
+somebody matched a mapped group, but fell back to "assign the default role
+unless they already have one" when nobody matched — so taking a person out of
+the service desk group in AD left their agent role in place forever. With a
+group map configured, the directory is authoritative and the account is reset
+to the default role.
+
+The one carve-out: when `sync_groups` is on but the map is still empty, nothing
+is recomputed. That is the state an administrator is in halfway through
+configuring the screen, and flattening every account to the default role at
+that moment would lock them out of it.

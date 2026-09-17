@@ -8,6 +8,11 @@ the conventions the codebase follows, and what CI will check.
 Requirements: PHP 8.4+ with `bcmath`, `intl`, `mbstring`, `pdo_mysql`, `zip`;
 Composer 2; Node 22.
 
+Add `ldap` as well. The application does not need it — directory sign-in simply
+stays unavailable — but the directory tests skip themselves without it, and a
+skipped test reads like a passing one at the bottom of the run. CI installs it,
+so anything it hides locally surfaces there instead.
+
 ```bash
 composer install
 npm install

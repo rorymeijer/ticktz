@@ -75,13 +75,14 @@ class LdapAuthenticator
             return null;
         }
 
+        $entry = $this->normalise($entry);
         $dn = (string) ($entry['dn'] ?? '');
 
         if ($dn === '' || ! $connection->auth()->attempt($dn, $password)) {
             return null;
         }
 
-        return $this->synchronizer->sync($config, $this->normalise($entry));
+        return $this->synchronizer->sync($config, $entry);
     }
 
     /**
@@ -140,10 +141,18 @@ class LdapAuthenticator
             $normalised[is_string($key) ? mb_strtolower($key) : $key] = $value;
         }
 
+        // A raw search result is a bag of multi-valued attributes, and the
+        // distinguished name is not exempt: some servers hand it back as the
+        // plain string, others as a one-element array like every other
+        // attribute. Casting the array straight to string is a PHP warning —
+        // which Laravel promotes to an ErrorException, so the whole sign-in
+        // fails with nothing but "credentials do not match" to show for it.
+        if (isset($normalised['dn'])) {
+            $normalised['dn'] = self::firstOf($normalised['dn']);
+        }
+
         if (isset($normalised['objectguid'])) {
-            $raw = is_array($normalised['objectguid'])
-                ? Arr::first(Arr::except($normalised['objectguid'], ['count']))
-                : $normalised['objectguid'];
+            $raw = self::firstOf($normalised['objectguid']);
 
             try {
                 $normalised['objectguid'] = (new Guid($raw))->getValue();
@@ -153,5 +162,16 @@ class LdapAuthenticator
         }
 
         return $normalised;
+    }
+
+    /**
+     * The first value of an LDAP attribute, whether the server returned it as
+     * a scalar or as the usual `['count' => 1, 0 => 'value']` array.
+     */
+    private static function firstOf(mixed $value): mixed
+    {
+        return is_array($value)
+            ? Arr::first(Arr::except($value, ['count']))
+            : $value;
     }
 }

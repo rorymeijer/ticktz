@@ -29,7 +29,9 @@ class LdapUserSynchronizer
      */
     public function sync(LdapConfig $config, array $entry): ?User
     {
-        $dn = (string) ($entry['dn'] ?? '');
+        // firstValue() rather than a cast: a directory may hand the DN back
+        // as a one-element array like any other attribute.
+        $dn = (string) ($this->firstValue($entry, 'dn') ?? '');
         $guid = $this->guidFrom($entry);
         $attributes = $this->mapAttributes($config, $entry);
 
@@ -171,28 +173,56 @@ class LdapUserSynchronizer
 
         $roles = array_values(array_unique($roles));
 
-        if ($roles === []) {
-            $this->assignFallbackRole($config, $user);
+        if ($roles !== []) {
+            $user->syncRoleNames($roles);
 
             return;
         }
 
-        $user->syncRoleNames($roles);
+        // Nobody matched a mapped group. With a map configured the directory
+        // is authoritative, so somebody who has been taken out of the service
+        // desk group in AD drops back to the default role here on their next
+        // sign-in — keeping the role they used to have would mean access
+        // survives being revoked upstream.
+        //
+        // With no map configured there is nothing to recompute from: group
+        // sync was switched on before the mapping was filled in, and flattening
+        // every account to the default role at that moment would lock the
+        // administrator out of the screen they were about to use.
+        $map === []
+            ? $this->assignFallbackRole($config, $user)
+            : $this->resetToFallbackRole($config, $user);
     }
 
+    /** Give the user the default role, but only if they have none at all. */
     private function assignFallbackRole(LdapConfig $config, User $user): void
     {
         if ($user->roles()->exists()) {
             return;
         }
 
-        $role = $config->default_role_id
-            ? Role::query()->find($config->default_role_id)
-            : Role::query()->where('is_default', true)->first();
+        $role = $this->fallbackRole($config);
 
         if ($role) {
             $user->roles()->syncWithoutDetaching([$role->getKey()]);
         }
+    }
+
+    /** Replace whatever the user has with the default role. */
+    private function resetToFallbackRole(LdapConfig $config, User $user): void
+    {
+        $role = $this->fallbackRole($config);
+
+        // syncRoleNames() rather than the pivot: it also drops the resolved
+        // permission cache, so the demotion takes effect within this request.
+        $user->syncRoleNames($role ? [$role->name] : []);
+    }
+
+    private function fallbackRole(LdapConfig $config): ?Role
+    {
+        return $config->default_role_id
+            ? Role::query()->find($config->default_role_id)
+            : Role::query()->where('is_default', true)->first();
     }
 
     /**

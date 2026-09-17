@@ -178,6 +178,17 @@ settings change without a deploy.
 
 `config/ldap.php` holds only the driver-level defaults.
 
+Directory sign-in needs `ext-ldap`. Ticktz runs without it — the directory
+screens simply stay unavailable — but the bundled image ships with it.
+
+**Group mapping.** With *Sync groups* on and at least one group mapped to a
+role, the directory decides what somebody may do: roles are recomputed on every
+sign-in, so taking a person out of a group upstream drops them back to the
+default role here the next time they log in. With the map still empty nothing
+is recomputed and existing roles are left alone, so switching group sync on
+before filling the mapping in cannot demote you out of the screen you are
+configuring.
+
 ## Docker
 
 | Variable | Default | Notes |
