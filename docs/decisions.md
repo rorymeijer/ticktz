@@ -1240,15 +1240,19 @@ look like another.
 rendered into both parts of a message; asking somebody editing a notification
 to think about markup would be a worse editor, not a better one.
 
-**Inbound e-mail still arrives as text.** The HTML part of a customer's reply
-is not kept. What makes a mail thread readable is cutting the quoted history
-off the bottom, and that is far more reliable on text than on the nested
-`<blockquote>` and vendor-specific wrapper divs every client emits differently.
-A reply is converted to paragraphs like any other plain text. Keeping the
-customer's formatting would be nice; keeping their last four replies quoted
-underneath it would not.
+**Inbound e-mail still arrives as text.** ~~The HTML part of a customer's reply
+is not kept.~~ **Superseded by D65.** The reasoning below was sound and the
+conclusion was wrong: cutting the quoted history *is* harder on HTML than on
+text, which is an argument for doing that work rather than for throwing the
+customer's formatting away. It is done now.
 
-**Inline images are not in yet.** Pasting a screenshot into a reply is the
+> What makes a mail thread readable is cutting the quoted history off the
+> bottom, and that is far more reliable on text than on the nested
+> `<blockquote>` and vendor-specific wrapper divs every client emits
+> differently. Keeping the customer's formatting would be nice; keeping their
+> last four replies quoted underneath it would not.
+
+**Inline images are not in yet.** *(Done in D63.)* Pasting a screenshot into a reply is the
 obvious next thing to want, and it needs an upload path, storage, and a policy
 deciding who may read the file — the attachment system already has all three,
 so it is a feature to add rather than a limitation to design around. The
@@ -1363,3 +1367,60 @@ needed no Docker to find. Running the dev server and reading the file it writes
 would have shown `http://0.0.0.0:5173` on any machine. It was not found because
 nobody looked at the development path at all — the built bundle was what every
 check exercised, and the hot file only exists on the path no check took.
+
+## D65 — Finding where the person stopped writing
+
+Inbound mail keeps its formatting now. A customer who sends a numbered list
+arrives with a numbered list, rather than four lines that happen to begin with
+digits.
+
+D62 said this would not be done, and gave a real reason: the hard part of
+inbound mail is not the markup, it is knowing where the reply ends and the
+quoted thread begins, and that is genuinely harder on HTML than on text. What
+that reason actually argues for is doing the work. Throwing away what the
+customer wrote because the boundary is hard to find is solving the wrong
+problem — the boundary has to be found either way, since a reply with its last
+four exchanges quoted underneath is unreadable in any format.
+
+**Every client marks the boundary differently and none of them agree.** Gmail
+wraps the history in `div.gmail_quote`; Outlook puts a `divRplyFwdMsg` header
+above it; Apple Mail uses `blockquote type="cite"`; Thunderbird writes a
+`moz-cite-prefix` line; Proton, Yahoo and Zoho each have their own class. And
+plenty of clients mark it with nothing at all beyond the sentence "On … wrote:".
+
+So the rule is: find the earliest point in the document that is unambiguously
+the start of the quoted thread, drop it and everything after it, and touch
+nothing else. Each rule is one a client actually emits — none of it is a guess
+about what a quote might look like.
+
+**Conservative where it matters.** A cut that takes too much loses what the
+customer wrote, which is far worse than a reply carrying one quoted paragraph
+too many: the second is obviously wrong to whoever reads it, and the first is
+invisible. So a cut that would leave nothing behind is refused outright, which
+keeps a bare forward whole; an attribution line is only read as one when it is
+short, because an element that begins "From:" and runs for three paragraphs is
+somebody quoting a header inside their own sentence.
+
+The first version of that guard walked the tree by hand and had it exactly
+backwards — it cut the one case the guard exists to protect. A test caught it,
+and `preceding::text()` now asks the question in one expression instead of ten
+lines of traversal. That is the second time in this work that hand-rolled tree
+walking was the bug and XPath was the fix.
+
+**The text part is not a fallback for rare cases.** Plenty of mail is sent as
+text, and some HTML mail turns out to be nothing but a quoted thread once the
+reply has been taken out of it. Both land in the same shape as anything typed
+into the editor.
+
+**Signatures stop carrying pixels.** Inbound mail goes through the same
+sanitiser as everything else, and the message profile only allows an image this
+instance is serving — so the remote `<img>` in a mail signature is dropped.
+That was not the goal of this change and it is the part with the most security
+in it: a tracking pixel in a customer's signature reports on whichever agent
+opens the ticket, and every agent it is escalated to afterwards.
+
+What is still not kept: images the customer attached inline with `cid:`. The
+files are stored as attachments and listed on the ticket as they always were,
+but the picture does not appear in the body. Mapping a `cid:` reference onto
+the attachment it belongs to is the obvious next step and a smaller one than
+this was.

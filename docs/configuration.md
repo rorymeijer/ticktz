@@ -201,7 +201,8 @@ screenshot on an internal note is not readable by the requester.
 | `TICKTZ_UPLOAD_RATE_LIMIT` | `30` | Uploads per minute per person |
 
 A message may only show an image this instance is serving. A remote one is a
-tracking pixel — see D63. Articles may still embed a remote image, because they
+tracking pixel — see D63. That applies to inbound mail too: the remote images
+in a customer's signature are dropped when the reply is filed. Articles may still embed a remote image, because they
 are written by staff on purpose; that is one line to change if you would rather
 they could not.
 

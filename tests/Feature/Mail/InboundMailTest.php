@@ -331,3 +331,89 @@ it('recovers the ticket key from a message id it generated', function (): void {
     expect(TicketMailer::ticketKeyFromMessageId('<ticktz.SUP-1042.17.9f2ab3c1@ticktz.test>'))->toBe('SUP-1042')
         ->and(TicketMailer::ticketKeyFromMessageId('<CAF=abc123@mail.gmail.com>'))->toBeNull();
 });
+
+// -----------------------------------------------------------------
+// The formatting a customer sent
+// -----------------------------------------------------------------
+
+/**
+ * A customer who sent a numbered list should arrive with a numbered list,
+ * rather than four lines that happen to start with digits.
+ */
+it('keeps the formatting of an html mail', function (): void {
+    $record = $this->processor->process($this->channel, inboundMail([
+        'text' => 'Two things: it is slow, and it is loud.',
+        'html' => '<p>Two things:</p><ol><li>It is <strong>slow</strong></li><li>And <em>loud</em></li></ol>',
+    ]));
+
+    $ticket = Ticket::query()->findOrFail($record->ticket_id);
+
+    expect($ticket->description)->toContain('<ol>')
+        ->and($ticket->description)->toContain('<strong>slow</strong>')
+        ->and($ticket->description)->toContain('<em>loud</em>')
+        // And the words are still searchable, without any of the tags.
+        ->and($ticket->description_text)->toContain('It is slow')
+        ->and($ticket->description_text)->not->toContain('strong');
+});
+
+it('cuts the quoted thread out of an html reply', function (): void {
+    $opened = $this->processor->process($this->channel, inboundMail());
+    $ticket = Ticket::query()->findOrFail($opened->ticket_id);
+
+    $this->processor->process($this->channel, inboundMail([
+        'subject' => "Re: [{$ticket->key}] Printer",
+        'text' => null,
+        'html' => '<div dir="ltr">Still broken.</div>'
+            .'<div class="gmail_quote"><blockquote class="gmail_quote">'
+            .'<p>Have you tried turning it off?</p></blockquote></div>',
+    ]));
+
+    $comment = $ticket->comments()->latest('id')->first();
+
+    expect($comment->body_text)->toBe('Still broken.')
+        ->and($comment->body)->not->toContain('turning it off');
+});
+
+/**
+ * A mail signature is the easiest place in the world to hide a tracking pixel,
+ * and the person it reports on is whichever agent opens the ticket.
+ */
+it('drops the remote images a signature carries', function (): void {
+    $record = $this->processor->process($this->channel, inboundMail([
+        'text' => null,
+        'html' => '<p>The lift is stuck.</p><img src="https://tracker.test/pixel.gif" width="1" height="1">',
+    ]));
+
+    $ticket = Ticket::query()->findOrFail($record->ticket_id);
+
+    expect($ticket->description)->toContain('The lift is stuck')
+        ->and($ticket->description)->not->toContain('<img')
+        ->and($ticket->description)->not->toContain('tracker.test');
+});
+
+/**
+ * An HTML part that is nothing but a quoted thread leaves the rich path with
+ * nothing to keep. The text part is not a rare fallback.
+ */
+it('falls back to the text part when the html holds nothing', function (): void {
+    $record = $this->processor->process($this->channel, inboundMail([
+        'text' => 'Plain and simple.',
+        'html' => '<div><style>p{color:red}</style></div>',
+    ]));
+
+    $ticket = Ticket::query()->findOrFail($record->ticket_id);
+
+    expect($ticket->description_text)->toBe('Plain and simple.');
+});
+
+it('still escapes what a plain-text mail only looks like', function (): void {
+    $record = $this->processor->process($this->channel, inboundMail([
+        'text' => 'It fails when a < b. See <3 attached.',
+        'html' => null,
+    ]));
+
+    $ticket = Ticket::query()->findOrFail($record->ticket_id);
+
+    expect($ticket->description)->toContain('&lt;3')
+        ->and($ticket->description_text)->toBe('It fails when a < b. See <3 attached.');
+});
