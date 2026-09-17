@@ -135,7 +135,7 @@ COPY --from=assets /app/public/build /usr/src/ticktz/public/build
 RUN rm -f /usr/src/ticktz/public/hot \
           /usr/src/ticktz/.env \
           /usr/src/ticktz/bootstrap/cache/*.php \
-    && find /usr/src/ticktz/storage -type f ! -name '.gitignore' -delete
+    && find /usr/src/ticktz/storage -type f ! -name '.gitignore' -exec rm -f {} +
 
 RUN mkdir -p /usr/src/ticktz/storage/framework/{cache,sessions,testing,views} \
         /usr/src/ticktz/storage/logs \
