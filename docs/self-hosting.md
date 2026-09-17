@@ -350,6 +350,36 @@ pull` no longer moves you to whatever the image has unless that image is
 compares versions — but the running version is the higher of the two, not
 whichever you pulled last.
 
+#### If a command is refused for running in production, and you are not in production
+
+Or the reverse: a setting you changed in `.env` has no effect, `printenv`
+inside the container shows one value and `config(...)` reports another.
+
+You are probably in the other stack. The two compose files describe two
+separate stacks — `ticktz` for production, `ticktz-dev` for development — and a
+`docker compose` command without `-f` reads `docker-compose.yml`, so it talks
+to the development stack. Name the file you mean:
+
+```bash
+docker compose ps                                  # development
+docker compose -f docker-compose.prod.yml ps       # production
+```
+
+Before 1.1.3 both files were named `ticktz`, which made them one stack as far
+as Compose was concerned: bringing either up replaced the other's containers,
+and a bare `docker compose exec app` reached whichever had gone up last. If you
+started your instance before 1.1.3, your development containers still carry the
+old name. Remove them once, and the two stacks stop colliding:
+
+```bash
+docker compose -f docker-compose.prod.yml down     # or `docker compose down`
+docker compose up -d --build
+```
+
+Nothing is lost that you want to keep: the development stack's database is demo
+data, and the production stack's data lives in `ticktz_mysql` and
+`ticktz_storage`, which `down` without `-v` never touches.
+
 #### If every page is a 500 and the log says MissingAppKeyException
 
 The instance has no `APP_KEY`. Set one in your `.env` — that is where it
@@ -592,7 +622,7 @@ once — and `-v` alone would take the database with it:
 
 ```bash
 docker compose down
-docker volume rm ticktz_vendor
+docker volume rm ticktz-dev_vendor
 docker compose up --build
 ```
 

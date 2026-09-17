@@ -11,6 +11,20 @@ fi
 
 cd "${TICKTZ_APP_ROOT:-/var/www/html}"
 
+# Throw away the compiled config before anything reads it.
+#
+# It is a snapshot of the environment as it stood during some earlier boot, and
+# it lives in the code volume, so it outlives the boot that wrote it. An
+# instance that once came up without an APP_KEY has a compiled config saying
+# there is no key, and keeps answering from it even after the key exists —
+# `printenv APP_KEY` shows the key, `config('app.key')` says there is none, and
+# nothing in either answer explains the other.
+#
+# Production compiles a fresh one at the end of this script, once the
+# environment is settled. Everywhere else the framework reads .env directly,
+# which is what a developer changing a setting expects.
+rm -f bootstrap/cache/config.php
+
 # Wait for the database before doing anything that touches it. Compose health
 # checks already gate startup, but self-hosters sometimes point Ticktz at an
 # external MySQL that is slower to come up.

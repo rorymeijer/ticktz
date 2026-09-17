@@ -8,7 +8,13 @@
 # For production use docker-compose.prod.yml instead.
 # ---------------------------------------------------------------------------
 
-name: ticktz
+# A different project from the production stack, deliberately. Compose treats
+# `name` as the identity of the stack, so two files sharing one name are two
+# descriptions of the *same* containers: bringing one up replaces the other's,
+# and a bare `docker compose exec app` then reaches whichever went up last —
+# which is how a development command ends up running against the production
+# container and being refused for running in production.
+name: ticktz-dev
 
 x-app-base: &app-base
   build:
