@@ -34,7 +34,7 @@ interface PortalRequest {
     assignee: UserSummary | null;
     created_at: string | null;
     resolved_at: string | null;
-    fields: { key: string; label: string; display: string }[];
+    fields: { key: string; label: string; type: string; value: unknown; display: string }[];
     attachments: AttachmentSummary[];
 }
 
@@ -152,7 +152,13 @@ export default function PortalRequestShow({
                                             <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
                                                 {field.label}
                                             </dt>
-                                            <dd className="mt-0.5 text-sm text-slate-800">{field.display}</dd>
+                                            <dd className="mt-0.5 text-sm text-slate-800">
+                                                {field.type === 'textarea' ? (
+                                                    <RichText html={String(field.value ?? '')} />
+                                                ) : (
+                                                    field.display
+                                                )}
+                                            </dd>
                                         </div>
                                     ))}
                                 </dl>

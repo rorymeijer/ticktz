@@ -16,6 +16,7 @@ import {
 } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import { slugify } from '@/lib/slug';
+import { RichTextField } from '@/Components/RichText/RichTextField';
 
 interface OrganizationPayload {
     id: number;
@@ -98,16 +99,13 @@ export default function OrganizationForm({ organization }: { organization: Organ
                             )}
                         </Field>
 
-                        <Field label={t('common.labels.description')} error={form.errors.description}>
-                            {(props) => (
-                                <Textarea
-                                    {...props}
-                                    rows={2}
-                                    value={form.data.description}
-                                    onChange={(event) => form.setData('description', event.target.value)}
-                                />
-                            )}
-                        </Field>
+                        <RichTextField
+                            label={t('common.labels.description')}
+                            error={form.errors.description}
+                            value={form.data.description}
+                            onChange={(html) => form.setData('description', html)}
+                            minHeight="5rem"
+                        />
 
                         <Field
                             label={t('admin.organizations.fields.email_domains')}

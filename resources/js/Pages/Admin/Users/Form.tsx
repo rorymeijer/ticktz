@@ -18,6 +18,7 @@ import {
     Toggle,
 } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
+import { RichTextField } from '@/Components/RichText/RichTextField';
 
 interface RoleOption {
     id: number;
@@ -291,20 +292,14 @@ export default function UserForm({
                             </div>
 
                             {isEdit ? (
-                                <Field
+                                <RichTextField
                                     label={t('admin.users.fields.signature')}
                                     help={t('admin.users.fields.signature_help')}
                                     error={form.errors.signature}
-                                >
-                                    {(props) => (
-                                        <Textarea
-                                            {...props}
-                                            rows={3}
-                                            value={form.data.signature}
-                                            onChange={(event) => form.setData('signature', event.target.value)}
-                                        />
-                                    )}
-                                </Field>
+                                    value={form.data.signature}
+                                    onChange={(html) => form.setData('signature', html)}
+                                    minHeight="6rem"
+                                />
                             ) : null}
 
                             <Toggle

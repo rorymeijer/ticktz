@@ -18,6 +18,7 @@ import type { AssetSummary } from '@/types/assets';
 import type { KbArticleSummary } from '@/types/kb';
 import type { TicketDetail, TicketOptions, TimelineItem, TransitionOption } from '@/types/tickets';
 import { RichText } from '@/Components/RichText/RichText';
+import { RichTextEditor } from '@/Components/RichText/RichTextEditor';
 
 export default function TicketShow({
     ticket,
@@ -216,13 +217,13 @@ function TransitionDialog({
                 </>
             }
         >
-            <Textarea
+            <RichTextEditor
                 value={form.data.comment}
-                onChange={(event) => form.setData('comment', event.target.value)}
-                rows={4}
-                autoFocus
-                aria-label={t('tickets.actions.reply')}
+                onChange={(html) => form.setData('comment', html)}
+                label={t('tickets.actions.reply')}
                 placeholder={t('tickets.placeholders.reply')}
+                invalid={Boolean(form.errors.comment)}
+                minHeight="7rem"
             />
             {form.errors.comment ? <p className="mt-1 text-xs text-red-600">{form.errors.comment}</p> : null}
         </Modal>

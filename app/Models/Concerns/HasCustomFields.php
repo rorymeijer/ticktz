@@ -7,6 +7,7 @@ namespace App\Models\Concerns;
 use App\Models\CustomField;
 use App\Models\CustomFieldValue;
 use App\Models\User;
+use App\Services\RichText\RichTextSanitizer;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Collection;
 
@@ -133,6 +134,13 @@ trait HasCustomFields
 
         if ($field->type === 'user') {
             return User::query()->whereKey($typed)->value('name') ?? (string) $typed;
+        }
+
+        // `display` is a string for a table cell or a summary line, so a rich
+        // field is flattened here. The markup is still in `value`, which is
+        // what a detail page renders.
+        if ($field->type === 'textarea') {
+            return app(RichTextSanitizer::class)->toLine((string) $typed);
         }
 
         return is_array($typed) ? implode(', ', $typed) : (string) $typed;

@@ -14,6 +14,7 @@ import { cn } from '@/lib/cn';
 import { deadline, relativeTime } from '@/lib/datetime';
 import type { Paginated } from '@/types';
 import type { Approval } from '@/types/approvals';
+import { RichText } from '@/Components/RichText/RichText';
 
 /**
  * One approval inbox for everybody.
@@ -115,9 +116,7 @@ function ApprovalCard({ approval }: { approval: Approval }) {
                         <h3 className="mt-1.5 font-medium text-slate-900">{approval.subject}</h3>
 
                         {approval.reason ? (
-                            <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-                                {approval.reason}
-                            </p>
+                            <RichText html={approval.reason} className="mt-1 text-slate-600" />
                         ) : null}
 
                         <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">

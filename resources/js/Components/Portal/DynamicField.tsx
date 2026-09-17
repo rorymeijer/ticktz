@@ -1,5 +1,6 @@
 import { Checkbox, Field, Select, TextInput, Textarea } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
+import { RichTextField } from '@/Components/RichText/RichTextField';
 
 export interface FieldDefinition {
     id: number;
@@ -79,22 +80,31 @@ export function DynamicField({
         );
     }
 
+    /*
+     * Handled before the Field wrapper rather than inside it: the editor is a
+     * contenteditable, and `<label for>` binds only to real form controls, so
+     * it needs the label to carry an id and the field an aria-labelledby.
+     * RichTextField is that same wrapper, done that way.
+     */
+    if (field.type === 'textarea') {
+        return (
+            <RichTextField
+                label={field.label}
+                help={field.help_text}
+                error={error}
+                required={field.is_required}
+                value={String(value ?? '')}
+                onChange={onChange}
+                placeholder={field.placeholder ?? undefined}
+                minHeight="7rem"
+            />
+        );
+    }
+
     return (
         <Field label={field.label} help={field.help_text} error={error} required={field.is_required}>
             {(props) => {
                 switch (field.type) {
-                    case 'textarea':
-                        return (
-                            <Textarea
-                                {...props}
-                                rows={4}
-                                value={String(value ?? '')}
-                                required={field.is_required}
-                                placeholder={field.placeholder ?? undefined}
-                                onChange={(event) => onChange(event.target.value)}
-                            />
-                        );
-
                     case 'select':
                         return (
                             <Select

@@ -18,6 +18,7 @@ import {
 import { useTranslations } from '@/hooks/useTranslations';
 import type { PrioritySummary } from '@/types/tickets';
 import { RichTextField } from '@/Components/RichText/RichTextField';
+import { RichText } from '@/Components/RichText/RichText';
 
 interface RequestTypePayload {
     id: number;
@@ -104,9 +105,10 @@ export default function RequestForm({
                 </div>
 
                 {requestType.instructions ? (
-                    <div className="mb-5 whitespace-pre-wrap rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
-                        {requestType.instructions}
-                    </div>
+                    <RichText
+                        html={requestType.instructions}
+                        className="mb-5 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sky-900"
+                    />
                 ) : null}
 
                 <form onSubmit={submit}>

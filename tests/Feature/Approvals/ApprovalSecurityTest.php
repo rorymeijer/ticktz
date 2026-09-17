@@ -151,7 +151,7 @@ it('decides on the post from that page', function (): void {
 
     expect($approval->status)->toBe(ApprovalRequest::APPROVED)
         ->and($approval->decisions->first()->source)->toBe('email')
-        ->and($approval->decisions->first()->comment)->toBe('Fine by me');
+        ->and($approval->decisions->first()->comment)->toBe('<p>Fine by me</p>');
 });
 
 /**

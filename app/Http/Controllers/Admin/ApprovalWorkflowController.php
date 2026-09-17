@@ -174,7 +174,7 @@ class ApprovalWorkflowController extends Controller
                 Rule::unique('approval_workflows', 'slug')->ignore($workflow?->getKey()),
             ],
             'description' => ['nullable', 'string', 'max:255'],
-            'instructions' => ['nullable', 'string', 'max:2000'],
+            'instructions' => ['nullable', 'string', 'max:10000'],
             'is_active' => ['boolean'],
 
             'steps' => ['array', 'max:10'],

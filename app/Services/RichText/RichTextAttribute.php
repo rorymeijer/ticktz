@@ -29,5 +29,14 @@ final readonly class RichTextAttribute
         public ?string $text = null,
         /** Whether an empty value should be stored as NULL or as ''. */
         public bool $nullable = true,
+        /**
+         * The companion JSON column holding the same field in other languages,
+         * or null where the field is not translated.
+         *
+         * A translated field is the same field, so every language in it gets
+         * the same treatment. Sanitising only the default one would leave the
+         * Dutch version of an instruction as the way in.
+         */
+        public ?string $translations = null,
     ) {}
 }

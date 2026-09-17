@@ -256,7 +256,17 @@ export function TicketSidebar({
                     title={t('tickets.fields.links')}
                     actions={
                         can.link ? (
-                            <Button size="sm" variant="ghost" onClick={() => setLinking((value) => !value)}>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                // An icon is aria-hidden, so a button holding
+                                // nothing else has no accessible name at all —
+                                // a screen reader announces "button" and stops.
+                                aria-label={t('tickets.actions.link')}
+                                title={t('tickets.actions.link')}
+                                aria-expanded={linking}
+                                onClick={() => setLinking((value) => !value)}
+                            >
                                 <IconPlus className="h-3.5 w-3.5" />
                             </Button>
                         ) : null

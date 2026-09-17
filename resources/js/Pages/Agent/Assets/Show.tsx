@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link, router, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -22,6 +23,7 @@ import {
 import { useTranslations } from '@/hooks/useTranslations';
 import { formatDate } from '@/lib/datetime';
 import type { AssetDetail, AssetOptions, AssetRelationView, AssetSummary, AssetTicket } from '@/types/assets';
+import { RichText } from '@/Components/RichText/RichText';
 
 export default function AssetShow({
     asset,
@@ -113,9 +115,7 @@ export default function AssetShow({
                             </dl>
 
                             {asset.notes ? (
-                                <div className="mt-4 whitespace-pre-wrap border-t border-slate-100 pt-4 text-sm leading-6 text-slate-700">
-                                    {asset.notes}
-                                </div>
+                                <RichText html={asset.notes} className="mt-4 border-t border-slate-100 pt-4" />
                             ) : null}
                         </CardBody>
                     </Card>
@@ -126,7 +126,17 @@ export default function AssetShow({
                             <CardBody>
                                 <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
                                     {asset.fields.map((field) => (
-                                        <Detail key={field.key} label={field.label} value={field.display} />
+                                        <Detail
+                                            key={field.key}
+                                            label={field.label}
+                                            value={
+                                                field.type === 'textarea' ? (
+                                                    <RichText html={String(field.value ?? '')} />
+                                                ) : (
+                                                    field.display
+                                                )
+                                            }
+                                        />
                                     ))}
                                 </dl>
                             </CardBody>
@@ -253,7 +263,16 @@ export default function AssetShow({
     );
 }
 
-function Detail({ label, value, mono = false }: { label: string; value?: string | null; mono?: boolean }) {
+function Detail({
+    label,
+    value,
+    mono = false,
+}: {
+    label: string;
+    // A node as well as a string: a rich custom field renders its markup here.
+    value?: ReactNode;
+    mono?: boolean;
+}) {
     if (!value) {
         return null;
     }

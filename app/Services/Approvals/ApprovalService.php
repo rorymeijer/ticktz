@@ -14,6 +14,7 @@ use App\Models\ApprovalWorkflow;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\RichText\RichTextSanitizer;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -42,6 +43,7 @@ class ApprovalService
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly ApprovalNotifier $notifier,
+        private readonly RichTextSanitizer $richText,
     ) {}
 
     /**
@@ -156,7 +158,19 @@ class ApprovalService
             ->where('decision', ApprovalDecision::PENDING)
             ->update([
                 'decision' => $outcome,
-                'comment' => $comment ? mb_substr($comment, 0, 2000) : null,
+                // Cleaned here, not by HasRichText: this is a query-builder
+                // update rather than a model save — deliberately, so the claim
+                // below is atomic — and Eloquent fires no model events for
+                // one. The trait cannot cover a write that never touches the
+                // model, so the write has to do it itself.
+                //
+                // Truncating first and sanitising after is the order that
+                // matters: the sanitiser parses and re-serialises, so a cut
+                // that lands mid-tag is repaired rather than stored as an
+                // unclosed element that swallows the rest of the page.
+                'comment' => $comment
+                    ? ($this->richText->clean(mb_substr($comment, 0, 20_000)) ?: null)
+                    : null,
                 'source' => $source,
                 'decided_at' => now(),
                 'token_hash' => null,

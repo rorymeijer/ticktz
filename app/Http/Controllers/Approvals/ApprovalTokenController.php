@@ -81,7 +81,7 @@ class ApprovalTokenController extends Controller
     {
         $data = $request->validate([
             'decision' => ['required', Rule::in(ApprovalDecision::OUTCOMES)],
-            'comment' => ['nullable', 'string', 'max:2000'],
+            'comment' => ['nullable', 'string', 'max:10000'],
         ]);
 
         // Re-resolved from the token rather than trusted from the form: the

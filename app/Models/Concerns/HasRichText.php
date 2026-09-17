@@ -25,6 +25,13 @@ use Illuminate\Database\Eloquent\Model;
  * and a search index that disagrees with what is on screen is worse than no
  * index at all.
  *
+ * **The one thing it cannot cover** is a write that never touches the model.
+ * `Builder::update()` and `DB::table()->update()` fire no model events, so a
+ * service that updates a rich text column that way — `ApprovalService::decide()`
+ * does, because its claim has to be atomic — has to sanitise the value itself.
+ * There is no way to make Eloquent catch those, so the rule is: if you are
+ * writing rich text without saving a model, clean it on the way.
+ *
  * Models declare their columns:
  *
  *     protected static function richTextAttributes(): array
@@ -41,6 +48,13 @@ trait HasRichText
             $sanitizer = app(RichTextSanitizer::class);
 
             foreach (static::richTextAttributes() as $column => $rich) {
+                if ($rich->translations !== null && $model->isDirty($rich->translations)) {
+                    $model->setAttribute($rich->translations, $sanitizer->cleanEach(
+                        (array) ($model->getAttribute($rich->translations) ?? []),
+                        $rich->profile,
+                    ));
+                }
+
                 // Only what changed. Re-cleaning an untouched column on every
                 // save would rewrite history the moment the allowlist changes,
                 // which is not a decision a status change should be making.

@@ -266,7 +266,7 @@ class AssetController extends Controller
             'warranty_ends_at' => ['nullable', 'date'],
             'purchase_cost' => ['nullable', 'integer', 'min:0'],
             'currency' => ['nullable', 'string', 'size:3'],
-            'notes' => ['nullable', 'string', 'max:5000'],
+            'notes' => ['nullable', 'string', 'max:20000'],
             'fields' => ['array'],
         ]);
     }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasRichText;
+use App\Services\RichText\RichTextAttribute;
 use Database\Factories\RequestTypeFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class RequestType extends Model
 {
     /** @use HasFactory<RequestTypeFactory> */
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, HasRichText;
 
     protected $fillable = [
         'portal_category_id', 'name', 'name_translations', 'slug', 'description',
@@ -32,6 +34,16 @@ class RequestType extends Model
         'queue_id', 'team_id', 'workflow_id', 'approval_workflow_id', 'priority_id', 'allow_priority_choice',
         'subject_template', 'visibility', 'organization_ids', 'is_active', 'position',
     ];
+
+    /**
+     * @return array<string, RichTextAttribute>
+     */
+    protected static function richTextAttributes(): array
+    {
+        return [
+            'instructions' => new RichTextAttribute(translations: 'instructions_translations'),
+        ];
+    }
 
     protected function casts(): array
     {

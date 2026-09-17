@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\RichText;
 
+use Closure;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -30,7 +31,7 @@ class RichTextBackfill
      * @param  string  $html  the column holding the content, which becomes rich text
      * @param  string|null  $text  the companion column to fill with the flattened text
      */
-    public function convert(string $table, string $html, ?string $text = null): void
+    public function convert(string $table, string $html, ?string $text = null, ?Closure $only = null): void
     {
         $this->each($table, $html, function (int|string $id, string $value) use ($table, $html, $text): void {
             $update = [$html => $this->sanitizer->fromPlainText($value)];
@@ -40,6 +41,33 @@ class RichTextBackfill
             }
 
             DB::table($table)->where('id', $id)->update($update);
+        }, $only);
+    }
+
+    /**
+     * The same, for a translated field: a JSON column holding one value per
+     * language, each of which is the same kind of prose as the default one.
+     */
+    public function convertTranslations(string $table, string $column): void
+    {
+        $this->each($table, $column, function (int|string $id, string $value) use ($table, $column): void {
+            $decoded = json_decode($value, true);
+
+            if (! is_array($decoded) || $decoded === []) {
+                return;
+            }
+
+            $converted = [];
+
+            foreach ($decoded as $locale => $text) {
+                $converted[$locale] = is_string($text) && trim($text) !== ''
+                    ? $this->sanitizer->fromPlainText($text)
+                    : $text;
+            }
+
+            DB::table($table)->where('id', $id)->update([
+                $column => json_encode($converted, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ]);
         });
     }
 
@@ -48,20 +76,24 @@ class RichTextBackfill
      * is, so a downgrade lands on something a textarea can render rather than
      * on tag soup.
      */
-    public function flatten(string $table, string $html): void
+    public function flatten(string $table, string $html, ?Closure $only = null): void
     {
         $this->each($table, $html, function (int|string $id, string $value) use ($table, $html): void {
             DB::table($table)->where('id', $id)->update([$html => $this->sanitizer->toText($value)]);
-        });
+        }, $only);
     }
 
     /**
      * @param  callable(int|string, string): void  $handle
+     * @param  Closure|null  $only  narrows the rows to convert — a table that
+     *                              holds more than one kind of value in one
+     *                              column, say
      */
-    private function each(string $table, string $column, callable $handle): void
+    private function each(string $table, string $column, callable $handle, ?Closure $only = null): void
     {
         DB::table($table)
             ->select('id', $column)
+            ->when($only !== null, $only)
             ->orderBy('id')
             // Chunked: a desk with a hundred thousand tickets should not need a
             // hundred thousand rows in memory to be upgraded.

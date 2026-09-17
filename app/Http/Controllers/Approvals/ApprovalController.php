@@ -82,7 +82,7 @@ class ApprovalController extends Controller
 
         $data = $request->validate([
             'decision' => ['required', Rule::in(ApprovalDecision::OUTCOMES)],
-            'comment' => ['nullable', 'string', 'max:2000'],
+            'comment' => ['nullable', 'string', 'max:10000'],
         ]);
 
         /** @var User $user */

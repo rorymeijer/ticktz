@@ -1181,3 +1181,84 @@ A note for whoever hits this in their own stack, because the error compose
 prints is not the error that matters: a failed first boot leaves a partly
 written data directory, and the official image only initialises an empty one.
 Fixing the setting alone leaves `Table 'mysql.plugin' doesn't exist` behind it.
+
+## D62 — Rich text everywhere, and where it stops
+
+Every field in Ticktz somebody writes sentences into is rich text: ticket
+descriptions and comments, knowledge base articles, asset notes, request type
+and approval instructions, approval reasons and decisions, e-mail signatures,
+and multiline custom fields.
+
+**Two profiles, not one.** An article is a document — headings, tables, images,
+code blocks. A ticket reply is a message: emphasis, a list, a quote, a link,
+and no heading, because somebody who can set a heading in a comment can make
+their sentence twice the size of everybody else's. The editor toolbar is built
+from the same profile name the server sanitises with, so what somebody can
+click and what survives the save cannot drift apart.
+
+The difference between the profiles is *unwrapped*, never dropped. A profile
+says what a field offers, not what is dangerous, so a reply pasted out of a
+Word document loses its heading and keeps its sentence; a heading becomes a
+bold lead line rather than being left loose at block level. Only the removed
+list — scripts, forms, iframes, media — takes content with it.
+
+**Sanitising is declared on the model.** A ticket description is written by an
+agent form, a portal submission, an API client, an inbound e-mail and an
+automation rule; a comment by five more. Putting the sanitiser in each service
+method means the one added next year is the hole, and the hole is stored XSS.
+`HasRichText` fills the plain-text companion column in the same pass from the
+same cleaned value, so the search index cannot disagree with the screen.
+
+It cannot cover a write that never touches the model. `Builder::update()` fires
+no model events, and `ApprovalService::decide()` uses one deliberately — its
+claim has to be atomic so two approvers clicking at once produce one answer.
+That one sanitises its own comment, and a test exists precisely because it is
+the kind of thing that gets forgotten.
+
+**Every rich column has a plain-text twin**, or the FULLTEXT index moves onto
+one. Indexing the markup would make every tag name a term: a search for "code"
+would find every ticket containing a code block, "strong" would find half the
+desk. The same applies to automation conditions — a rule saying "description
+contains password" means the word.
+
+**E-mail has two real parts now.** The HTML part fills the template's
+placeholders with markup under one rule: *a placeholder alone in a paragraph is
+replaced by the block it stands for; a placeholder inside a sentence by its
+text.* That is exactly how the shipped templates read — `{{ ticket.description }}`
+on its own line, `{{ requester.first_name }}` inside "Hello …" — and it is what
+stops a formatted reply landing inside a paragraph as `<p><p>…</p></p>`, which
+is invalid and which every mail client recovers from differently. Everything an
+administrator wrote around the placeholders is escaped.
+
+### Where it stops, and why
+
+Names, keys, slugs, e-mail addresses, CSV mappings and automation conditions
+stay plain. Markup in a name is not formatting, it is a way to make one row
+look like another.
+
+**E-mail templates stay plain text.** They are written with placeholders and
+rendered into both parts of a message; asking somebody editing a notification
+to think about markup would be a worse editor, not a better one.
+
+**Inbound e-mail still arrives as text.** The HTML part of a customer's reply
+is not kept. What makes a mail thread readable is cutting the quoted history
+off the bottom, and that is far more reliable on text than on the nested
+`<blockquote>` and vendor-specific wrapper divs every client emits differently.
+A reply is converted to paragraphs like any other plain text. Keeping the
+customer's formatting would be nice; keeping their last four replies quoted
+underneath it would not.
+
+**Inline images are not in yet.** Pasting a screenshot into a reply is the
+obvious next thing to want, and it needs an upload path, storage, and a policy
+deciding who may read the file — the attachment system already has all three,
+so it is a feature to add rather than a limitation to design around. The
+message profile refuses `<img>` until then rather than allowing an element with
+nowhere to point.
+
+### The cost
+
+TipTap is 129KB gzipped, in its own chunk, loaded only on the pages that have
+an editor. That is a real number and worth stating plainly. The alternative to
+a library here is not "no library" — keeping selection, undo and paste
+normalisation correct across browsers is a multi-year problem — it is a worse
+one.

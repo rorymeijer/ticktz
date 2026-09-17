@@ -128,6 +128,32 @@ class RichTextSanitizer
     }
 
     /**
+     * Clean a map of values — a translated field, one entry per language.
+     *
+     * An entry that cleans down to nothing is dropped rather than stored as an
+     * empty string: a language with no translation and a language translated
+     * to nothing should behave the same way, and the fallback to the default
+     * language depends on the key being absent.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, string>
+     */
+    public function cleanEach(array $values, RichTextProfile $profile = RichTextProfile::Basic): array
+    {
+        $clean = [];
+
+        foreach ($values as $locale => $value) {
+            $cleaned = is_string($value) ? $this->clean($value, $profile) : '';
+
+            if ($cleaned !== '') {
+                $clean[$locale] = $cleaned;
+            }
+        }
+
+        return $clean;
+    }
+
+    /**
      * The same content with the markup taken out: what search indexes, what an
      * excerpt is cut from, and what goes in the plain-text part of an e-mail.
      *

@@ -22,6 +22,7 @@ import {
     Textarea,
 } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
+import { RichTextField } from '@/Components/RichText/RichTextField';
 import type {
     ApprovalAdminOptions,
     ApprovalWorkflowAdmin,
@@ -256,20 +257,14 @@ function WorkflowDialog({
                     )}
                 </Field>
 
-                <Field
+                <RichTextField
                     label={t('approvals.admin.instructions')}
                     error={form.errors.instructions}
                     help={t('approvals.admin.instructions_help')}
-                >
-                    {(props) => (
-                        <Textarea
-                            {...props}
-                            rows={2}
-                            value={form.data.instructions ?? ''}
-                            onChange={(event) => form.setData('instructions', event.target.value)}
-                        />
-                    )}
-                </Field>
+                    value={form.data.instructions ?? ''}
+                    onChange={(html) => form.setData('instructions', html)}
+                    minHeight="5rem"
+                />
 
                 <label className="flex items-center gap-2 text-sm text-slate-700">
                     <Checkbox

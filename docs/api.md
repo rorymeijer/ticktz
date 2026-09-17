@@ -120,6 +120,51 @@ script filing its own tickets wants. Naming somebody else (`requester_id` or
 `requester_email`) needs the `tickets.create` permission; without it this is
 impersonation with an audit trail pointing at the wrong person.
 
+## Rich text
+
+Ticket descriptions and comment bodies are rich text: an allowlisted subset of
+HTML, sanitised on the way in and therefore safe to render as markup without
+doing anything to it first.
+
+Every one of them comes back twice:
+
+| Field | What it is |
+| --- | --- |
+| `description`, `body` | The markup as stored |
+| `description_text`, `body_text` | The same content with the tags taken out |
+
+Read whichever suits what you are building. A page rendering a ticket wants the
+markup; a script grepping for a word, a chat relay, or anything with no room
+for formatting wants the text.
+
+**Writing is the forgiving direction.** Send markup and it is sanitised against
+the allowlist — anything that could execute, load something or collect a
+password is removed, not escaped. Send plain text and it is wrapped in the
+paragraphs it was already implying, so a client written against 1.0.0 needs no
+changes at all:
+
+```json
+{ "subject": "Disk almost full", "description": "/var is at 94%.\n\nTriggered at 03:14 UTC." }
+```
+
+comes back as:
+
+```json
+{
+  "description": "<p>/var is at 94%.</p><p>Triggered at 03:14 UTC.</p>",
+  "description_text": "/var is at 94%.\n\nTriggered at 03:14 UTC."
+}
+```
+
+The one thing that changed in 1.0.1: a client that *reads* `description` or
+`body` now gets markup where it used to get a sentence. That is why the text
+fields sit beside them rather than replacing them — switch the field you read
+and you are back where you were.
+
+Asset notes and multiline custom fields work the same way. Everything else —
+names, keys, e-mail addresses, short descriptions — is plain text and stays
+plain text.
+
 ## Moving a ticket
 
 Status is not a field on `PATCH`. It gets its own endpoint, because it is not a

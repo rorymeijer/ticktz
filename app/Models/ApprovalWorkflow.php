@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasRichText;
+use App\Services\RichText\RichTextAttribute;
 use Database\Factories\ApprovalWorkflowFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,11 +23,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ApprovalWorkflow extends Model
 {
     /** @use HasFactory<ApprovalWorkflowFactory> */
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, HasRichText;
 
     protected $fillable = [
         'name', 'name_translations', 'slug', 'description', 'instructions', 'is_active',
     ];
+
+    /**
+     * @return array<string, RichTextAttribute>
+     */
+    protected static function richTextAttributes(): array
+    {
+        return [
+            'instructions' => new RichTextAttribute,
+        ];
+    }
 
     protected function casts(): array
     {

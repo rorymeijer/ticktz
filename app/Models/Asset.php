@@ -6,6 +6,8 @@ namespace App\Models;
 
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\HasCustomFields;
+use App\Models\Concerns\HasRichText;
+use App\Services\RichText\RichTextAttribute;
 use Database\Factories\AssetFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -30,7 +32,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Asset extends Model
 {
     /** @use HasFactory<AssetFactory> */
-    use Auditable, HasCustomFields, HasFactory, SoftDeletes;
+    use Auditable, HasCustomFields, HasFactory, HasRichText, SoftDeletes;
 
     public const IN_STOCK = 'in_stock';
 
@@ -59,6 +61,16 @@ class Asset extends Model
         'status', 'location', 'assigned_to', 'organization_id', 'team_id',
         'purchased_at', 'warranty_ends_at', 'purchase_cost', 'currency', 'notes', 'created_by',
     ];
+
+    /**
+     * @return array<string, RichTextAttribute>
+     */
+    protected static function richTextAttributes(): array
+    {
+        return [
+            'notes' => new RichTextAttribute(text: 'notes_text'),
+        ];
+    }
 
     protected function casts(): array
     {
@@ -179,12 +191,14 @@ class Asset extends Model
             // "Dell Latitude 5440" is not a search.
             if ($scoped->getConnection()->getDriverName() === 'mysql') {
                 $scoped->orWhereFullText(
-                    ['name', 'serial_number', 'model', 'manufacturer', 'location', 'notes'],
+                    ['name', 'serial_number', 'model', 'manufacturer', 'location', 'notes_text'],
                     $term,
                 );
             }
 
-            foreach (['name', 'model', 'manufacturer', 'location', 'notes'] as $column) {
+            // notes_text, not notes: the notes column holds markup now, and a
+            // LIKE over it would match tag names.
+            foreach (['name', 'model', 'manufacturer', 'location', 'notes_text'] as $column) {
                 $scoped->orWhere("assets.{$column}", 'like', $like);
             }
         });

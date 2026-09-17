@@ -65,6 +65,24 @@ const PAGES = [
     ['/admin/service-desk', 'admin'],
     ['/admin/webhooks', 'admin'],
     ['/settings/api-tokens', 'admin'],
+
+    /*
+     * The pages with an editor on them.
+     *
+     * Worth naming separately because a list page proves nothing about the
+     * widget on the form behind it: the rich text toolbar is a custom control
+     * with its own roles, pressed states and accessible names, and it is
+     * exactly the kind of thing that passes review and fails a screen reader.
+     * Keyed on the demo seed, which is what this script runs against.
+     */
+    ['/agent/tickets/create', 'agent'],
+    ['/agent/tickets/SUP-1', 'agent'],
+    ['/portal/new/application-access', 'requester'],
+    // A knowledge base article routes on its slug, not its id. This one comes
+    // from the demo seed, which is what this script is documented to run
+    // against; if the seed changes, the run reports the page as failed to load
+    // rather than quietly checking one page fewer.
+    ['/admin/kb/wachtwoord-opnieuw-instellen/edit', 'admin'],
 ];
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
