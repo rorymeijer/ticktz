@@ -51,6 +51,7 @@ return [
         'alt_apply' => 'Beschrijving opslaan',
         'rejected' => 'Dit bestand is geen afbeelding die we accepteren, of het is te groot.',
         'too_many' => 'Te veel uploads op dit moment. Wacht even en probeer opnieuw.',
+        'expired' => 'Je sessie is verlopen. Herlaad de pagina en probeer opnieuw.',
         'failed' => 'De afbeelding kon niet worden geüpload.',
     ],
 

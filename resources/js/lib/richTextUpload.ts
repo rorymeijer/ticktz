@@ -14,7 +14,7 @@ export type UploadedImage = { url: string; name: string };
  * reader's own language. Anything else is a fault, and a fault should not be
  * explained to somebody pasting a screenshot.
  */
-export type UploadFailure = 'rejected' | 'too_many' | 'failed';
+export type UploadFailure = 'rejected' | 'too_many' | 'expired' | 'failed';
 
 export class RichTextUploadError extends Error {
     constructor(public readonly kind: UploadFailure) {
@@ -43,8 +43,25 @@ export async function uploadRichTextImage(file: File, internal = false): Promise
     } catch (error) {
         const status = axios.isAxiosError(error) ? error.response?.status : undefined;
 
+        /*
+         * The status goes to the console even though it never reaches the
+         * screen. "The image could not be uploaded" is the right thing to show
+         * somebody pasting a screenshot and the wrong thing to hand a
+         * developer: a 404 and a 500 and a stale container are three different
+         * problems, and collapsing them cost an afternoon once already.
+         */
+        if (status !== 422 && status !== 429 && status !== 419) {
+            console.error(`Ticktz: image upload failed with status ${status ?? 'unknown'}`, error);
+        }
+
         throw new RichTextUploadError(
-            status === 422 ? 'rejected' : status === 429 ? 'too_many' : 'failed',
+            status === 422
+                ? 'rejected'
+                : status === 429
+                  ? 'too_many'
+                  : status === 419
+                    ? 'expired'
+                    : 'failed',
         );
     }
 }

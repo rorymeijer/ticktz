@@ -51,6 +51,7 @@ return [
         'alt_apply' => 'Save description',
         'rejected' => 'That file is not an image we accept, or it is too large.',
         'too_many' => 'Too many uploads just now. Wait a moment and try again.',
+        'expired' => 'Your session has expired. Reload the page and try again.',
         'failed' => 'The image could not be uploaded.',
     ],
 
