@@ -1,16 +1,26 @@
-MIT License
+Ticktz License v1.0
 
-Copyright (c) 2026 Ticktz contributors
+Copyright (c) 2026 Rory Meijer
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to use,
+copy, modify, and distribute the Software and modified versions of it, for any
+purpose, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. No Sale. You may not sell the Software or any derivative work based on it,
+   and you may not charge any fee for the Software itself or for access to it.
+   This includes selling it as a product, offering it as a paid or hosted
+   service, or sublicensing it for a fee.
+
+2. Reserved Commercial Rights. Only the copyright holder (Rory Meijer) may
+   sell or otherwise commercially exploit the Software, including by offering a
+   paid "PRO" edition or a separate commercial license. To use the Software in
+   a way this license does not permit, you must obtain a commercial license
+   from the copyright holder.
+
+3. Attribution. The above copyright notice, this license, and the "No Sale"
+   condition must be included in all copies or substantial portions of the
+   Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
