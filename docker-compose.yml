@@ -92,7 +92,14 @@ services:
       - .:/var/www/html
       - node_modules:/var/www/html/node_modules
     environment:
+      # What the container binds…
       VITE_PORT: 5173
+      # …and what the browser has to ask for, which is the published port on
+      # the host. The two differ the moment a second checkout publishes 5174 to
+      # keep out of this one's way, and the URL written into public/hot is the
+      # browser's, not the container's.
+      VITE_BROWSER_PORT: ${TICKTZ_VITE_PORT:-5173}
+      VITE_BROWSER_HOST: ${TICKTZ_VITE_HOST:-localhost}
     restart: unless-stopped
 
   mysql:

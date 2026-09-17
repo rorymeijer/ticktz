@@ -377,6 +377,22 @@ exist`. On a stack with no data worth keeping, `docker compose down -v` throws
 the volume away and the next `up` initialises cleanly. On one with data, restore
 the backup into a fresh volume instead.
 
+**A white page at http://localhost:8080, and nothing in any log.** The
+development stack serves its JavaScript from the Vite container, and the URL
+the browser is told to fetch it from is written into `public/hot` by the dev
+server itself. A server listening on `0.0.0.0` — which it has to, to be
+reachable from outside its container — writes `http://0.0.0.0:5173` there, and
+that is not an address a browser can fetch. Chrome quietly treats it as
+localhost and the page works; Safari and Firefox do not and it does not.
+
+```bash
+docker compose exec vite cat public/hot     # expect http://localhost:5173
+```
+
+If it says `0.0.0.0` or `[::]`, the `server.hmr.host` setting in
+`vite.config.js` is missing or has been overridden. Nothing is wrong with the
+application, and no log will say so — the page simply has no script to run.
+
 **`Host '172.20.0.x' is not allowed to connect to this MySQL server`.** Error
 1130, and it does not mean what it sounds like. The server is running and
 reachable; it simply has no account by that name. The official image creates
