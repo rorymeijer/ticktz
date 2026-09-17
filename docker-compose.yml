@@ -55,7 +55,7 @@ services:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - .:/var/www/html:ro
     depends_on:
-      - app
+      app: { condition: service_healthy }
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost/health"]
@@ -75,6 +75,18 @@ services:
       REDIS_PORT: 6379
     expose:
       - "9000"
+    healthcheck:
+      # php-fpm speaks FastCGI rather than HTTP, so this asks the only question
+      # that can be asked from outside it: is anything accepting connections on
+      # its port. php-fpm is the last thing the entrypoint starts, so the answer
+      # is no for the whole of the first boot — the migrations and the demo
+      # seed — which is exactly the window this is here to cover. Without it,
+      # `docker compose up -d` returns while that is still running, and the very
+      # next command lands on a database whose tables are not all there yet.
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
 
   worker:
     <<: *app-base

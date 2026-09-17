@@ -1599,3 +1599,12 @@ different answers and neither explaining the other. Anything compiled from the
 environment is now dropped at the start of a boot and rebuilt at the end, once
 the environment is settled. A cache that survives what it was derived from is
 not a cache.
+
+**And "started" is not "ready".** The development stack's `app` service had no
+health check, so `docker compose up -d` returned while the entrypoint was still
+migrating, and the command somebody ran next — including the one the README told
+them to run — hit a database missing half its tables. The production stack had
+carried the right check since 1.1.1 and the development one had simply never
+been given it. php-fpm is the last thing the entrypoint starts, which makes
+"is anything listening on 9000" exactly the question "has the first boot
+finished", with no separate readiness flag to keep in step with the truth.

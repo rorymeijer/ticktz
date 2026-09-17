@@ -9,6 +9,29 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.1.4
+
+**`docker compose up -d` now means the application is ready.** The development
+stack's `app` service had no health check, so `up -d` returned as soon as the
+container had *started* — while the entrypoint was still running the migrations
+and seeding the demo desk. A command run at that moment found tables that were
+not there yet:
+
+```
+SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ticktz.permissions' doesn't exist
+```
+
+It now carries the same check the production stack has had since 1.1.1: php-fpm
+is the last thing the entrypoint starts, so "is anything listening on 9000" is
+exactly the question "is the first boot finished". nginx waits for it, and
+`docker compose up -d --wait` waits for it too.
+
+**And the quick start no longer tells you to seed a desk that seeds itself.**
+The development stack has always set `TICKTZ_SEED_DEMO`, so
+`php artisan ticktz:demo` straight after `up -d` was both unnecessary and the
+most likely way to hit the race above. The README says what actually happens on
+a first boot instead.
+
 ## 1.1.3
 
 **Separates the development stack from the production one.** Both compose files

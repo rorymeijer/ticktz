@@ -29,18 +29,21 @@ original build brief.
 git clone https://github.com/rorymeijer/ticktz.git
 cd ticktz
 cp .env.example .env
-docker compose up -d --build
+docker compose up -d --build --wait
 ```
 
 The stack comes up on <http://localhost:8080>. The first boot waits for MySQL,
-generates an application key and runs the migrations. A development mail server
-(GreenMail: SMTP, IMAP and a web interface) is available at
-<http://localhost:8025> — see [docs/email.md](docs/email.md).
+generates an application key, runs the migrations and seeds a demo desk — roles,
+queues, SLAs and sample tickets — so there is something to sign in to. It only
+ever seeds an instance with no users in it, so a restart never writes over a
+desk you have started using. A development mail server (GreenMail: SMTP, IMAP
+and a web interface) is available at <http://localhost:8025> — see
+[docs/email.md](docs/email.md).
 
-```bash
-# seed a demo instance (roles, queues, SLAs, sample tickets)
-docker compose exec app php artisan ticktz:demo
-```
+`--wait` is worth the few seconds: without it `up` returns as soon as the
+containers have *started*, while the first boot is still migrating, and a
+command run against the database at that moment finds tables that are not there
+yet.
 
 Health check:
 
