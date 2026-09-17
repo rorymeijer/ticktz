@@ -9,6 +9,28 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.1.1
+
+**Fixes a Docker first boot that could end in a crash loop.** The app and the
+worker mount the same code volume and start at the same time, and both ran the
+placement — two `rm -rf vendor && cp -a` over each other, leaving a vendor
+missing files and php-fpm dying on them. nginx answered 502.
+
+Worse, it could not recover: the marker recording which image placed the code
+was written when the copy started rather than when it finished, so every
+restart read `1.1.0`, concluded there was nothing to do, and crashed again on
+the same file.
+
+Three changes. Placement takes a lock, so one container does it and the others
+wait. The marker is written only after the copied tree is verified to load its
+own autoloader, and a tree that claims to be placed but cannot load is replaced
+rather than trusted. And nginx now waits for php-fpm to accept connections
+instead of merely for the container to exist, which closes the window where a
+first boot answers 502 while it is still copying.
+
+Recovering an instance already stuck this way is in
+[`docs/self-hosting.md`](docs/self-hosting.md).
+
 ## 1.1.0
 
 **Upgrade from the browser.** Administration → Updates shows which version this

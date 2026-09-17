@@ -32,18 +32,28 @@ check() {
 # An image tree at $1 holding version $2.
 make_image() {
     rm -rf "$1"
-    mkdir -p "$1/app" "$1/vendor" "$1/config"
+    mkdir -p "$1/app" "$1/vendor/composer" "$1/config"
     printf 'from %s' "$2" > "$1/app/Marker.php"
-    printf '<?php' > "$1/vendor/autoload.php"
     printf '#!/usr/bin/env php' > "$1/artisan"
     printf '%s' "$2" > "$WORK/image-version"
+
+    # A real autoloader, in miniature: autoload.php requires a second file, the
+    # way Composer's does. That is what makes a half-copied vendor detectable —
+    # and a half-copied vendor is exactly what the missing polyfill bootstrap
+    # was in the failure this guards against.
+    printf '<?php require __DIR__ . "/composer/real.php";' > "$1/vendor/autoload.php"
+    printf '<?php return true;' > "$1/vendor/composer/real.php"
 }
 
+# Never aborts the harness, even though the script runs under `set -e` and this
+# file does too. A placement that dies is a result worth reporting as a failed
+# check rather than a reason for the suite to vanish mid-run — which is what it
+# did the first time the concurrency check below caught a real bug.
 run_place() {
     TICKTZ_IMAGE_TREE="$1" \
     TICKTZ_IMAGE_VERSION_FILE="$WORK/image-version" \
     TICKTZ_APP_ROOT="$2" \
-    sh "$SCRIPT" > "$WORK/out" 2>&1
+    sh "$SCRIPT" > "$WORK/out-$$" 2>&1 || true
 }
 
 echo "place-code.sh"
@@ -104,6 +114,64 @@ run_place "$WORK/image" "$WORK/source"
 
 check "fills an empty vendor volume" "$([ -f "$WORK/source/vendor/autoload.php" ] && echo yes || echo no)" "yes"
 check "and still does not touch the source" "$(cat "$WORK/source/app/Marker.php")" "work in progress"
+
+# --- 7. Two containers starting at once do not corrupt the tree -------------
+# The app and the worker mount the same volume and start together. Without a
+# lock they both run `rm -rf vendor && cp -a` over each other, php-fpm comes up
+# on a half-copied tree, and nginx answers 502 with nothing in any log naming
+# the cause. This is that situation, with a tree big enough that the copy
+# actually overlaps.
+rm -rf "$WORK/image" "$WORK/race"; mkdir -p "$WORK/race"
+make_image "$WORK/image" 1.1.0
+i=0
+while [ "$i" -lt 300 ]; do
+    printf 'lots of vendor code %s' "$i" > "$WORK/image/vendor/file-$i.php"
+    i=$((i + 1))
+done
+expected="$(find "$WORK/image/vendor" -type f | wc -l)"
+
+run_place "$WORK/image" "$WORK/race" & first=$!
+run_place "$WORK/image" "$WORK/race" & second=$!
+wait "$first" || true
+wait "$second" || true
+
+check "two at once leave a complete vendor" "$(find "$WORK/race/vendor" -type f | wc -l)" "$expected"
+check "two at once leave a usable tree" "$(cat "$WORK/race/app/Marker.php")" "from 1.1.0"
+check "and the lock is released afterwards" "$([ -e "$WORK/race/.ticktz-placing" ] && echo held || echo free)" "free"
+
+# --- 8. A lock left by a container that died is taken over ------------------
+rm -rf "$WORK/stale"; mkdir -p "$WORK/stale/.ticktz-placing"
+touch -d '2 hours ago' "$WORK/stale/.ticktz-placing"
+TICKTZ_PLACE_TIMEOUT=60 run_place "$WORK/image" "$WORK/stale"
+
+check "takes over a stale lock rather than hanging" "$(cat "$WORK/stale/artisan" 2>/dev/null)" "#!/usr/bin/env php"
+
+# --- 9. A tree that says it is placed but cannot load is replaced ----------
+# The failure this was written for: two containers clobbered each other's copy,
+# vendor lost a file, and the marker said 1.1.0 all the same. Every restart
+# then read the marker, decided there was nothing to do, and crashed on the
+# same missing file. A marker is a claim; this is the check that it is true.
+rm -rf "$WORK/damaged"; mkdir -p "$WORK/damaged"
+make_image "$WORK/image" 1.1.0
+run_place "$WORK/image" "$WORK/damaged"
+rm -f "$WORK/damaged/vendor/composer/real.php"          # what the race did
+printf 'broken but claims to be fine' > "$WORK/damaged/app/Marker.php"
+
+run_place "$WORK/image" "$WORK/damaged"
+
+check "repairs a tree that cannot load itself" "$([ -f "$WORK/damaged/vendor/composer/real.php" ] && echo repaired || echo "still broken")" "repaired"
+check "and the repaired tree is the image's" "$(cat "$WORK/damaged/app/Marker.php")" "from 1.1.0"
+
+# --- 10. A copy that cannot load is not marked as placed -------------------
+# Better to stop with a message naming the cause than to write a marker every
+# later start will believe.
+rm -rf "$WORK/badimage" "$WORK/target"; mkdir -p "$WORK/target"
+make_image "$WORK/badimage" 1.1.0
+rm -f "$WORK/badimage/vendor/composer/real.php"
+run_place "$WORK/badimage" "$WORK/target"
+
+check "refuses to mark an unloadable copy as placed" "$([ -f "$WORK/target/.ticktz-image" ] && echo marked || echo "not marked")" "not marked"
+check "and says why" "$(grep -c 'will not load' "$WORK/out-$$" 2>/dev/null || echo 0)" "1"
 
 echo
 if [ "$failures" -gt 0 ]; then

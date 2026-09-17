@@ -350,6 +350,35 @@ pull` no longer moves you to whatever the image has unless that image is
 compares versions — but the running version is the higher of the two, not
 whichever you pulled last.
 
+#### If the app container crash-loops on a missing vendor file
+
+A `502 Bad Gateway` from nginx with `Failed opening required '.../vendor/...'`
+repeating in `docker compose logs app` means the code volume holds an
+incomplete copy. Ticktz 1.1.1 repairs this by itself on the next start: the
+entrypoint checks that the tree can load its own autoloader before trusting the
+marker that says it is placed, and puts the image's copy back when it cannot.
+
+On 1.1.0 it could not, because the marker was written when the copy *started*
+rather than when it finished — so every restart read the marker, decided there
+was nothing to do, and crashed on the same file. To recover by hand:
+
+```bash
+docker compose -f docker-compose.prod.yml exec app rm -f /var/www/html/.ticktz-image
+docker compose -f docker-compose.prod.yml restart app worker
+```
+
+Or, if the app container will not stay up long enough to exec into:
+
+```bash
+docker compose -f docker-compose.prod.yml down
+docker volume rm ticktz_code          # code only; your data is in ticktz_storage and ticktz_mysql
+docker compose -f docker-compose.prod.yml up -d
+```
+
+`ticktz_code` holds nothing but the application. Removing it is safe, and the
+next start fills it from the image. Do **not** use `down -v`, which takes the
+database with it.
+
 If you would rather keep the image immutable, remove the `code` volume from
 your own compose override. The readiness checks will then say the code does not
 persist and the button will be gone, which is correct: on that stack, these are

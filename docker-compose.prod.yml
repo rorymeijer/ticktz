@@ -56,7 +56,11 @@ services:
       # replaces the compiled assets is visible to nginx without a restart.
       - code:/var/www/html:ro
     depends_on:
-      - app
+      # Healthy, not merely started. On a first boot the app container copies
+      # the application into the code volume before php-fpm listens, and an
+      # nginx that starts during that window answers 502 with no explanation.
+      app:
+        condition: service_healthy
     restart: unless-stopped
 
   app:
@@ -75,6 +79,16 @@ services:
       REDIS_PORT: 6379
     expose:
       - "9000"
+    healthcheck:
+      # php-fpm speaks FastCGI rather than HTTP, so this asks the only question
+      # that can be asked from outside it: is anything accepting connections on
+      # its port. That is false for the whole of the first-boot copy, which is
+      # exactly the window nginx must not serve in.
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
 
   worker:
     <<: *app-base
