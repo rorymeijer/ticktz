@@ -237,13 +237,17 @@ jobs:
         with:
           subject-path: dist/ticktz-*.zip
 
+      # Only to hand the archive to the next job. A day is long enough for
+      # that and short enough to stay out of the storage bill: an Actions
+      # artifact counts against the account's storage quota, where the release
+      # asset it becomes does not.
       - uses: actions/upload-artifact@v4
         with:
           name: installable
           path: |
             dist/ticktz-*.zip
             dist/ticktz-*.zip.sha256
-          retention-days: 7
+          retention-days: 1
 
   release:
     name: Draft the release notes

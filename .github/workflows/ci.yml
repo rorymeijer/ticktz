@@ -1,8 +1,19 @@
 name: CI
 
+# Every commit is checked exactly once.
+#
+# `push: ['**']` alongside `pull_request` runs the whole suite twice for every
+# commit on a branch with an open pull request — and the concurrency group
+# below does not collapse them, because a push and a pull_request carry
+# different `github.ref` values (`refs/heads/x` against `refs/pull/N/merge`).
+# On a private repository that is double the billed minutes for no second
+# opinion.
+#
+# The trade: a branch with no pull request open gets no CI. Open the pull
+# request, which is where the result is read anyway.
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
 
 permissions:

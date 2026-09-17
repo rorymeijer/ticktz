@@ -170,6 +170,46 @@ no `.git`.
 
 ---
 
+## What it costs
+
+`rorymeijer/ticktz` is a **private** repository, so Actions minutes come out of
+the account's monthly allowance. On a public repository all of this is free and
+none of the below applies.
+
+Check the real numbers against your own plan — GitHub moves them, and this was
+written in September 2026:
+
+**Settings → Billing and licensing → Usage**
+
+Roughly, at the time of writing: a Free account gets 2,000 minutes a month, Pro
+and Team 3,000. Every job here runs on Linux, which bills at ×1 — macOS is ×10
+and Windows ×2, so it is worth noticing that nothing here needs either.
+
+A release costs somewhere around 25–40 minutes. Most of that is the container
+image: `linux/arm64` is built under emulation on an amd64 runner, which is slow
+in a way nothing else here is. The archive and the test suite are a few minutes
+each.
+
+**The recurring cost is CI, not releases.** A full run is about ten minutes, and
+it runs on every push to an open pull request. Ten pushes in a day is roughly a
+hundred minutes.
+
+Two things keep that down, both already in place:
+
+- **One run per commit.** `push` limited to `main`, everything else checked
+  through the pull request. Running both — which is the default shape people
+  write — costs double, and the concurrency group does not collapse the pair
+  because a push and a pull_request carry different refs.
+- **Superseded runs are cancelled.** Pushing three times in a row leaves one
+  run standing, not three.
+
+Storage is separate from minutes and easier to overlook. Release assets are
+free and unlimited; **Actions artifacts are not** and count against the
+account's storage quota, which starts at 500 MB on Free. The installable
+archive is uploaded as an artifact only to hand it from one job to the next, so
+it is kept for a day rather than a week. Container images in `ghcr.io` count
+too when the package is private, which is one more reason to make it public.
+
 ## When it goes wrong
 
 **`Resource not accessible by integration`** — workflow permissions, step 1
