@@ -21,10 +21,16 @@ said `APP_ENV=local`. It was talking to the production container, where the
 compose file sets `APP_ENV: production` outright.
 
 The development stack is now `ticktz-dev`. Production keeps the plain name, so
-a deployed instance is untouched by the upgrade. A development stack started
-before this still carries the old name; remove its containers once
-(`docker compose down && docker compose up -d --build`) and the two stop
-colliding. Its `vendor` volume is now `ticktz-dev_vendor`.
+a deployed instance is untouched by the upgrade. Its `vendor` volume is now
+`ticktz-dev_vendor`.
+
+A development stack started before this still carries the old name, and
+`docker compose down` no longer reaches it — it looks for `ticktz-dev` now, so
+the old containers stay up and the first `up` fails on a port they are still
+holding. Name the old project once:
+`docker compose -p ticktz -f docker-compose.yml down --remove-orphans`. See
+[self-hosting](docs/self-hosting.md#when-something-is-wrong), which also covers
+what that does to a production stack running alongside it.
 
 **Stops a compiled config from outliving the boot that wrote it.** The
 compiled config lives in the code volume, so an instance that once came up

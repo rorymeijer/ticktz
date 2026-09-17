@@ -367,13 +367,33 @@ docker compose -f docker-compose.prod.yml ps       # production
 
 Before 1.1.3 both files were named `ticktz`, which made them one stack as far
 as Compose was concerned: bringing either up replaced the other's containers,
-and a bare `docker compose exec app` reached whichever had gone up last. If you
-started your instance before 1.1.3, your development containers still carry the
-old name. Remove them once, and the two stacks stop colliding:
+and a bare `docker compose exec app` reached whichever had gone up last.
+
+If you started a development stack before 1.1.3, its containers still carry the
+old name — and `docker compose down` will no longer find them, because it now
+looks for `ticktz-dev`. The first `up` after upgrading therefore fails on a port
+the old containers are still holding:
+
+```
+Bind for 0.0.0.0:3025 failed: port is already allocated
+```
+
+Name the old project to reach them:
 
 ```bash
-docker compose -f docker-compose.prod.yml down     # or `docker compose down`
+docker compose -p ticktz -f docker-compose.yml down --remove-orphans
 docker compose up -d --build
+```
+
+`-p` overrides the `name:` in the file, so that first command addresses exactly
+what was there before the rename. It is needed once.
+
+**If your production stack is running, bring it down first** and start it again
+afterwards. It is also project `ticktz`, so `--remove-orphans` takes it with
+them:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 Nothing is lost that you want to keep: the development stack's database is demo
