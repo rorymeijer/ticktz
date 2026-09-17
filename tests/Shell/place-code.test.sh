@@ -195,6 +195,18 @@ if [ "$(id -u)" = "0" ] && id www-data >/dev/null 2>&1; then
     run_place "$WORK/image" "$WORK/owned"
 
     check "a root-owned storage is handed over on a later boot" "$(stat -c '%U' "$WORK/owned/storage")" "www-data"
+
+    # A developer's bind-mounted checkout has no marker, and handing their
+    # storage to uid 82 would stop their own artisan writing to it.
+    rm -rf "$WORK/devtree"; mkdir -p "$WORK/devtree/storage" "$WORK/devtree/vendor"
+    printf '#!/usr/bin/env php' > "$WORK/devtree/artisan"
+    printf '<?php require __DIR__ . "/composer/real.php";' > "$WORK/devtree/vendor/autoload.php"
+    mkdir -p "$WORK/devtree/vendor/composer"
+    printf '<?php return true;' > "$WORK/devtree/vendor/composer/real.php"
+    chown -R root:root "$WORK/devtree"
+    run_place "$WORK/image" "$WORK/devtree"
+
+    check "leaves a mounted source tree's ownership alone" "$(stat -c '%U' "$WORK/devtree/storage")" "root"
 else
     echo "  skip ownership checks (needs root and a www-data user)"
 fi

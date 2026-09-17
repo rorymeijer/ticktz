@@ -75,6 +75,13 @@ newer_than() {
 own_instance_directories() {
     [ "$(id -u)" = "0" ] || return 0
 
+    # Only for a tree this script placed. Without the marker, /var/www/html is
+    # somebody's bind-mounted working copy — the development stack — and
+    # chowning it would hand a developer's own `storage` to uid 82 on their
+    # host, where their `artisan` can no longer write to it. That stack worked
+    # before this function existed and must keep working exactly as it did.
+    [ -f "$PLACED_BY_IMAGE" ] || return 0
+
     for path in "$APP_ROOT/storage" "$APP_ROOT/bootstrap/cache"; do
         [ -d "$path" ] || continue
 
