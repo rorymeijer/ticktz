@@ -12,8 +12,13 @@ on:
         required: true
 
 permissions:
-  contents: write
-  packages: write
+  contents: write # create the release and attach the archive
+  packages: write # push the image to ghcr.io
+  # Attestations are signed with a short-lived certificate issued to this
+  # workflow rather than with a key somebody stores. These two are what let it
+  # ask for one. See docs/releasing.md.
+  id-token: write
+  attestations: write
 
 jobs:
   verify:
@@ -126,9 +131,123 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  bundle:
+    name: Build the installable archive
+    needs: verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, gd, intl, ldap, mbstring, pdo_mysql, redis, sockets, zip
+          coverage: none
+          tools: composer:v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # A GitHub source archive carries neither `vendor` nor the built assets,
+      # so installing one means running composer and npm on the server — with
+      # network access to two package registries, at whatever version of each
+      # tool happens to be installed. The archive below is the whole
+      # application, ready to run, which is what makes an upgrade from the
+      # browser a download and a swap rather than a build.
+      - name: Install what the application ships with
+        run: |
+          composer install --no-dev --no-interaction --no-progress \
+            --prefer-dist --optimize-autoloader --classmap-authoritative
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Assemble the tree
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          STAGE="dist/ticktz"
+
+          mkdir -p "$STAGE"
+
+          # Named rather than excluded. An exclude list quietly ships whatever
+          # somebody adds to the repository next; this one ships what the
+          # application is, and anything new has to be added on purpose.
+          for path in app bootstrap config database lang public resources routes \
+                      scripts vendor artisan composer.json composer.lock LICENSE \
+                      README.md CHANGELOG.md docs docker; do
+            # An `if`, not `[ … ] && cp`: under `set -e` a false test is a
+            # failed command and the whole build stops on the first optional
+            # path that happens not to exist.
+            if [ -e "$path" ]; then
+              cp -R "$path" "$STAGE/"
+            fi
+          done
+
+          # The framework's working directories, empty. Their contents belong
+          # to the instance being upgraded and are never part of a release.
+          mkdir -p "$STAGE/storage/app/private" \
+                   "$STAGE/storage/framework/cache/data" \
+                   "$STAGE/storage/framework/sessions" \
+                   "$STAGE/storage/framework/testing" \
+                   "$STAGE/storage/framework/views" \
+                   "$STAGE/storage/logs"
+          find "$STAGE/storage" -type d -exec touch {}/.gitkeep \;
+
+          # Anything the build left behind that an installation must not
+          # inherit: a compiled config pointing at the runner's paths, a hot
+          # file pointing at a Vite server that does not exist.
+          rm -f "$STAGE/bootstrap/cache/"*.php "$STAGE/public/hot"
+
+          # The written documentation ships; the seventy screenshots of it do
+          # not. They are twenty-three megabytes that every instance would
+          # download on every upgrade to look at a picture of itself.
+          rm -rf "$STAGE/docs/screenshots"
+          rm -rf "$STAGE/public/storage"
+
+          # What the updater checks before it installs anything.
+          cat > "$STAGE/build.json" <<JSON
+          {
+            "product": "ticktz",
+            "version": "$VERSION",
+            "commit": "$GITHUB_SHA",
+            "built_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          JSON
+
+          cd dist
+          zip -qry "ticktz-$VERSION.zip" ticktz
+          sha256sum "ticktz-$VERSION.zip" | awk '{print $1}' > "ticktz-$VERSION.zip.sha256"
+
+          echo "Built ticktz-$VERSION.zip ($(du -h "ticktz-$VERSION.zip" | cut -f1))"
+
+      # Keyless provenance, signed by the workflow itself and recorded in a
+      # public transparency log. It proves this archive came out of this
+      # repository and this commit, which a checksum cannot: a checksum says
+      # the bytes did not change on the way, and says nothing about where they
+      # were made. Verified with `gh attestation verify`; see docs/releasing.md.
+      - name: Attest where the archive came from
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/ticktz-*.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installable
+          path: |
+            dist/ticktz-*.zip
+            dist/ticktz-*.zip.sha256
+          retention-days: 7
+
   release:
     name: Draft the release notes
-    needs: image
+    needs: [image, bundle]
     runs-on: ubuntu-latest
 
     steps:
@@ -136,11 +255,22 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: installable
+          path: dist
+
       - name: Create the GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           generate_release_notes: true
+          # The two files an in-place upgrade reads: the application, and the
+          # digest it is checked against. An update screen that cannot find
+          # them says so rather than installing something it did not verify.
+          files: |
+            dist/ticktz-*.zip
+            dist/ticktz-*.zip.sha256
           # Drafted rather than published: the generated notes are a commit
           # list, and a release worth tagging is worth a paragraph written by
           # a person.
@@ -153,6 +283,18 @@ jobs:
             ```
 
             Built for `linux/amd64` and `linux/arm64`.
+
+            ## Upgrading in place
+
+            Installations that run from source can upgrade from
+            *Administration → Updates*, or with:
+
+            ```
+            php artisan ticktz:upgrade
+            ```
+
+            Both install `ticktz-*.zip` below after checking it against
+            `ticktz-*.zip.sha256`.
 
             ## Upgrading
 
