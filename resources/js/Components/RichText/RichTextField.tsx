@@ -23,6 +23,7 @@ export function RichTextField({
     required,
     placeholder,
     disabled,
+    images,
     minHeight,
     className,
 }: {
@@ -35,6 +36,7 @@ export function RichTextField({
     required?: boolean;
     placeholder?: string;
     disabled?: boolean;
+    images?: boolean;
     minHeight?: string;
     className?: string;
 }) {
@@ -67,6 +69,7 @@ export function RichTextField({
                     invalid={Boolean(error)}
                     placeholder={placeholder}
                     disabled={disabled}
+                    images={images}
                     minHeight={minHeight}
                 />
             </div>

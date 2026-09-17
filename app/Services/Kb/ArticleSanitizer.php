@@ -27,7 +27,7 @@ class ArticleSanitizer
 
     public function clean(string $html): string
     {
-        return $this->rich->clean($html, RichTextProfile::Article);
+        return $this->rich->clean($html, RichTextProfile::Article, images: true);
     }
 
     public function toText(string $html): string

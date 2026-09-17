@@ -92,7 +92,14 @@ services:
       - .:/var/www/html
       - node_modules:/var/www/html/node_modules
     environment:
+      # What the container binds…
       VITE_PORT: 5173
+      # …and what the browser has to ask for, which is the published port on
+      # the host. The two differ the moment a second checkout publishes 5174 to
+      # keep out of this one's way, and the URL written into public/hot is the
+      # browser's, not the container's.
+      VITE_BROWSER_PORT: ${TICKTZ_VITE_PORT:-5173}
+      VITE_BROWSER_HOST: ${TICKTZ_VITE_HOST:-localhost}
     restart: unless-stopped
 
   mysql:
@@ -116,7 +123,23 @@ services:
     ports:
       - "${TICKTZ_MYSQL_PORT:-3306}:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DB_ROOT_PASSWORD:-root-secret}"]
+      # Checks what the application needs, not merely that a server answers.
+      #
+      # `mysqladmin ping` as root says the process is up, and it says that
+      # just as cheerfully when the data directory was initialised without the
+      # application's user and database — which is what a leftover volume
+      # gives you. The dependency gate then opens, the app starts, and the
+      # first query fails with "Host … is not allowed to connect to this MySQL
+      # server", a long way from the cause.
+      #
+      # So: connect as the user the app connects as, to the database the app
+      # uses. `$$` escapes the compose interpolation so the shell inside the
+      # container expands them.
+      test:
+        - CMD-SHELL
+        - >-
+          mysql -h 127.0.0.1 -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD"
+          -e 'select 1' "$$MYSQL_DATABASE"
       interval: 5s
       timeout: 5s
       retries: 30

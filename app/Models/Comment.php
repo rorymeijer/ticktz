@@ -44,7 +44,7 @@ class Comment extends Model
     protected static function richTextAttributes(): array
     {
         return [
-            'body' => new RichTextAttribute(text: 'body_text', nullable: false),
+            'body' => new RichTextAttribute(text: 'body_text', nullable: false, images: true),
         ];
     }
 

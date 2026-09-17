@@ -61,6 +61,12 @@
     .ticktz-prose pre code { @apply bg-transparent p-0 text-inherit; }
     .ticktz-prose blockquote { @apply mb-3 border-l-2 border-slate-300 pl-3 italic text-slate-600; }
     .ticktz-prose table { @apply mb-3 w-full border-collapse text-left; }
+    /*
+     * Capped rather than full width: a pasted screenshot is very often a
+     * 3000px retina grab, and a ticket is not a lightbox. Height auto keeps
+     * the aspect ratio when the width is the thing that gives.
+     */
+    .ticktz-prose img { @apply my-2 h-auto max-w-full rounded-lg border border-slate-200; }
     .ticktz-prose th, .ticktz-prose td { @apply border border-slate-200 px-2 py-1; }
 
     /*
@@ -73,7 +79,7 @@
     .ticktz-article h4 { @apply mb-1.5 mt-4 text-sm font-semibold text-slate-900 first:mt-0; }
     .ticktz-article h5, .ticktz-article h6 { @apply mb-1.5 mt-4 text-sm font-semibold text-slate-700 first:mt-0; }
     .ticktz-article hr { @apply my-5 border-slate-200; }
-    .ticktz-article img { @apply my-3 max-w-full rounded-lg border border-slate-200; }
+    .ticktz-article img { @apply my-3; }
     .ticktz-article figure { @apply my-4; }
     .ticktz-article figcaption { @apply mt-1 text-xs text-slate-500; }
     .ticktz-article dl { @apply mb-3; }

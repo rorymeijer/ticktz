@@ -128,3 +128,17 @@ Schedule::call(function (): void {
     ->name('ticktz:prune-automation-log')
     ->dailyAt('03:20')
     ->withoutOverlapping();
+
+/*
+ * Images pasted into an editor and then abandoned.
+ *
+ * Every draft somebody starts and closes leaves its screenshots behind. Most
+ * are harmless; some are a payslip. They belong to nothing, nobody but their
+ * uploader can read them, and keeping them is keeping somebody's data for no
+ * reason. Runs after the automation log so the two do not contend for the
+ * disk at the same moment.
+ */
+Schedule::command('ticktz:prune-images')
+    ->name('ticktz:prune-images')
+    ->dailyAt('03:35')
+    ->withoutOverlapping();

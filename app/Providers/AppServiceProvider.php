@@ -77,6 +77,16 @@ class AppServiceProvider extends ServiceProvider
             (int) config('ticktz.rate_limits.api')
         )->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
 
+        // Pasting images into an editor. The one endpoint in the application
+        // where a keystroke becomes a file on disk, so it gets a ceiling of
+        // its own — generous enough for somebody assembling a walkthrough out
+        // of a dozen screenshots, low enough that a script cannot fill the
+        // volume while nobody is looking. Per person, not per IP: an office
+        // behind one address is many people.
+        RateLimiter::for('uploads', fn (Request $request) => Limit::perMinute(
+            (int) config('ticktz.rate_limits.uploads')
+        )->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
+
         // The public API throttles per *token*, not per user. Two integrations
         // owned by the same service account are two callers, and one of them
         // polling in a loop must not be able to lock the other out. A token may

@@ -167,6 +167,7 @@ export default function RequestForm({
                                 value={form.data.description}
                                 onChange={(html) => form.setData('description', html)}
                                 placeholder={t('portal.form.description_placeholder')}
+                                images
                                 minHeight="9rem"
                             />
 

@@ -41,6 +41,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 trait HasRichText
 {
+    // Binding the images a field references to the record that holds them is
+    // its own job, and one model needs it without the rest of this. See the
+    // trait for why.
+    use BindsRichTextImages;
+
     public static function bootHasRichText(): void
     {
         static::saving(function (Model $model): void {
@@ -52,6 +57,7 @@ trait HasRichText
                     $model->setAttribute($rich->translations, $sanitizer->cleanEach(
                         (array) ($model->getAttribute($rich->translations) ?? []),
                         $rich->profile,
+                        $rich->images,
                     ));
                 }
 
@@ -63,7 +69,7 @@ trait HasRichText
                 }
 
                 $raw = $model->getAttribute($column);
-                $clean = $raw === null ? '' : $sanitizer->clean((string) $raw, $rich->profile);
+                $clean = $raw === null ? '' : $sanitizer->clean((string) $raw, $rich->profile, $rich->images);
 
                 $model->setAttribute($column, $clean === '' && $rich->nullable ? null : $clean);
 
@@ -80,5 +86,31 @@ trait HasRichText
     protected static function richTextAttributes(): array
     {
         return [];
+    }
+
+    /**
+     * Derived rather than declared twice: a field holds images exactly when
+     * its RichTextAttribute says so, and the two lists drifting apart would
+     * mean either an unbound screenshot or a column scanned for nothing.
+     *
+     * @return array<int, string>
+     */
+    protected static function richTextImageColumns(): array
+    {
+        $columns = [];
+
+        foreach (static::richTextAttributes() as $column => $rich) {
+            if (! $rich->images) {
+                continue;
+            }
+
+            $columns[] = $column;
+
+            if ($rich->translations !== null) {
+                $columns[] = $rich->translations;
+            }
+        }
+
+        return $columns;
     }
 }

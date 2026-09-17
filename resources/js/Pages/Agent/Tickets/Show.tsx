@@ -222,6 +222,7 @@ function TransitionDialog({
                 onChange={(html) => form.setData('comment', html)}
                 label={t('tickets.actions.reply')}
                 placeholder={t('tickets.placeholders.reply')}
+                images
                 invalid={Boolean(form.errors.comment)}
                 minHeight="7rem"
             />

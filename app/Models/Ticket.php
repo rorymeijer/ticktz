@@ -50,7 +50,7 @@ class Ticket extends Model
     protected static function richTextAttributes(): array
     {
         return [
-            'description' => new RichTextAttribute(text: 'description_text'),
+            'description' => new RichTextAttribute(text: 'description_text', images: true),
         ];
     }
 

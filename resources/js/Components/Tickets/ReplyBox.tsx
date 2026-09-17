@@ -97,6 +97,8 @@ export function ReplyBox({
                     onChange={(html) => form.setData('body', html)}
                     label={internal ? t('tickets.actions.internal_note') : t('tickets.actions.reply')}
                     placeholder={internal ? t('tickets.placeholders.note') : t('tickets.placeholders.reply')}
+                    images
+                    internal={internal}
                     invalid={Boolean(form.errors.body)}
                     minHeight={internal ? '6rem' : '8rem'}
                     className={cn(internal && 'bg-amber-50/40')}

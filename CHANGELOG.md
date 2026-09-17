@@ -9,6 +9,35 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.0.2
+
+**Paste a screenshot.** Tickets, replies and knowledge base articles now take
+images: paste, drop or pick one and it goes straight into the text. They are
+stored outside the web root and read through a policy that follows whatever
+they were pasted into, so a screenshot on an internal note stays unreadable to
+the requester who can read everything around it. They travel with outgoing
+e-mail as part of the message rather than as a link, and each one has a
+description field, because a screenshot with no alt text is nothing to a screen
+reader.
+
+A message may only show an image this instance is serving; a remote one is a
+tracking pixel. Articles keep the wider rule.
+
+`ticktz:prune-images` runs nightly and deletes images that were pasted into a
+draft nobody ever saved.
+
+**Three fixes to a development stack that had never been started.** `docker
+compose up` now works. The database container was passed a flag that only
+exists in MySQL 8.4 while pinned to 8.0, and MySQL aborts rather than ignoring
+a setting it does not recognise. Its healthcheck then reported the server
+healthy even when the application's own user and database had never been
+created, so the failure surfaced one layer later as an error about hosts. And
+the page came up white in every browser but Chrome, because Vite was telling
+the browser to fetch its JavaScript from `0.0.0.0`.
+
+None of these affect a production install. All three are recorded, with the
+symptom to search for, in the troubleshooting section.
+
 ## 1.0.1
 
 **Rich text everywhere.** Every field somebody writes sentences into now has a

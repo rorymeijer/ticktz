@@ -6,6 +6,7 @@ namespace App\Mail;
 
 use App\Models\Attachment;
 use App\Models\EmailChannel;
+use App\Models\RichTextImage;
 use App\Models\Ticket;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,6 +16,8 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\Mime\Email;
 
 /**
  * Every outgoing ticket notification.
@@ -51,6 +54,14 @@ class TicketNotification extends Mailable implements ShouldQueue
          * version of the other.
          */
         public readonly string $renderedText,
+        /**
+         * The images this copy of the notification carries, keyed by content
+         * id. Filtered per recipient before it gets here: an internal note's
+         * screenshot reaches the agents it was mailed to and nobody else.
+         *
+         * @var array<string, RichTextImage>
+         */
+        public readonly array $inlineImages,
         public readonly string $messageId,
         public readonly ?string $inReplyTo = null,
         string $locale = 'en',
@@ -59,6 +70,23 @@ class TicketNotification extends Mailable implements ShouldQueue
         // views and any `__()` inside them render in the recipient's language.
         $this->locale = $locale;
         $this->onQueue(config('ticktz.queues.mail'));
+
+        /*
+         * Streamed rather than read by path: an instance storing attachments
+         * on S3 has no local file to point at, and a screenshot is not
+         * something to hold in memory twice for the sake of a shorter line.
+         */
+        $this->withSymfonyMessage(function (Email $message): void {
+            foreach ($this->inlineImages as $cid => $image) {
+                $stream = Storage::disk($image->disk)->readStream($image->path);
+
+                if ($stream === null) {
+                    continue;
+                }
+
+                $message->embed($stream, $cid, $image->mime_type);
+            }
+        });
     }
 
     public function envelope(): Envelope

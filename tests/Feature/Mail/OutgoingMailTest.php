@@ -283,6 +283,7 @@ it('suppresses auto-responders on everything it sends', function (): void {
         renderedSubject: 'Subject',
         renderedBody: '<p>Body</p>',
         renderedText: 'Body',
+        inlineImages: [],
         messageId: 'ticktz.'.$ticket->key.'.0.abcd1234@ticktz.test',
     );
 

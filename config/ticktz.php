@@ -10,7 +10,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'version' => env('TICKTZ_VERSION', '1.0.1'),
+    'version' => env('TICKTZ_VERSION', '1.0.2'),
 
     /*
     |--------------------------------------------------------------------------
@@ -48,6 +48,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Images pasted into rich text
+    |--------------------------------------------------------------------------
+    |
+    | Separate limits from attachments on purpose. A screenshot pasted into a
+    | reply is inline in somebody's reading, so it wants to be small; a 25MB
+    | attachment is a file somebody chose to send. Stored on the same disk by
+    | default, and never on a public one.
+    |
+    */
+    'rich_text' => [
+        'images' => [
+            'disk' => env('TICKTZ_RICH_TEXT_IMAGE_DISK', env('TICKTZ_ATTACHMENT_DISK', 'local')),
+            'max_kilobytes' => (int) env('TICKTZ_MAX_INLINE_IMAGE_KB', 5120),
+            'extensions' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('TICKTZ_ALLOWED_INLINE_IMAGE_EXTENSIONS', 'png,jpg,jpeg,gif,webp')),
+            ))),
+            // How long an image nobody ever saved is kept before the prune
+            // command sweeps it up. Long enough to survive a draft somebody
+            // left open over a weekend.
+            'orphan_days' => (int) env('TICKTZ_INLINE_IMAGE_ORPHAN_DAYS', 7),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Rate limiting (requests per minute)
     |--------------------------------------------------------------------------
     */
@@ -56,6 +82,7 @@ return [
         'login' => (int) env('TICKTZ_LOGIN_RATE_LIMIT', 5),
         'portal' => (int) env('TICKTZ_PORTAL_RATE_LIMIT', 60),
         'api' => (int) env('TICKTZ_API_RATE_LIMIT', 120),
+        'uploads' => (int) env('TICKTZ_UPLOAD_RATE_LIMIT', 30),
     ],
 
     /*

@@ -92,7 +92,14 @@ services:
       - mysql:/var/lib/mysql
       - ./docker/mysql/ticktz.cnf:/etc/mysql/conf.d/ticktz.cnf:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DB_ROOT_PASSWORD}"]
+      # As in the development stack: the application's own credentials against
+      # the application's own database, because a server that answers root is
+      # not the same thing as a database the app can use.
+      test:
+        - CMD-SHELL
+        - >-
+          mysql -h 127.0.0.1 -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD"
+          -e 'select 1' "$$MYSQL_DATABASE"
       interval: 10s
       timeout: 5s
       retries: 30

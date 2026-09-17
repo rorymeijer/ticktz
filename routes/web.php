@@ -8,6 +8,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Reports\ReportController;
+use App\Http\Controllers\RichTextImageController;
 use App\Http\Controllers\Settings\ApiTokenController;
 use App\Http\Controllers\System\HealthController;
 use Illuminate\Support\Facades\Route;
@@ -106,6 +107,16 @@ Route::middleware('auth')->group(function (): void {
 
     // Attachments are streamed through a controller so the ticket policy runs
     // before the file does; they are never on a public disk.
+    // Images pasted into a rich text field. Same shape as attachments and for
+    // the same reason: never on a public disk, always through a policy. The
+    // upload is throttled because it is the one endpoint in the application
+    // that turns a keystroke into a file on disk.
+    Route::post('/rich-text/images', [RichTextImageController::class, 'store'])
+        ->middleware('throttle:uploads')
+        ->name('rich-text.images.store');
+    Route::get('/rich-text/images/{image}', [RichTextImageController::class, 'show'])
+        ->name('rich-text.images.show');
+
     Route::get('/attachments/{attachment}', [AttachmentController::class, 'show'])->name('attachments.show');
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
