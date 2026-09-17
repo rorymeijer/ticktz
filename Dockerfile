@@ -127,9 +127,15 @@ COPY --from=assets /app/public/build /usr/src/ticktz/public/build
 # config compiled on whoever's machine built this. Neither belongs in an image,
 # and the release archive already strips both; this keeps the two ways of
 # shipping Ticktz producing the same tree.
+# `storage` and `bootstrap/cache` keep their directories — the build needs
+# them, and .dockerignore therefore leaves them in the context — so what is in
+# them is emptied here instead. Whatever a developer's instance left behind
+# (logs, sessions, compiled views, uploaded attachments, a config cache
+# compiled for their paths) belongs to that instance and not to this image.
 RUN rm -f /usr/src/ticktz/public/hot \
           /usr/src/ticktz/.env \
-          /usr/src/ticktz/bootstrap/cache/*.php
+          /usr/src/ticktz/bootstrap/cache/*.php \
+    && find /usr/src/ticktz/storage -type f ! -name '.gitignore' -delete
 
 RUN mkdir -p /usr/src/ticktz/storage/framework/{cache,sessions,testing,views} \
         /usr/src/ticktz/storage/logs \

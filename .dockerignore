@@ -41,16 +41,14 @@ public/build
 # A symlink into storage, recreated by `artisan storage:link` at boot.
 public/storage
 
-# Belongs to whichever instance is running, never to the image: logs, sessions,
-# compiled views, uploaded attachments. The Dockerfile creates the empty
-# skeleton it needs.
-storage/app
-storage/framework
-storage/logs
-storage/*.sqlite
-
-# A config, route or event cache compiled somewhere else, for somewhere else.
-bootstrap/cache
+# `storage` and `bootstrap/cache` are deliberately NOT excluded here, only
+# emptied in the Dockerfile.
+#
+# Excluding the directories removes them from the context entirely, and the
+# build needs them to exist: `composer dump-autoload` runs Laravel's
+# `package:discover`, which writes into `bootstrap/cache` and fails the build
+# with "must be present and writable" when it is not there. Their contents are
+# stripped after copying instead, where the directories are explicitly created.
 
 # Local databases.
 database/*.sqlite
