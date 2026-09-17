@@ -38,6 +38,7 @@ final class UiTranslations
         'reports',
         'api',
         'install',
+        'editor',
         'validation_ui',
     ];
 

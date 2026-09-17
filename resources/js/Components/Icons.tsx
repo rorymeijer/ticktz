@@ -175,3 +175,90 @@ export const IconAlert = (p: IconProps) => (
         <path d="M12 9v5M12 17h.01" />
     </Icon>
 );
+
+/*
+ * Editor toolbar. These are never the accessible name of anything — every
+ * toolbar button carries its own aria-label — so they stay aria-hidden like
+ * the rest of the set.
+ */
+export const IconBold = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M7 5h5.5a3.5 3.5 0 0 1 0 7H7zM7 12h6.5a3.5 3.5 0 0 1 0 7H7z" />
+    </Icon>
+);
+export const IconItalic = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M11 5h7M6 19h7M14.5 5 9.5 19" />
+    </Icon>
+);
+export const IconUnderline = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M7 4v6a5 5 0 0 0 10 0V4M5 20h14" />
+    </Icon>
+);
+export const IconStrike = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M4 12h16" />
+        <path d="M8 8.5A3.5 3.5 0 0 1 11.5 5h1.8a3.4 3.4 0 0 1 3.2 2M16.5 15a3.5 3.5 0 0 1-3.5 4h-1.8A3.5 3.5 0 0 1 7.7 16" />
+    </Icon>
+);
+export const IconCode = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="m9 8-4 4 4 4M15 8l4 4-4 4" />
+    </Icon>
+);
+export const IconCodeBlock = (p: IconProps) => (
+    <Icon {...p}>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m10 10-2 2 2 2M14 10l2 2-2 2" />
+    </Icon>
+);
+export const IconBulletList = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M9 6h11M9 12h11M9 18h11" />
+        <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" strokeWidth={2.5} />
+    </Icon>
+);
+export const IconOrderedList = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M9 6h11M9 12h11M9 18h11" />
+        <path d="M3.5 4.5h1v3.5M3.5 8h2" />
+        <path d="M3.5 11.5h2l-2 3h2" />
+        <path d="M3.5 17h2l-1.2 1.2H5" />
+    </Icon>
+);
+export const IconQuote = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M6 8h4v4a4 4 0 0 1-4 4M14 8h4v4a4 4 0 0 1-4 4" />
+    </Icon>
+);
+export const IconHeading = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M6 5v14M14 5v14M6 12h8" />
+    </Icon>
+);
+export const IconRule = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M4 12h16" />
+        <path d="M7 7h10M7 17h10" strokeOpacity={0.4} />
+    </Icon>
+);
+export const IconUnlink = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M10 13a4 4 0 0 0 5.66 0l2-2a4 4 0 1 0-5.66-5.66l-1 1" />
+        <path d="M14 11a4 4 0 0 0-5.66 0l-2 2A4 4 0 0 0 12 18.66l1-1" />
+        <path d="m4 4 16 16" />
+    </Icon>
+);
+export const IconUndo = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="M9 14 4 9l5-5" />
+        <path d="M4 9h10a6 6 0 0 1 0 12H9" />
+    </Icon>
+);
+export const IconRedo = (p: IconProps) => (
+    <Icon {...p}>
+        <path d="m15 14 5-5-5-5" />
+        <path d="M20 9H10a6 6 0 0 0 0 12h5" />
+    </Icon>
+);

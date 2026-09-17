@@ -85,6 +85,38 @@
     .ticktz-article table { @apply block overflow-x-auto sm:table; }
 }
 
+/*
+ * The editor's writing area.
+ *
+ * It renders with .ticktz-prose so what somebody types looks the same while
+ * they are typing it as it will once it is saved — the whole point of editing
+ * in place. Only the parts that exist solely while editing live here.
+ */
+.ticktz-editor {
+    @apply min-h-full outline-none;
+}
+
+/* The trailing margin on the last block would otherwise pad the box unevenly. */
+.ticktz-editor > *:last-child {
+    @apply mb-0;
+}
+
+/*
+ * The placeholder. A real `placeholder` attribute is not available on a
+ * contenteditable, so TipTap marks the empty first block and the text is drawn
+ * as generated content — which is also why it can never be the field's
+ * accessible name.
+ */
+.ticktz-editor p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    @apply pointer-events-none float-left h-0 text-slate-500;
+}
+
+/* A selection made while the editor does not have focus still has to be visible. */
+.ticktz-editor .ProseMirror-selectednode {
+    @apply rounded outline outline-2 outline-brand-500;
+}
+
 /* Quoted e-mail history inside ticket comments. */
 .ticktz-quote {
     @apply mt-3 border-l-2 border-slate-200 pl-3 text-xs text-slate-500;
