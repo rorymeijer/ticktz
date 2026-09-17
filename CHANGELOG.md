@@ -65,7 +65,7 @@ rather than once by hand.
 
 ### Notes for operators
 
-- PHP 8.3 or 8.4, MySQL 8, Redis.
+- PHP 8.4, MySQL 8, Redis.
 - `docker compose up` on a fresh clone gives a working, populated demo. Do not
   point that compose file at real data: see
   [docs/self-hosting.md](docs/self-hosting.md) for the production one.

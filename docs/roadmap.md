@@ -33,7 +33,7 @@ tracks what is shipped. The phase definitions come from the original brief in
   `useTranslations()` is the only way UI copy is resolved.
 - A small component library (`resources/js/Components/UI`) and the three shells:
   auth, agent console and portal.
-- GitHub Actions: Pint, migrations against MySQL 8, Pest on PHP 8.3 and 8.4,
+- GitHub Actions: Pint, migrations against MySQL 8, Pest on PHP 8.4,
   TypeScript, Vitest and a Docker image build.
 
 ## Phase 1 — Auth, users & RBAC

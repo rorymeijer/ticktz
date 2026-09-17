@@ -75,7 +75,7 @@ curl -s http://localhost:8080/health | jq
 
 | Layer | Choice |
 | --- | --- |
-| Backend | Laravel 12, PHP 8.3 (8.4 supported) |
+| Backend | Laravel 13, PHP 8.4 |
 | Frontend | Inertia.js + React 18 + TypeScript, Vite, Tailwind |
 | Database | MySQL 8 (utf8mb4) |
 | Cache / queue / sessions | Redis |

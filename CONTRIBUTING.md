@@ -5,7 +5,7 @@ the conventions the codebase follows, and what CI will check.
 
 ## Local development
 
-Requirements: PHP 8.3+ with `bcmath`, `intl`, `mbstring`, `pdo_mysql`, `zip`;
+Requirements: PHP 8.4+ with `bcmath`, `intl`, `mbstring`, `pdo_mysql`, `zip`;
 Composer 2; Node 22.
 
 ```bash

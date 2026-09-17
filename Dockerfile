@@ -10,7 +10,7 @@
 # ---------------------------------------------------------------------------
 
 # --- Stage 1: composer dependencies ----------------------------------------
-FROM php:8.3-fpm-alpine AS vendor
+FROM php:8.4-fpm-alpine AS vendor
 
 RUN apk add --no-cache git unzip icu-dev oniguruma-dev libzip-dev $PHPIZE_DEPS \
     && docker-php-ext-install -j"$(nproc)" bcmath intl pdo_mysql zip \
@@ -45,7 +45,7 @@ COPY --from=vendor /var/www/html/vendor ./vendor
 RUN npm run build
 
 # --- Stage 3: runtime -------------------------------------------------------
-FROM php:8.3-fpm-alpine AS runtime
+FROM php:8.4-fpm-alpine AS runtime
 
 RUN apk add --no-cache \
         icu-libs \

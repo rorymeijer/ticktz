@@ -263,7 +263,7 @@ memory and fast disk before you give it anything else.
 
 If you would rather run it directly, see
 [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the development setup. For
-production you need PHP 8.3 or 8.4 with `bcmath`, `gd`, `intl`, `ldap`,
+production you need PHP 8.4 with `bcmath`, `gd`, `intl`, `ldap`,
 `mbstring`, `pdo_mysql`, `redis`, `sockets` and `zip`; MySQL 8; Redis; and:
 
 ```bash

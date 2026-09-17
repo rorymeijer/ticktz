@@ -39,16 +39,18 @@ which conflicts with the privacy requirement and breaks air-gapped installs.
 Ticktz uses a system font stack instead. Nothing in the built page references an
 external origin.
 
-## D4 — PHP 8.3 as the floor, 8.4 supported
+## D4 — The PHP floor tracks what is actually built and tested
 
-The brief specifies PHP 8.3. The Docker image is built on `php:8.3-fpm-alpine`
-and CI runs the suite on both 8.3 and 8.4, so the codebase keeps working on
-distributions that ship the newer runtime.
+The brief specifies PHP 8.3, and that was the floor through phase 12.
 
-`composer.json` originally allowed `^8.2`; it was tightened to `^8.3` with the
-framework upgrade in [D50](#d50--laravel-12-because-11-carries-unpatched-advisories),
-because claiming support for a runtime nothing builds or tests on is a promise
-with nothing behind it.
+It has moved twice since, both times for the same reason: a supported runtime
+should be one the project actually builds and tests on, not one it merely
+declares. `composer.json` allowed `^8.2` originally, was tightened to `^8.3`
+with the Laravel 12 upgrade ([D50](#d50--laravel-12-because-11-carries-unpatched-advisories)),
+and is now `^8.4` ([D55](#d55--laravel-13-and-a-php-84-floor)).
+
+The Docker image, the CI matrix and this constraint are kept in step. Claiming
+support for a runtime nothing verifies is a promise with nothing behind it.
 
 ## D5 — MIT license
 
@@ -948,3 +950,28 @@ out what is in production.
 Images are built for `linux/amd64` and `linux/arm64`, and the release is
 **drafted** rather than published: generated notes are a commit list, and a
 release worth tagging is worth a paragraph written by a person.
+
+## D55 — Laravel 13, and a PHP 8.4 floor
+
+Laravel 13.32 is the current line, and the project moved to it. `laravel/tinker`
+had to go to 3.x with it; nothing else in the tree needed a constraint change,
+and no application code changed.
+
+The interesting part is the runtime. Laravel 13 itself accepts PHP 8.3, and it
+accepts **either** Symfony 7.4 or Symfony 8. Symfony 8 requires PHP 8.4.1, so
+there was a real choice: pin Symfony back to 7.4 and keep 8.3 working, or take
+Symfony 8 and raise the floor.
+
+The floor moved to 8.4. Pinning a major dependency backwards to preserve a
+runtime nothing builds or tests on is the kind of arrangement that quietly
+rots — and PHP 8.3 leaves active support in December 2026, two months from
+this release. Ticktz ships as a container that controls its own PHP, so the
+only people affected are those running it outside Docker, who can install 8.4.
+
+`composer.json`, the Dockerfile and the CI matrix all moved together, because
+the whole point of the constraint is that it matches reality.
+
+Verified the same way as [D50](#d50--laravel-12-because-11-carries-unpatched-advisories):
+669 tests unchanged, zero axe violations across eighteen pages, the API and the
+webhook pipeline exercised against a running instance, migrations clean from
+scratch, and `composer audit` empty.
