@@ -187,8 +187,7 @@ mailbox pointing at it.
 To watch the whole round trip:
 
 ```bash
-docker compose up -d
-docker compose exec app php artisan ticktz:demo
+docker compose up -d --wait   # the first boot seeds the demo desk itself
 
 # reply to a ticket in the agent console, then read it at localhost:8025
 # reply to that mail from GreenMail, then:
