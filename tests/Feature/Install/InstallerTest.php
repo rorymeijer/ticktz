@@ -273,12 +273,27 @@ it('installs against the built-in database without being given its credentials',
 
         unset($payload['host'], $payload['port'], $payload['database'], $payload['username'], $payload['password']);
 
-        // `host` is excluded for the same reason as the well-formed-payload
-        // test above: it is where a connection failure is reported, and this
-        // suite has no `mysql` to reach. What is pinned here is that none of
-        // the five fields is *demanded* of a request that sent none of them.
+        // Every one of the five, `host` included. There is no `mysql` for this
+        // suite to reach, so the install does fail — but on a screen with no
+        // fields the failure belongs to the instance rather than to a field,
+        // and the next test pins where it goes instead.
         post('/install', $payload)
-            ->assertSessionDoesntHaveErrors(['database_choice', 'port', 'database', 'username', 'password']);
+            ->assertSessionDoesntHaveErrors(['database_choice', 'host', 'port', 'database', 'username', 'password']);
+    });
+});
+
+it('reports a built-in database that stops answering where it can be read', function (): void {
+    withBundledEnvironment(function (): void {
+        // The connection is tested again at the end, and this suite has no
+        // `mysql`, so this is that failure. It used to be reported on `host` —
+        // which the bundled screen no longer renders, so the button would have
+        // appeared to do nothing and going back a step would have explained
+        // nothing either.
+        $payload = installPayload(['database_choice' => 'bundled']);
+
+        unset($payload['host'], $payload['port'], $payload['database'], $payload['username'], $payload['password']);
+
+        post('/install', $payload)->assertSessionHasErrors('install');
     });
 });
 

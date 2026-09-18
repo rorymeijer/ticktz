@@ -236,6 +236,7 @@ export default function Wizard({
                                     <DatabaseStep
                                         form={form}
                                         available={database.bundledAvailable}
+                                        bundled={database.defaults}
                                         test={test}
                                         testing={testing}
                                         onTest={runTest}
@@ -262,7 +263,7 @@ export default function Wizard({
 
                                 {current === 'mail' && <MailStep form={form} />}
 
-                                {current === 'finish' && <FinishStep form={form} />}
+                                {current === 'finish' && <FinishStep form={form} bundled={database.defaults} />}
                             </div>
 
                             {/* `install` is not a form field, so it is not in
@@ -416,6 +417,7 @@ function RequirementsStep({
 function DatabaseStep({
     form,
     available,
+    bundled,
     test,
     testing,
     onTest,
@@ -424,6 +426,11 @@ function DatabaseStep({
 }: {
     form: WizardForm;
     available: boolean;
+    // The bundled database as the server described it, which is not the same
+    // thing as what is in the form: editing the external fields and switching
+    // back would otherwise have this summary name a database that is about to
+    // be ignored.
+    bundled: Record<string, string>;
     test: TestResult | null;
     testing: boolean;
     onTest: () => void;
@@ -462,9 +469,9 @@ function DatabaseStep({
                 <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                     <p>
                         {t('install.database.bundled_summary', {
-                            database: form.data.database,
-                            host: form.data.host,
-                            username: form.data.username,
+                            database: bundled.database,
+                            host: bundled.host,
+                            username: bundled.username,
                         })}
                     </p>
                     <p className="mt-2 text-xs text-slate-600">{t('install.database.bundled_password')}</p>
@@ -887,13 +894,19 @@ function MailStep({ form }: { form: WizardForm }) {
     );
 }
 
-function FinishStep({ form }: { form: WizardForm }) {
+function FinishStep({ form, bundled }: { form: WizardForm; bundled: Record<string, string> }) {
     const { t } = useTranslations();
+    const isBundled = form.data.database_choice === 'bundled';
+
+    // Read from the server's values for the bundled database, for the same
+    // reason the step above does: the form still holds whatever was typed into
+    // the external fields, and none of it is going to be used.
+    const db = isBundled ? bundled : form.data;
 
     const rows: [string, string][] = [
         [
             t('install.finish.database'),
-            `${form.data.database_choice === 'bundled' ? t('install.finish.bundled') : t('install.finish.external')} — ${form.data.database}@${form.data.host}:${form.data.port}`,
+            `${isBundled ? t('install.finish.bundled') : t('install.finish.external')} — ${db.database}@${db.host}:${db.port}`,
         ],
         [t('install.finish.application'), `${form.data.app.name} — ${form.data.app.url}`],
         [t('install.finish.administrator'), `${form.data.admin.name} <${form.data.admin.email}>`],

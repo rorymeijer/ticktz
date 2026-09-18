@@ -134,11 +134,20 @@ class InstallController extends Controller
         try {
             $this->installer->run($payload);
         } catch (RuntimeException $exception) {
-            // The one failure the operator can fix by going back a step.
             if (str_starts_with($exception->getMessage(), 'database:')) {
-                return back()->withErrors([
-                    'host' => __('install.database.errors.'.substr($exception->getMessage(), 9)),
-                ]);
+                $message = __('install.database.errors.'.substr($exception->getMessage(), 9));
+
+                // Where it can be read. For a database the operator typed in,
+                // that is beside the host field they can correct. The bundled
+                // one has no fields on the screen at all, so the same error
+                // put on `host` would be attached to nothing — the button
+                // would appear to do nothing at all, and going back a step
+                // would explain nothing either. It is not a field-level
+                // problem there anyway: the container the stack started has
+                // stopped answering.
+                return back()->withErrors(
+                    $choice === DatabaseChoice::Bundled ? ['install' => $message] : ['host' => $message]
+                );
             }
 
             return back()->withErrors(['install' => $exception->getMessage()]);
