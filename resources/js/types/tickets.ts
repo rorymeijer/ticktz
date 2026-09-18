@@ -167,6 +167,4 @@ export interface TicketOptions {
     labels: LabelSummary[];
     teams: { id: number; name: string }[];
     sources: string[];
-    assignees?: UserSummary[];
-    requesters?: (UserSummary & { organization_id: number | null })[];
 }

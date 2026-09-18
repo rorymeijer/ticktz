@@ -149,7 +149,6 @@ export default function TicketShow({
                             ticketKey={ticket.key}
                             approvals={approvals}
                             workflows={approvalWorkflows}
-                            assignees={options.assignees ?? []}
                             canRequest={can.approve && can.update}
                         />
                     ) : null}

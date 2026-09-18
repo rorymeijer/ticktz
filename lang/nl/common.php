@@ -75,6 +75,31 @@ return [
         'overdue_by' => ':duration te laat',
         'remaining' => 'nog :duration',
     ],
+    /*
+    |--------------------------------------------------------------------------
+    | Iemand kiezen
+    |--------------------------------------------------------------------------
+    |
+    | De kiezer zoekt tijdens het typen op de server in plaats van de hele
+    | lijst vast te houden, en heeft daardoor toestanden die een keuzelijst
+    | niet heeft: er is nog niets getypt, er is niets gevonden, en het zoeken
+    | zelf is mislukt. Dat laatste moet het zeggen — een lege lijst die "het
+    | verzoek is geweigerd" betekent leest als "er is niemand", en iemand
+    | gelooft dat.
+    |
+    */
+    'people' => [
+        'search' => 'Zoek op naam of e-mailadres',
+        'searching' => 'Bezig met zoeken…',
+        'no_matches' => 'Niemand komt overeen met :term.',
+        'failed' => 'Die zoekopdracht kon niet worden uitgevoerd. Probeer het zo nog eens.',
+        'nobody' => 'Niemand',
+        'clear' => 'Keuze wissen',
+        'remove' => ':name verwijderen',
+        'result_count' => ':count gevonden',
+        'more_hint' => 'Typ verder om de lijst te verkleinen.',
+    ],
+
     'errors' => [
         'forbidden' => 'Je hebt geen rechten voor deze actie.',
         'not_found' => 'Het gevraagde item is niet gevonden.',

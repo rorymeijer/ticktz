@@ -11,7 +11,6 @@ import {
     Card,
     CardBody,
     CardHeader,
-    CheckboxGroup,
     ConfirmDialog,
     Field,
     Modal,
@@ -19,6 +18,7 @@ import {
     TextInput,
     Textarea,
 } from '@/Components/UI';
+import { PersonMultiPicker } from '@/Components/UI/PersonPicker';
 import { useTranslations } from '@/hooks/useTranslations';
 import { relativeTime } from '@/lib/datetime';
 import type { Approval, ApprovalWorkflowSummary } from '@/types/approvals';
@@ -37,13 +37,11 @@ export function ApprovalPanel({
     ticketKey,
     approvals,
     workflows,
-    assignees,
     canRequest,
 }: {
     ticketKey: string;
     approvals: Approval[];
     workflows: ApprovalWorkflowSummary[];
-    assignees: UserSummary[];
     canRequest: boolean;
 }) {
     const { t } = useTranslations();
@@ -137,7 +135,6 @@ export function ApprovalPanel({
                 <RequestDialog
                     ticketKey={ticketKey}
                     workflows={workflows}
-                    assignees={assignees}
                     onClose={() => setAsking(false)}
                 />
             ) : null}
@@ -170,15 +167,17 @@ export function ApprovalPanel({
 function RequestDialog({
     ticketKey,
     workflows,
-    assignees,
     onClose,
 }: {
     ticketKey: string;
     workflows: ApprovalWorkflowSummary[];
-    assignees: UserSummary[];
     onClose: () => void;
 }) {
     const { t } = useTranslations();
+
+    // The form posts ids; the picker shows people.
+    const [approvers, setApprovers] = useState<UserSummary[]>([]);
+
     const form = useForm({
         approval_workflow_id: '',
         approver_ids: [] as number[],
@@ -234,16 +233,25 @@ function RequestDialog({
 
                 {!usingWorkflow ? (
                     <>
+                        {/* Anybody with an account, not only agents. An
+                            approver is very often a budget holder or a line
+                            manager who never opens the console — this list was
+                            the agent list, so those people could not be asked
+                            at all. Searched rather than listed for the same
+                            reason as everywhere else. */}
                         <Field label={t('approvals.fields.approvers')} error={form.errors.approver_ids}>
-                            {() => (
-                                <CheckboxGroup
-                                    options={assignees.map((user) => ({
-                                        value: user.id,
-                                        label: user.name,
-                                        description: user.email,
-                                    }))}
-                                    selected={form.data.approver_ids}
-                                    onChange={(values) => form.setData('approver_ids', values as number[])}
+                            {(props) => (
+                                <PersonMultiPicker
+                                    {...props}
+                                    value={approvers}
+                                    query={{ scope: 'user' }}
+                                    onChange={(people) => {
+                                        setApprovers(people);
+                                        form.setData(
+                                            'approver_ids',
+                                            people.map((person) => person.id),
+                                        );
+                                    }}
                                 />
                             )}
                         </Field>

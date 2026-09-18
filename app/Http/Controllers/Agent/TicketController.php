@@ -130,9 +130,7 @@ class TicketController extends Controller
         $this->authorize('tickets.create');
 
         return Inertia::render('Agent/Tickets/Create', [
-            'options' => $this->filterOptions() + [
-                'requesters' => $this->requesterOptions($request),
-            ],
+            'options' => $this->filterOptions(),
         ]);
     }
 
@@ -182,7 +180,7 @@ class TicketController extends Controller
             'ticket' => $this->detailPayload($ticket, $user),
             'timeline' => $this->timeline($ticket, $comments->all()),
             'transitions' => $this->availableTransitions($ticket, $user),
-            'options' => $this->filterOptions() + ['assignees' => $this->assigneeOptions()],
+            'options' => $this->filterOptions(),
             'can' => [
                 'update' => $user->can('update', $ticket),
                 'assign' => $user->can('assign', $ticket),
@@ -429,35 +427,17 @@ class TicketController extends Controller
         ];
     }
 
-    /**
-     * @return array<int, array<string, mixed>>
+    /*
+     * There were two more option builders here: `assigneeOptions()`, the first
+     * five hundred active agents by name, and `requesterOptions()`, the first
+     * hundred users. Both filled a `<select>` and both truncated to do it,
+     * silently — on a desk of four hundred, half the staff simply could not be
+     * chosen. `requesterOptions()` also read a `requester_search` parameter
+     * that no page ever sent, which is what half-built search plumbing looks
+     * like after a while.
+     *
+     * Both are gone. The pickers search `GET /people` instead, which answers
+     * out of the set the server will actually accept rather than out of
+     * whatever fitted in the page. See App\Http\Controllers\PeopleController.
      */
-    private function assigneeOptions(): array
-    {
-        return User::query()
-            ->active()
-            ->agents()
-            ->orderBy('name')
-            ->limit(500)
-            ->get()
-            ->map(fn (User $user) => $user->toSummaryArray())
-            ->all();
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function requesterOptions(Request $request): array
-    {
-        return User::query()
-            ->active()
-            ->search($request->string('requester_search')->toString())
-            ->orderBy('name')
-            ->limit(100)
-            ->get()
-            ->map(fn (User $user) => $user->toSummaryArray() + [
-                'organization_id' => $user->organization_id,
-            ])
-            ->all();
-    }
 }

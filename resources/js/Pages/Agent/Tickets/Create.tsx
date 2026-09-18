@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { useRef, type FormEventHandler } from 'react';
+import { useRef, useState, type FormEventHandler } from 'react';
 
 import AppLayout from '@/Layouts/AppLayout';
 import { IconPaperclip, IconX } from '@/Components/Icons';
@@ -16,13 +16,19 @@ import {
     Select,
     TextInput,
 } from '@/Components/UI';
+import { PersonPicker } from '@/Components/UI/PersonPicker';
 import { useTranslations } from '@/hooks/useTranslations';
-import type { TicketOptions } from '@/types/tickets';
+import type { TicketOptions, UserSummary } from '@/types/tickets';
 import { RichTextField } from '@/Components/RichText/RichTextField';
 
 export default function TicketCreate({ options }: { options: TicketOptions }) {
     const { t } = useTranslations();
     const fileInput = useRef<HTMLInputElement>(null);
+
+    // The form posts ids; the picker shows a person. These hold the second
+    // half, which nothing else on the page needs and the server never sees.
+    const [requester, setRequester] = useState<UserSummary | null>(null);
+    const [assignee, setAssignee] = useState<UserSummary | null>(null);
 
     const form = useForm<{
         subject: string;
@@ -140,19 +146,15 @@ export default function TicketCreate({ options }: { options: TicketOptions }) {
                         <CardBody className="space-y-4">
                             <Field label={t('tickets.fields.requester')} error={form.errors.requester_id} required>
                                 {(props) => (
-                                    <Select
+                                    <PersonPicker
                                         {...props}
-                                        value={form.data.requester_id}
-                                        required
-                                        onChange={(event) => form.setData('requester_id', event.target.value)}
-                                    >
-                                        <option value="">{t('common.actions.select')}…</option>
-                                        {(options.requesters ?? []).map((person) => (
-                                            <option key={person.id} value={person.id}>
-                                                {person.name} — {person.email}
-                                            </option>
-                                        ))}
-                                    </Select>
+                                        value={requester}
+                                        query={{ scope: 'user' }}
+                                        onChange={(person) => {
+                                            setRequester(person);
+                                            form.setData('requester_id', person ? String(person.id) : '');
+                                        }}
+                                    />
                                 )}
                             </Field>
 
@@ -177,7 +179,20 @@ export default function TicketCreate({ options }: { options: TicketOptions }) {
                                     <Select
                                         {...props}
                                         value={form.data.team_id}
-                                        onChange={(event) => form.setData('team_id', event.target.value)}
+                                        // Choosing a team narrows who may hold
+                                        // the ticket, so whoever was chosen
+                                        // before it may no longer qualify.
+                                        // Clearing it beats posting a name the
+                                        // server then refuses under a field the
+                                        // operator has stopped looking at.
+                                        onChange={(event) => {
+                                            setAssignee(null);
+                                            form.setData({
+                                                ...form.data,
+                                                team_id: event.target.value,
+                                                assignee_id: '',
+                                            });
+                                        }}
                                     >
                                         <option value="">{t('common.labels.none')}</option>
                                         {options.teams.map((team) => (
@@ -191,18 +206,19 @@ export default function TicketCreate({ options }: { options: TicketOptions }) {
 
                             <Field label={t('tickets.fields.assignee')} error={form.errors.assignee_id}>
                                 {(props) => (
-                                    <Select
+                                    <PersonPicker
                                         {...props}
-                                        value={form.data.assignee_id}
-                                        onChange={(event) => form.setData('assignee_id', event.target.value)}
-                                    >
-                                        <option value="">{t('common.labels.unassigned')}</option>
-                                        {(options.assignees ?? []).map((agent) => (
-                                            <option key={agent.id} value={agent.id}>
-                                                {agent.name}
-                                            </option>
-                                        ))}
-                                    </Select>
+                                        value={assignee}
+                                        allowNobody
+                                        // Scoped to the team chosen above, so
+                                        // the list is the answer rather than a
+                                        // guess the server has to correct.
+                                        query={{ scope: 'assignee', teamId: form.data.team_id || null }}
+                                        onChange={(person) => {
+                                            setAssignee(person);
+                                            form.setData('assignee_id', person ? String(person.id) : '');
+                                        }}
+                                    />
                                 )}
                             </Field>
                         </CardBody>
