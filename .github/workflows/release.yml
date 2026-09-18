@@ -184,7 +184,21 @@ jobs:
   # arm64 still building — is the failure this shape makes impossible.
   image:
     name: Build the image (${{ matrix.platform }})
-    needs: [prepare, verify]
+    # Deliberately not waiting for `verify`.
+    #
+    # `verify` runs the suite a third time on a commit CI has usually already
+    # checked twice — once on the pull request, once on main after the merge —
+    # and its only step CI does not also run is the tag-versus-version check.
+    # Deleting it is the wrong fix: a tag can be pushed at any commit, including
+    # one no pull request ever covered, and then it is the only thing standing
+    # between that commit and everybody's `docker pull`.
+    #
+    # So it keeps its job and stops costing time. These builds start beside it
+    # rather than after it, and because they push by digest under no tag,
+    # nothing they produce is reachable by name. `manifest` is what publishes,
+    # and that waits for `verify`. A failed suite therefore leaves a few
+    # untagged blobs in the registry and nothing anybody can pull.
+    needs: prepare
     runs-on: ${{ matrix.runner }}
 
     env:
@@ -269,7 +283,10 @@ jobs:
   # registry and this only writes the index above them.
   manifest:
     name: Publish the image tags
-    needs: [prepare, image]
+    # The gate. Everything above this line is work; this is the line the work
+    # crosses to become something an operator can pull, so it is here that the
+    # test suite has to have passed.
+    needs: [prepare, verify, image]
     runs-on: ubuntu-latest
 
     env:

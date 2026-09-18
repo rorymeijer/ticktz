@@ -9,6 +9,20 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## Unreleased
+
+**A release is about six minutes rather than eight.** The test suite in the
+release runs the same `pest` and `composer audit` that CI has usually already
+run twice — on the pull request, and on `main` after the merge — and its only
+step CI does not also run is the tag-versus-version check.
+
+It is still there, because a tag can be pushed at any commit and this is then
+the only thing between that commit and everybody's `docker pull`. It just no
+longer holds the image builds up: they start beside it and push by digest under
+no tag, so nothing they produce is reachable by name until the job that applies
+the tags, which does wait for the suite. A failing suite leaves a few untagged
+blobs in the registry and nothing anybody can pull.
+
 ## 1.1.8
 
 **The redis extension is built from source rather than fetched through pecl.**
