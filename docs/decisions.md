@@ -1608,3 +1608,44 @@ carried the right check since 1.1.1 and the development one had simply never
 been given it. php-fpm is the last thing the entrypoint starts, which makes
 "is anything listening on 9000" exactly the question "has the first boot
 finished", with no separate readiness flag to keep in step with the truth.
+
+## D69 — Two passwords, and everything else asked for later
+
+Installing production meant opening `.env` and filling in a block of settings
+before anything would start. The setup wizard existed and asked for most of the
+same things, so the work was done twice — once blind in an editor, once in a
+screen that could validate it.
+
+**What genuinely cannot wait.** The bundled MySQL container is handed its
+password at the moment it is *created*, and that is before any application
+exists to ask for one. That is the whole of it: two passwords, one for the
+application's user and one for root. `scripts/install.sh` generates them, and a
+generated value is better than an invented one anyway.
+
+**What must not be written early, and why it is not obvious.** Everything in
+`.env` reaches the container as an environment variable, and Laravel's dotenv is
+immutable — it does not overwrite a variable that already exists. So a value
+placed in `.env` before installation outranks whatever the wizard writes to the
+same key afterwards. Put `APP_URL` there up front and the wizard's URL field
+appears to work and changes nothing. The script therefore writes two keys and
+stops, and the documentation says not to add more.
+
+**A default that lived in the wrong file.** `DB_CONNECTION`, `SESSION_DRIVER`,
+`CACHE_STORE` and `QUEUE_CONNECTION` came only from `.env.example`. Copy that
+file and they are right; write a `.env` from scratch and they are absent, at
+which point Laravel's own fallback for `DB_CONNECTION` applies — `sqlite`. The
+instance starts, migrates into a file, and sits beside a healthy MySQL it never
+speaks to. Nothing reports an error, because nothing is wrong: every component
+did what it was told.
+
+The fix is to notice whose fact it is. Which database to reach and which
+drivers to use are properties of `docker-compose.prod.yml`, which ships the
+MySQL and the Redis in question — not preferences an operator holds. They moved
+there, as `${VAR:-default}`, so overriding still works and the default can no
+longer be missing.
+
+**And the duplication that hid it.** A service's own `environment:` replaces
+the base's rather than merging into it, so the app and the worker each restated
+every key. Four places to keep in step is four places to forget one. They now
+merge a single map, which is what `<<:` does inside a mapping and what the base
+was reaching for all along.

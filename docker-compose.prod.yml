@@ -28,19 +28,45 @@
 # containers and volumes.
 name: ticktz
 
+x-app-env: &app-env
+  APP_ENV: production
+  APP_DEBUG: "false"
+  # What this stack *is*, rather than what an operator prefers. It ships a
+  # MySQL and a Redis, so which drivers to speak to them with is not a
+  # question — and a default that has to be written into every `.env` is a
+  # default that will eventually be missing from one. It was: Laravel's own
+  # fallback for DB_CONNECTION is `sqlite`, so an instance whose `.env` did not
+  # name it came up pointed at a file instead of the database beside it.
+  #
+  # Each is still `${VAR:-default}`, so an operator pointing at their own
+  # database or an external Redis overrides it from `.env` exactly as before.
+  DB_CONNECTION: ${DB_CONNECTION:-mysql}
+  DB_HOST: ${DB_HOST:-mysql}
+  DB_PORT: ${DB_PORT:-3306}
+  DB_DATABASE: ${DB_DATABASE:-ticktz}
+  DB_USERNAME: ${DB_USERNAME:-ticktz}
+  # Named here rather than left to `env_file` alone, so that a missing one
+  # stops the stack with the sentence above rather than starting an app that
+  # cannot reach its own database.
+  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+  REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
+  REDIS_HOST: ${REDIS_HOST:-redis}
+  REDIS_PORT: ${REDIS_PORT:-6379}
+  SESSION_DRIVER: ${SESSION_DRIVER:-redis}
+  CACHE_STORE: ${CACHE_STORE:-redis}
+  QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+
 x-app-base: &app-base
   build:
     context: .
     target: runtime
-  image: ${TICKTZ_IMAGE:-ticktz/app:latest}
+  # The published image. `ticktz/app:latest` was the default and is nobody's
+  # repository on Docker Hub, so `docker compose pull` — which the upgrade
+  # instructions tell you to run — answered with an access-denied error that
+  # reads like a login problem and is not one.
+  image: ${TICKTZ_IMAGE:-ghcr.io/rorymeijer/ticktz:latest}
   env_file: [.env]
-  environment:
-    APP_ENV: production
-    APP_DEBUG: "false"
-    DB_HOST: mysql
-    DB_PORT: 3306
-    REDIS_HOST: redis
-    REDIS_PORT: 6379
+  environment: *app-env
   volumes:
     - code:/var/www/html
     - storage:/var/www/html/storage
@@ -70,17 +96,12 @@ services:
   app:
     <<: *app-base
     environment:
+      <<: *app-env
       CONTAINER_ROLE: app
-      APP_ENV: production
-      APP_DEBUG: "false"
       # Off by default so a first boot lands on the setup wizard rather than
       # migrating into a database nobody has chosen yet. Set it to true for an
       # unattended deployment that runs `ticktz:install` itself.
       TICKTZ_AUTO_MIGRATE: ${TICKTZ_AUTO_MIGRATE:-false}
-      DB_HOST: mysql
-      DB_PORT: 3306
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
     expose:
       - "9000"
     healthcheck:
@@ -98,13 +119,8 @@ services:
     <<: *app-base
     command: ["supervisord", "-c", "/etc/supervisor/conf.d/ticktz.conf"]
     environment:
+      <<: *app-env
       CONTAINER_ROLE: worker
-      APP_ENV: production
-      APP_DEBUG: "false"
-      DB_HOST: mysql
-      DB_PORT: 3306
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
       TICKTZ_AUTO_MIGRATE: "false"
       TICKTZ_QUEUES: ${TICKTZ_QUEUES:-high,default,mail,webhooks,low}
       TICKTZ_QUEUE_WORKERS: ${TICKTZ_QUEUE_WORKERS:-4}

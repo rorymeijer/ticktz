@@ -9,6 +9,50 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.1.5
+
+**Installing production no longer means editing a file.**
+
+```bash
+git clone https://github.com/rorymeijer/ticktz.git
+cd ticktz
+./scripts/install.sh
+```
+
+The script writes the two passwords the bundled MySQL needs and starts the
+stack; the setup wizard in the browser does the rest and writes `.env` itself.
+Those two exist because the MySQL container is handed its password at the
+moment it is *created*, before any application exists to ask for one — the one
+genuine chicken and egg in the setup. The script writes nothing else on
+purpose: a value in `.env` reaches the container as an environment variable, and
+Laravel leaves existing environment variables alone, so anything planted up
+front silently outranks what the wizard writes later. Running it twice never
+replaces a value already there. `tests/Shell/install.test.sh` covers it, in CI.
+
+**A production instance could come up on sqlite.** `DB_CONNECTION`,
+`SESSION_DRIVER`, `CACHE_STORE` and `QUEUE_CONNECTION` came only from `.env`,
+and Laravel's own fallback for the first of them is `sqlite`. An instance whose
+`.env` did not name it started on a file, with a synchronous queue, beside the
+MySQL and Redis it was supposed to be using — and said nothing.
+
+They are now set by `docker-compose.prod.yml`, which is where they belong: the
+file ships those services, so which drivers to reach them with is not an
+opinion. Each is still `${VAR:-default}`, so pointing at your own database or an
+external Redis works exactly as before. A `.env` naming them explicitly — every
+one written before this release — is unaffected.
+
+The repeated per-service environment blocks that caused it are gone too. A
+service's own `environment:` replaces the base's rather than merging into it, so
+every key had to be restated in both the app and the worker; they now merge one
+map, and a setting added in one place reaches both.
+
+**The production stack's default image exists.** It was `ticktz/app:latest`,
+which is nobody's repository on Docker Hub, so the `docker compose pull` the
+upgrade instructions call for answered with *pull access denied … or may require
+docker login* — an error that reads like a login problem and is not one. The
+default is now `ghcr.io/rorymeijer/ticktz:latest`, which is what the release
+workflow publishes.
+
 ## 1.1.4
 
 **`docker compose up -d` now means the application is ready.** The development

@@ -48,40 +48,56 @@ your working copy into the container.
 ```bash
 git clone https://github.com/rorymeijer/ticktz.git
 cd ticktz
-cp .env.example .env
+./scripts/install.sh
 ```
 
-Then edit `.env`. The minimum that has to change:
+Then open it in a browser, and the **setup wizard** takes it from there: it
+checks the server, asks where the database should live, names your service desk
+and creates your administrator. See [First run](#first-run). You will not have
+opened an editor.
 
-```dotenv
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://servicedesk.example.org      # must match how people reach it
-APP_KEY=                                      # generated on first boot if blank
+### What the script does, and what it deliberately does not
 
-DB_DATABASE=ticktz
-DB_USERNAME=ticktz
-DB_PASSWORD=                                  # required, no default
-DB_ROOT_PASSWORD=                             # required, no default
+It writes two passwords into `.env` and starts the stack. That is all.
 
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.example.org
-MAIL_FROM_ADDRESS=servicedesk@example.org
-```
+Those two exist because the bundled MySQL container is handed its password at
+the moment it is *created* — before any application exists to ask for one. It is
+the one genuine chicken and egg in the whole setup, and generating a random
+value is a better answer than asking somebody to invent one.
 
-`APP_URL` matters more than it looks. Links in notification e-mail, the
-approve-by-e-mail links and the `instance` field on every webhook payload are
-built from it; get it wrong and every one of them points somewhere useless.
+Everything else is left to the wizard, which writes `.env` itself. That is not
+tidiness: a value in `.env` is passed into the container as an environment
+variable, and Laravel leaves environment variables that already exist alone. An
+`APP_URL` planted up front would quietly outrank what the wizard writes, and the
+field would appear to change in the screen while changing nothing. So the
+script writes no `APP_URL`, no `APP_KEY` and no mail settings, and neither
+should you.
 
-Then:
+It is safe to run twice: a value already in the file is never replaced.
+
+`--no-start` writes the secrets and stops, for a host where something else
+brings the stack up.
+
+### Doing it by hand
+
+The script is a convenience, not a requirement. The equivalent is:
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+printf 'DB_PASSWORD=%s\nDB_ROOT_PASSWORD=%s\n' \
+  "$(openssl rand -hex 24)" "$(openssl rand -hex 24)" > .env
+chmod 600 .env
+docker compose -f docker-compose.prod.yml up -d --build --wait
 ```
 
-Open it in a browser and the **setup wizard** takes it from there: it checks
-the server, asks where the database should live, and creates your
-administrator. See [First run](#first-run).
+Two lines really is enough. Which database to speak to, which Redis, and which
+drivers to use for sessions, cache and queues are properties of this compose
+file rather than opinions you hold, so it sets them — with `${VAR:-default}`
+throughout, so naming any of them in `.env` still overrides it.
+
+That was not always true. Before 1.1.5 they came only from `.env`, and an
+instance whose `.env` omitted `DB_CONNECTION` fell through to Laravel's own
+default, which is `sqlite` — so it came up on a file, beside a MySQL it never
+spoke to.
 
 The production stack differs from the development one in the ways that matter:
 the image is self-contained with vendor and compiled assets baked in, there are

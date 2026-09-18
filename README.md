@@ -45,6 +45,19 @@ containers have *started*, while the first boot is still migrating, and a
 command run against the database at that moment finds tables that are not there
 yet.
 
+### Running it for real
+
+The development stack above is for looking at. A production instance is one
+command, and no editor:
+
+```bash
+./scripts/install.sh
+```
+
+It writes the two passwords the bundled MySQL needs — nothing else — starts the
+production stack, and leaves the rest to the setup wizard in the browser. See
+[Self-hosting](docs/self-hosting.md#running-it-for-real).
+
 Health check:
 
 ```bash
