@@ -11,6 +11,26 @@ the database.
 
 ## 1.1.8
 
+**The redis extension is built from source rather than fetched through pecl.**
+The first two attempts at cutting this release both failed on `pecl install
+redis`, an hour apart, with two different errors: `504 Gateway Timeout` on the
+package tarball, and then `Package "redis" does not have REST info xml
+available`.
+
+The second is the one that mattered. `pecl install redis` cannot work out what
+to download without the channel's REST metadata, so when `pecl.php.net` is
+degraded the request that fails is the one that decides what to ask for. There
+is nothing to retry into, and pinning a version does not help either — a
+versioned install consults the same endpoint.
+
+phpredis is now fetched from its own repository at a pinned tag and compiled in
+place, which is what `pecl install` did underneath anyway. It trades a host
+nobody here operates for the one this whole pipeline already cannot run
+without, and pins the version so that two builds of the same tag cannot ship
+different extensions.
+
+Nothing about what the image contains changes.
+
 **A ticket can only be held by somebody on its team.** Its own team, or its
 queue's when it has none; a ticket with no team at all still goes to any agent,
 because plenty of work arrives without one. Enforced on the server at all four

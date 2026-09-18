@@ -85,6 +85,56 @@ RUN npm run build
 # --- Stage 3: runtime -------------------------------------------------------
 FROM php:8.4-fpm-alpine AS runtime
 
+# The redis extension is built from its own source, at a pinned version.
+#
+# It used to be `pecl install redis`, and on 2026-09-18 that stopped two
+# attempts at cutting 1.1.8 with two different failures an hour apart:
+#
+#     Could not download from "https://pecl.php.net/get/redis-6.3.0.tgz"
+#     (received: HTTP/1.1 504 Gateway Timeout)
+#
+#     Package "redis" does not have REST info xml available
+#
+# The second is the one that decided this. `pecl install redis` cannot resolve
+# "latest" without the channel's REST metadata, so when pecl.php.net is
+# degraded there is nothing to retry into — the request that fails is the one
+# that works out what to ask for. Retrying a registry that is down is a longer
+# way to fail.
+#
+# So the registry is out of the path. phpredis is fetched from its own
+# repository at a tag and compiled here, which is what `pecl install` does
+# underneath anyway. It trades a host nobody here operates for one this entire
+# pipeline already cannot run without.
+#
+# One path rather than pecl-with-a-fallback: a fallback that runs on the rare
+# day pecl is down is a fallback nobody has ever seen work. This runs on every
+# build, including CI's docker job on every pull request, so it cannot rot.
+#
+# Downloaded to a file and then unpacked, rather than piped into `tar`. In a
+# pipeline the shell reports the exit status of the last command, so a curl
+# that fails into a `tar` that shrugs is a build that carries on without the
+# source it was fetching.
+#
+# No checksum, deliberately. GitHub does not guarantee that an auto-generated
+# tag archive is byte-for-byte stable over time, so a pinned digest here would
+# eventually fail a build for a reason that is not a compromise — a guarantee
+# that turns into a maintenance trap. The tag is the pin.
+#
+# `phpize && ./configure && make && make install` is what upstream's INSTALL.md
+# documents, and `PHP_ARG_ENABLE(redis, ...)` is on by default for a phpize'd
+# build, so plain `./configure` is the whole extension with none of the
+# optional serializers — which is what `pecl install` was building anyway.
+#
+# Pinned at all because `pecl install redis` resolved to whatever was newest on
+# the day, so two builds of the same tag could ship different extensions — a
+# release image not reproducible from its own tag, which is most of what a tag
+# is for. Bumping it is a commit somebody reviews.
+#
+# It stays inside this one RUN rather than becoming its own: `apk del
+# .build-deps` has to happen in the same layer that added them, or the image
+# carries a compiler toolchain it never uses.
+ARG REDIS_EXT_VERSION=6.3.0
+
 RUN apk add --no-cache \
         icu-libs \
         oniguruma \
@@ -106,12 +156,17 @@ RUN apk add --no-cache \
         libjpeg-turbo-dev \
         openldap-dev \
         linux-headers \
+        curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" bcmath exif gd intl ldap opcache pcntl pdo_mysql sockets zip \
-    && pecl install redis \
+    && curl -fsSL -o /tmp/phpredis.tar.gz \
+        "https://github.com/phpredis/phpredis/archive/refs/tags/${REDIS_EXT_VERSION}.tar.gz" \
+    && mkdir -p /tmp/phpredis \
+    && tar -xzf /tmp/phpredis.tar.gz -C /tmp/phpredis --strip-components=1 \
+    && (cd /tmp/phpredis && phpize && ./configure && make -j"$(nproc)" && make install) \
     && docker-php-ext-enable redis \
     && apk del .build-deps \
-    && rm -rf /tmp/pear
+    && rm -rf /tmp/pear /tmp/phpredis /tmp/phpredis.tar.gz
 
 WORKDIR /var/www/html
 
