@@ -7,6 +7,7 @@ import { ReplyBox } from '@/Components/Tickets/ReplyBox';
 import { Timeline } from '@/Components/Tickets/Timeline';
 import { ApprovalPanel } from '@/Components/Tickets/ApprovalPanel';
 import { AssetPanel } from '@/Components/Tickets/AssetPanel';
+import { CloneDialog } from '@/Components/Tickets/CloneDialog';
 import { KbPanel } from '@/Components/Tickets/KbPanel';
 import { SlaPanel } from '@/Components/Tickets/SlaPanel';
 import { TicketSidebar } from '@/Components/Tickets/TicketSidebar';
@@ -45,6 +46,7 @@ export default function TicketShow({
 }) {
     const { t, locale } = useTranslations();
     const [pendingTransition, setPendingTransition] = useState<TransitionOption | null>(null);
+    const [cloning, setCloning] = useState(false);
 
     return (
         <AppLayout
@@ -62,6 +64,12 @@ export default function TicketShow({
             }
             actions={
                 <div className="flex flex-wrap items-center gap-1.5">
+                    {can.create ? (
+                        <Button size="sm" variant="ghost" onClick={() => setCloning(true)}>
+                            {t('tickets.actions.clone')}
+                        </Button>
+                    ) : null}
+
                     {transitions.map((transition) => (
                         <Button
                             key={transition.id}
@@ -164,6 +172,10 @@ export default function TicketShow({
                     {can.kb ? <KbPanel ticketKey={ticket.key} articles={kbArticles} canLink={can.update} /> : null}
                 </div>
             </div>
+
+            {cloning ? (
+                <CloneDialog ticket={ticket} options={options} onClose={() => setCloning(false)} />
+            ) : null}
 
             {pendingTransition ? (
                 <TransitionDialog

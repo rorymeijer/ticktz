@@ -75,6 +75,7 @@ Route::prefix('agent')->name('agent.')->middleware('can:tickets.view')->group(fu
 
     Route::put('tickets/{ticket}/assignee', [TicketActionController::class, 'assign'])->name('tickets.assign');
     Route::post('tickets/{ticket}/claim', [TicketActionController::class, 'claim'])->name('tickets.claim');
+    Route::post('tickets/{ticket}/clone', [TicketActionController::class, 'clone'])->name('tickets.clone');
     Route::post('tickets/{ticket}/transition', [TicketActionController::class, 'transition'])->name('tickets.transition');
 
     Route::post('tickets/{ticket}/watch', [TicketActionController::class, 'watch'])->name('tickets.watch');

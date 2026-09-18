@@ -17,6 +17,7 @@ use App\Models\KbArticle;
 use App\Models\Label;
 use App\Models\Priority;
 use App\Models\Queue;
+use App\Models\RequestType;
 use App\Models\SlaEvent;
 use App\Models\SlaTimer;
 use App\Models\Team;
@@ -180,10 +181,21 @@ class TicketController extends Controller
             'ticket' => $this->detailPayload($ticket, $user),
             'timeline' => $this->timeline($ticket, $comments->all()),
             'transitions' => $this->availableTransitions($ticket, $user),
-            'options' => $this->filterOptions(),
+            'options' => $this->filterOptions() + [
+                // For the clone dialog: filing the copy somewhere else is half
+                // of what cloning is for. Active types only — a retired form is
+                // not somewhere to file new work.
+                'request_types' => RequestType::query()
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get(['id', 'name'])
+                    ->all(),
+            ],
             'can' => [
                 'update' => $user->can('update', $ticket),
                 'assign' => $user->can('assign', $ticket),
+                // Cloning is a creation, not an edit of what is on screen.
+                'create' => $user->can('create', Ticket::class),
                 'transition' => $user->can('transition', $ticket),
                 'comment' => $user->can('comment', $ticket),
                 'comment_internal' => $user->can('commentInternally', $ticket),

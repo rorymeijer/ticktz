@@ -166,5 +166,7 @@ export interface TicketOptions {
     priorities: PrioritySummary[];
     labels: LabelSummary[];
     teams: { id: number; name: string }[];
+    /** Only on the ticket page, for the clone dialog. */
+    request_types?: { id: number; name: string }[];
     sources: string[];
 }

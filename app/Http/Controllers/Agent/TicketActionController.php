@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Agent;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tickets\CloneTicketRequest;
+use App\Models\RequestType;
 use App\Models\Ticket;
 use App\Models\TicketLink;
 use App\Models\TicketStatus;
 use App\Models\User;
 use App\Services\Tickets\Assignability;
+use App\Services\Tickets\TicketCloner;
 use App\Services\Tickets\TicketService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -143,6 +146,30 @@ class TicketActionController extends Controller
         $this->tickets->removeWatcher($ticket, $user);
 
         return back()->with('success', __('tickets.flash.watcher_removed'));
+    }
+
+    /**
+     * File the same request again, optionally under another request type.
+     *
+     * Authorised as a creation rather than as an edit of the original: a clone
+     * is a new ticket, and somebody who may read a ticket but not raise one has
+     * no business making a second copy of it. `view` on the original as well,
+     * so this cannot be used to read a ticket's fields by copying it.
+     */
+    public function clone(CloneTicketRequest $request, Ticket $ticket, TicketCloner $cloner): RedirectResponse
+    {
+        $this->authorize('view', $ticket);
+        $this->authorize('tickets.create');
+
+        $type = $request->integer('request_type_id')
+            ? RequestType::query()->findOrFail($request->integer('request_type_id'))
+            : $ticket->requestType;
+
+        $clone = $cloner->clone($ticket, $request->user(), $type, $request->string('subject')->toString());
+
+        return redirect()
+            ->route('agent.tickets.show', $clone->key)
+            ->with('success', __('tickets.flash.cloned', ['key' => $ticket->key]));
     }
 
     public function link(Request $request, Ticket $ticket): RedirectResponse
