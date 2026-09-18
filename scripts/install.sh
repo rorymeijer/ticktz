@@ -117,6 +117,10 @@ if [ ! -e "$ENV_FILE" ]; then
 # Back this file up. DB_PASSWORD is the database; APP_KEY, once generated,
 # encrypts the mailbox passwords stored in it.
 HEADER
+    # Set here, where this script owns the file, and deliberately nowhere
+    # else. An operator who made an existing `.env` group-readable — 0640, so
+    # a separate deployment account can run Compose — has a reason for that,
+    # and tightening it under them breaks that account's next start.
     chmod 600 "$ENV_FILE"
     echo "Created ${ENV_FILE}"
 else
@@ -125,11 +129,6 @@ fi
 
 set_secret DB_PASSWORD
 set_secret DB_ROOT_PASSWORD
-
-# Only tighten the mode when this script owns the file. An operator who
-# deliberately made it group-readable for their deployment user has a reason.
-[ "$(stat -c '%a' "$ENV_FILE" 2>/dev/null || stat -f '%Lp' "$ENV_FILE" 2>/dev/null)" = "600" ] \
-    || chmod 600 "$ENV_FILE" 2>/dev/null || true
 
 if [ "$START" != "true" ]; then
     echo

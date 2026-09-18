@@ -164,8 +164,19 @@ check "writes no APP_URL" "$(grep -c '^APP_URL=' "$C/.env" || true)" "0"
 check "writes no APP_KEY" "$(grep -c '^APP_KEY=' "$C/.env" || true)" "0"
 check "writes no DB_CONNECTION" "$(grep -c '^DB_CONNECTION=' "$C/.env" || true)" "0"
 check "writes exactly the two secrets" "$(grep -c '^[A-Z_]*=' "$C/.env")" "2"
-check "keeps the file to its owner" \
+check "keeps the file it created to its owner" \
     "$(stat -c '%a' "$C/.env" 2>/dev/null || stat -f '%Lp' "$C/.env")" "600"
+
+# An existing file's mode is the operator's business. 0640 is a deployment
+# account being given read access on purpose, and tightening it under them
+# breaks that account's next `docker compose up`.
+C="$WORK/groupreadable"
+make_checkout "$C"
+printf 'DB_PASSWORD=chosen\n' > "$C/.env"
+chmod 640 "$C/.env"
+run_install "$C" >/dev/null
+check "leaves an existing file's permissions alone" \
+    "$(stat -c '%a' "$C/.env" 2>/dev/null || stat -f '%Lp' "$C/.env")" "640"
 
 # --- Run from somewhere else ------------------------------------------------
 # A deployment runs this by absolute path from wherever cron happens to be.
