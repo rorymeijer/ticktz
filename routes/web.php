@@ -39,7 +39,7 @@ Route::get('/', function () {
     $user = request()->user();
 
     if ($user) {
-        return redirect()->route($user->isAgent() ? 'dashboard' : 'portal.index');
+        return redirect()->to($user->homePath());
     }
 
     return Inertia::render('Welcome');

@@ -553,6 +553,7 @@ return [
     ],
 
     'request_types' => [
+        'queue_is_a_view' => 'That queue is a saved view rather than somewhere a ticket can live, so tickets cannot be filed into it.',
         'title' => 'Request types',
         'subtitle' => 'What a requester can ask for, the form that asks it, and where the ticket lands.',
         'create' => 'New request type',

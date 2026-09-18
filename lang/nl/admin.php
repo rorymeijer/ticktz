@@ -553,6 +553,7 @@ return [
     ],
 
     'request_types' => [
+        'queue_is_a_view' => 'Die wachtrij is een opgeslagen weergave en geen plek waar een ticket kan staan, dus er kunnen geen tickets in worden ingediend.',
         'title' => 'Aanvraagtypen',
         'subtitle' => 'Wat een melder kan aanvragen, het formulier dat ernaar vraagt, en waar het ticket terechtkomt.',
         'create' => 'Nieuw aanvraagtype',

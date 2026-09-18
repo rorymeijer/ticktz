@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
 use App\Services\Ldap\LdapManager;
 use App\Services\SettingsRepository;
 use Illuminate\Http\RedirectResponse;
@@ -39,7 +40,15 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        /** @var User $user */
+        $user = $request->user();
+
+        // Where this person can actually work. `/` has always redirected on
+        // exactly this test; signing in went to the dashboard whoever you
+        // were, so a requester landed on a screen built to answer "what should
+        // I work on next" — a question they have no answer to and no links
+        // for.
+        return redirect()->intended($user->homePath());
     }
 
     /**

@@ -99,7 +99,16 @@ export default function TicketShow({
                                 <StatusBadge status={ticket.status} />
                                 <PriorityBadge priority={ticket.priority} />
                                 <Badge tone="slate">{t(`tickets.source.${ticket.source}`)}</Badge>
-                                {ticket.queue ? <Badge tone="blue">{ticket.queue.name}</Badge> : null}
+                                {/* Titled, because a bare name sitting among
+                                    status and priority reads as another state.
+                                    A queue called "Waiting on supplier" is a
+                                    place; next to "In progress" it looks like
+                                    a claim about the ticket. */}
+                                {ticket.queue ? (
+                                    <Badge tone="blue" title={t('tickets.fields.queue')}>
+                                        {ticket.queue.name}
+                                    </Badge>
+                                ) : null}
                             </div>
 
                             <h2 className="mt-2.5 text-lg font-semibold tracking-tight text-slate-900">

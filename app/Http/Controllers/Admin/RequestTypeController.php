@@ -16,6 +16,7 @@ use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\Workflow;
 use App\Services\AuditLogger;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -251,7 +252,18 @@ class RequestTypeController extends Controller
     {
         return [
             'categories' => PortalCategory::query()->orderBy('position')->get(['id', 'name'])->all(),
-            'queues' => Queue::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])->all(),
+            // Only queues a ticket can actually live in. A saved view —
+            // "Unassigned", "Assigned to me" — is a filter over everything, and
+            // filing tickets into one leaves them claiming a queue named after
+            // a state they left the moment somebody picked them up.
+            'queues' => Queue::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get()
+                ->reject(fn (Queue $queue) => $queue->isView())
+                ->map(fn (Queue $queue) => ['id' => $queue->id, 'name' => $queue->name])
+                ->values()
+                ->all(),
             'teams' => Team::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])->all(),
             'workflows' => Workflow::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])->all(),
             'approvalWorkflows' => ApprovalWorkflow::query()->where('is_active', true)->orderBy('name')
@@ -296,7 +308,16 @@ class RequestTypeController extends Controller
             'instructions_translations' => ['array'],
             'instructions_translations.*' => ['nullable', 'string', 'max:20000'],
             'icon' => ['nullable', 'string', 'max:40'],
-            'queue_id' => ['nullable', 'integer', Rule::exists('queues', 'id')],
+            'queue_id' => [
+                'nullable', 'integer', Rule::exists('queues', 'id'),
+                // Not merely left out of the dropdown: an id is an id, and the
+                // form is not the only way this arrives.
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if ($value && Queue::query()->find($value)?->isView()) {
+                        $fail(__('admin.request_types.queue_is_a_view'));
+                    }
+                },
+            ],
             'team_id' => ['nullable', 'integer', Rule::exists('teams', 'id')],
             'workflow_id' => ['nullable', 'integer', Rule::exists('workflows', 'id')],
             'approval_workflow_id' => ['nullable', 'integer', Rule::exists('approval_workflows', 'id')],

@@ -286,6 +286,27 @@ class User extends Authenticatable
      * @param  iterable<mixed>  $ids
      * @return array<int, array<string, mixed>>
      */
+    /**
+     * Where this person starts.
+     *
+     * The two sides of Ticktz are not a preference, they are what somebody can
+     * do: the console for people who work tickets, the portal for people who
+     * ask. `/` has always redirected on this test and signing in did not, so a
+     * requester who logged in landed on a dashboard built to answer "what
+     * should I work on next" — with no answer to it and nothing on it they
+     * could open.
+     */
+    public function homePath(): string
+    {
+        return $this->isAgent()
+            ? route('dashboard', absolute: false)
+            : route('portal.index', absolute: false);
+    }
+
+    /**
+     * @param  iterable<mixed>  $ids
+     * @return array<int, array<string, mixed>>
+     */
     public static function summariesFor(iterable $ids): array
     {
         $keys = collect($ids)

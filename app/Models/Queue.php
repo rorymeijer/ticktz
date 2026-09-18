@@ -59,7 +59,32 @@ class Queue extends Model
         ];
     }
 
-    /** @return BelongsTo<Team, $this> */
+    /** @return BelongsTo<Team, $this> */ /**
+     * Whether this queue is a saved view rather than somewhere a ticket lives.
+     *
+     * A queue in Ticktz is two things wearing one name. Most are a place —
+     * "Hardware", "Facilities" — and a ticket carries the id of the one it
+     * belongs to. Some are a saved view over everything: the seeded
+     * "Unassigned" and "Assigned to me" are filters, and they mean something
+     * different per viewer and per moment.
+     *
+     * Only the first kind can be a ticket's home, and nothing used to say so.
+     * Pointing a request type at "Unassigned" files every ticket into a queue
+     * named after a state the ticket leaves the moment somebody picks it up —
+     * and the ticket goes on claiming that queue for the rest of its life,
+     * which is how a ticket ends up labelled "Unassigned" while assigned.
+     *
+     * The test is narrow on purpose. A queue filtered by status is still a
+     * perfectly good home; one filtered by *who is looking* or by *whether
+     * anybody has it* is not a property of where a ticket belongs.
+     */
+    public function isView(): bool
+    {
+        $assignee = (array) ($this->filters['assignee'] ?? []);
+
+        return array_intersect($assignee, ['me', 'unassigned']) !== [];
+    }
+
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);

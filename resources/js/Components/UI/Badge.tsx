@@ -19,14 +19,18 @@ export function Badge({
     className,
     children,
     dotColor,
+    title,
 }: {
     tone?: BadgeTone;
     className?: string;
     children: ReactNode;
     dotColor?: string;
+    /** What this badge is, for a name that could be read as something else. */
+    title?: string;
 }) {
     return (
         <span
+            title={title}
             className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
                 tones[tone],
