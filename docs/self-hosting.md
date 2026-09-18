@@ -83,21 +83,35 @@ brings the stack up.
 The script is a convenience, not a requirement. The equivalent is:
 
 ```bash
-printf 'DB_PASSWORD=%s\nDB_ROOT_PASSWORD=%s\n' \
+printf 'TICKTZ_DB_PASSWORD=%s\nTICKTZ_DB_ROOT_PASSWORD=%s\n' \
   "$(openssl rand -hex 24)" "$(openssl rand -hex 24)" > .env
 chmod 600 .env
 docker compose -f docker-compose.prod.yml up -d --build --wait
 ```
 
+The prefix matters. Everything in this file is handed to the container as an
+environment variable, and Laravel's dotenv never lets `.env` replace one of
+those. Named `DB_PASSWORD`, the bundled database's password would outrank
+whatever the setup wizard writes — which is exactly the value somebody pointing
+the instance at a database of their own needs to change.
+
 Two lines really is enough. Which database to speak to, which Redis, and which
 drivers to use for sessions, cache and queues are properties of this compose
-file rather than opinions you hold, so it sets them — with `${VAR:-default}`
-throughout, so naming any of them in `.env` still overrides it.
+file rather than opinions you hold, so it supplies them — and `${VAR:-default}`
+throughout means naming any of them in `.env` still overrides it.
 
-That was not always true. Before 1.1.5 they came only from `.env`, and an
-instance whose `.env` omitted `DB_CONNECTION` fell through to Laravel's own
-default, which is `sqlite` — so it came up on a file, beside a MySQL it never
-spoke to.
+**It supplies them as defaults, not as environment.** The entrypoint writes
+what is missing into the instance's own `.env` on first boot and never touches
+a key that is already there. That is what lets the setup wizard change them
+afterwards: an environment variable is something `.env` can never replace, so
+settings delivered that way outrank the wizard's own file for the life of the
+instance — which is why, before 1.1.7, choosing your own database in the wizard
+migrated that database, created the administrator in it, and then served every
+request from the bundled one.
+
+Neither was true before 1.1.5: they came only from `.env`, and an instance whose
+`.env` omitted `DB_CONNECTION` fell through to Laravel's own default, which is
+`sqlite` — so it came up on a file, beside a MySQL it never spoke to.
 
 The production stack differs from the development one in the ways that matter:
 the image is self-contained with vendor and compiled assets baked in, there are
@@ -174,6 +188,16 @@ The one question worth thinking about, and the wizard asks it plainly:
 - **Your own database.** A MySQL or MariaDB server you already run — managed,
   clustered, or simply the one that is already in your backup schedule. Give
   it host, port, database, user and password.
+
+  On the Docker stack this did not work before 1.1.7: the compose file handed
+  the bundled database's details to the container as environment variables, and
+  Laravel's dotenv never replaces one of those, so the wizard migrated your
+  database, created the administrator in it, and every request afterwards
+  reconnected to the bundled one. **An instance installed before 1.1.7 needs one
+  change to its `.env`** beside the compose file — rename `DB_PASSWORD` to
+  `TICKTZ_DB_PASSWORD` and `DB_ROOT_PASSWORD` to `TICKTZ_DB_ROOT_PASSWORD`, and
+  remove any other `DB_*` line — or the same shadowing continues. Nothing else
+  changes: the bundled database keeps the password it already has.
 
 If you choose your own, **create the database first**. Ticktz will not create
 it, because a process that can create databases is a process with more rights

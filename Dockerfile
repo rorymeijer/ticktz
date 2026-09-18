@@ -113,6 +113,7 @@ COPY docker/php/www.conf /usr/local/etc/php-fpm.d/zz-ticktz.conf
 COPY docker/worker/supervisord.conf /etc/supervisor/conf.d/ticktz.conf
 COPY docker/php/entrypoint.sh /usr/local/bin/ticktz-entrypoint
 COPY docker/php/place-code.sh /usr/local/bin/ticktz-place-code
+COPY docker/php/instance-setting.php /usr/local/bin/ticktz-instance-setting
 RUN chmod +x /usr/local/bin/ticktz-entrypoint /usr/local/bin/ticktz-place-code
 
 COPY --from=vendor /var/www/html /usr/src/ticktz

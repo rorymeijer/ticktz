@@ -86,6 +86,7 @@ jobs:
         run: |
           sh tests/Shell/place-code.test.sh
           sh tests/Shell/install.test.sh
+          sh tests/Shell/instance-setting.test.sh
 
       # The Laravel 11 advisories that forced the upgrade in D50 sat in the
       # lock file for weeks before anyone ran this by hand. Now the build

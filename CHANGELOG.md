@@ -9,6 +9,47 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.1.7
+
+**Your own database now works on the Docker stack.** Choosing it in the setup
+wizard migrated that database, created the administrator in it, wrote the
+credentials to `.env` — and then every request reconnected to the bundled one,
+where that administrator does not exist. It had never worked.
+
+The cause is one sentence: Laravel's dotenv is immutable, so a variable already
+in the process environment is never replaced by `.env`. The compose file handed
+the database details over as environment variables, which looked equivalent to
+writing them in a file and is not: it made them outrank the very file the
+wizard writes, for the life of the instance.
+
+They are now delivered as *defaults for the instance's own `.env`*. The
+entrypoint writes what is missing on first boot and never touches a key that is
+already there, so an operator's settings and the wizard's both win — the
+precedence people expect from a file that is theirs.
+
+**The bundled database's password is renamed.** It is `TICKTZ_DB_PASSWORD` in
+the `.env` beside the compose file, and `TICKTZ_DB_ROOT_PASSWORD` for root.
+Everything in that file reaches the container as an environment variable, so
+under the plain name `DB_PASSWORD` it stayed in the environment and shadowed
+`.env` no matter what else changed. The old names still start the stack, so
+nothing breaks on upgrade.
+
+A second thing had to move with it. The entrypoint waits for the database
+before migrating, and it was reading `getenv("DB_HOST")` — which, after this
+change, is not set. That does not fail loudly: it waits two minutes for
+127.0.0.1 on every boot, logs one line, and then migrates the right database
+anyway, because the framework reads `.env`. It now resolves settings the way
+the application does, environment first and then `.env`, through
+`docker/php/instance-setting.php` with a test of its own.
+
+**Upgrading an instance installed before this:** rename those two lines in your
+`.env` and delete any other `DB_*` line in it. Until you do, the bundled
+database keeps working exactly as before and the wizard still cannot be pointed
+elsewhere — the shadowing is coming from your file rather than from the compose
+file. `scripts/install.sh` leaves an existing `DB_PASSWORD` alone rather than
+generating a second one, because the MySQL data directory keeps the password it
+was created with.
+
 ## 1.1.6
 
 **The built-in database now asks for nothing.** Choosing it in the setup

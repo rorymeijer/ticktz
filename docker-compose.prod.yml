@@ -29,32 +29,40 @@
 name: ticktz
 
 x-app-env: &app-env
+  # Environment variables, for the two things that are genuinely the
+  # container's rather than the instance's. APP_ENV in particular has to
+  # outrank `.env`: this stack is production whatever a file says.
   APP_ENV: production
   APP_DEBUG: "false"
-  # What this stack *is*, rather than what an operator prefers. It ships a
-  # MySQL and a Redis, so which drivers to speak to them with is not a
-  # question — and a default that has to be written into every `.env` is a
-  # default that will eventually be missing from one. It was: Laravel's own
-  # fallback for DB_CONNECTION is `sqlite`, so an instance whose `.env` did not
-  # name it came up pointed at a file instead of the database beside it.
+
+  # Everything else goes in as a *default for the instance's own `.env`*, not
+  # as an environment variable, and the difference is not cosmetic. Laravel's
+  # dotenv is immutable: a variable already in the process environment is never
+  # replaced by `.env`. Delivered as environment, each of these silently
+  # outranked the file — including the file the setup wizard writes, which is
+  # why choosing "my own database" in the wizard migrated that database,
+  # created the administrator in it, and then served every request from the
+  # bundled one.
   #
-  # Each is still `${VAR:-default}`, so an operator pointing at their own
-  # database or an external Redis overrides it from `.env` exactly as before.
-  DB_CONNECTION: ${DB_CONNECTION:-mysql}
-  DB_HOST: ${DB_HOST:-mysql}
-  DB_PORT: ${DB_PORT:-3306}
-  DB_DATABASE: ${DB_DATABASE:-ticktz}
-  DB_USERNAME: ${DB_USERNAME:-ticktz}
-  # Named here rather than left to `env_file` alone, so that a missing one
-  # stops the stack with the sentence above rather than starting an app that
-  # cannot reach its own database.
-  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-  REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
-  REDIS_HOST: ${REDIS_HOST:-redis}
-  REDIS_PORT: ${REDIS_PORT:-6379}
-  SESSION_DRIVER: ${SESSION_DRIVER:-redis}
-  CACHE_STORE: ${CACHE_STORE:-redis}
-  QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+  # The entrypoint strips `TICKTZ_DEFAULT_` and writes what is missing into
+  # `.env` once. A key already there is never touched, so an operator's own
+  # settings and the wizard's both win, which is the precedence people expect.
+  TICKTZ_DEFAULT_DB_CONNECTION: ${DB_CONNECTION:-mysql}
+  TICKTZ_DEFAULT_DB_HOST: ${DB_HOST:-mysql}
+  TICKTZ_DEFAULT_DB_PORT: ${DB_PORT:-3306}
+  TICKTZ_DEFAULT_DB_DATABASE: ${DB_DATABASE:-ticktz}
+  TICKTZ_DEFAULT_DB_USERNAME: ${DB_USERNAME:-ticktz}
+  # The bundled database's password, under a name Laravel does not read. It
+  # reaches the app through `env_file` as well, and under its own name it would
+  # be back in the environment outranking `.env` — the one value the wizard
+  # most needs to be able to change.
+  TICKTZ_DEFAULT_DB_PASSWORD: ${TICKTZ_DB_PASSWORD:-${DB_PASSWORD:?TICKTZ_DB_PASSWORD is required}}
+  TICKTZ_DEFAULT_REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
+  TICKTZ_DEFAULT_REDIS_HOST: ${REDIS_HOST:-redis}
+  TICKTZ_DEFAULT_REDIS_PORT: ${REDIS_PORT:-6379}
+  TICKTZ_DEFAULT_SESSION_DRIVER: ${SESSION_DRIVER:-redis}
+  TICKTZ_DEFAULT_CACHE_STORE: ${CACHE_STORE:-redis}
+  TICKTZ_DEFAULT_QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
 
 x-app-base: &app-base
   build:
@@ -136,8 +144,13 @@ services:
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-ticktz}
       MYSQL_USER: ${DB_USERNAME:-ticktz}
-      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
+      # `TICKTZ_DB_PASSWORD` is the name scripts/install.sh writes. `DB_PASSWORD`
+      # is what instances installed before 1.1.7 have, and still works — it just
+      # also lands in the app's environment, where it outranks anything the
+      # setup wizard writes. Renaming it is what frees an existing instance to
+      # be pointed at a database of its own.
+      MYSQL_PASSWORD: ${TICKTZ_DB_PASSWORD:-${DB_PASSWORD:?TICKTZ_DB_PASSWORD is required}}
+      MYSQL_ROOT_PASSWORD: ${TICKTZ_DB_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:?TICKTZ_DB_ROOT_PASSWORD is required}}
     volumes:
       - mysql:/var/lib/mysql
       - ./docker/mysql/ticktz.cnf:/etc/mysql/conf.d/ticktz.cnf:ro

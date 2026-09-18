@@ -7,6 +7,13 @@
 # Writes the two passwords the bundled MySQL needs, starts the stack, and
 # leaves the rest to the setup wizard in the browser.
 #
+# They are named TICKTZ_DB_PASSWORD and TICKTZ_DB_ROOT_PASSWORD rather than
+# DB_PASSWORD, and the prefix is the point: everything in this file is handed
+# to the container as an environment variable, and Laravel never lets `.env`
+# replace one of those. Under the plain name, the bundled password would
+# outrank whatever the setup wizard writes — including the credentials of a
+# database of your own.
+#
 # Why there is anything to write at all: the MySQL container is handed its
 # password at the moment it is *created*, which is before any application
 # exists to ask for one. Everything else a Ticktz instance needs — its name,
@@ -63,7 +70,8 @@ random_secret() {
     fi
 
     echo "install.sh: no openssl and no /dev/urandom, so no way to generate a" >&2
-    echo "            password worth having. Put DB_PASSWORD and DB_ROOT_PASSWORD" >&2
+    echo "            password worth having. Put TICKTZ_DB_PASSWORD and" >&2
+    echo "            TICKTZ_DB_ROOT_PASSWORD" >&2
     echo "            in ${ENV_FILE} yourself." >&2
     exit 1
 }
@@ -75,12 +83,22 @@ has_value() {
     grep -q "^$1=..*" "$ENV_FILE" 2>/dev/null
 }
 
+# $1 is the name to write. $2 is the name instances installed before 1.1.7
+# used, and finding *that* one set counts as set: the bundled MySQL was
+# initialised with it, and adding a second, different password under the new
+# name would lock the application out of the data directory it already has.
 set_secret() {
     key=$1
+    legacy=${2:-}
     value=$(random_secret)
 
     if has_value "$key"; then
         echo "  $key is already set, leaving it alone"
+        return
+    fi
+
+    if [ -n "$legacy" ] && has_value "$legacy"; then
+        echo "  $legacy is set, leaving it alone — it is what your database was created with"
         return
     fi
 
@@ -114,8 +132,8 @@ if [ ! -e "$ENV_FILE" ]; then
 # for by the setup wizard and written by it — adding settings here overrides
 # what the wizard writes, which is rarely what anybody wants.
 #
-# Back this file up. DB_PASSWORD is the database; APP_KEY, once generated,
-# encrypts the mailbox passwords stored in it.
+# Back this file up. TICKTZ_DB_PASSWORD is the database; APP_KEY, once
+# generated, encrypts the mailbox passwords stored in it.
 HEADER
     # Set here, where this script owns the file, and deliberately nowhere
     # else. An operator who made an existing `.env` group-readable — 0640, so
@@ -127,8 +145,8 @@ else
     echo "Using the ${ENV_FILE} that is already here"
 fi
 
-set_secret DB_PASSWORD
-set_secret DB_ROOT_PASSWORD
+set_secret TICKTZ_DB_PASSWORD DB_PASSWORD
+set_secret TICKTZ_DB_ROOT_PASSWORD DB_ROOT_PASSWORD
 
 if [ "$START" != "true" ]; then
     echo
