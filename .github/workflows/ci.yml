@@ -262,6 +262,32 @@ jobs:
             php /var/www/html/artisan --version
           '
 
+      # The two settings that segfaulted php-fpm, asserted against the built
+      # image rather than the file — what matters is what PHP ended up with,
+      # and an ini that is not being loaded looks identical to one that is.
+      #
+      # `validate_timestamps` must stay on because this application replaces
+      # its own code: the update screen swaps the tree under a running php-fpm,
+      # and it is a different container that does the swapping, so nothing can
+      # tell this one to forget what it compiled. The JIT on top of that
+      # compiled machine code against scripts that no longer existed.
+      - name: The image does not compile code it will not re-check
+        run: |
+          docker run --rm --entrypoint php ticktz/app:ci -r '
+            $bad = [];
+            if (ini_get("opcache.validate_timestamps") != 1) {
+                $bad[] = "opcache.validate_timestamps is ".var_export(ini_get("opcache.validate_timestamps"), true);
+            }
+            if ((int) ini_get("opcache.jit_buffer_size") !== 0) {
+                $bad[] = "the JIT buffer is ".ini_get("opcache.jit_buffer_size");
+            }
+            if ($bad !== []) {
+                fwrite(STDERR, "php-fpm would segfault after an upgrade: ".implode("; ", $bad)."\n");
+                exit(1);
+            }
+            echo "opcache settings are safe for an application that replaces its own code\n";
+          '
+
       # Neither the secrets nor the dev-server marker may reach the image. The
       # .env would ship a database password to anybody who pulls it, and
       # public/hot makes Laravel send every browser to localhost:5173 for its

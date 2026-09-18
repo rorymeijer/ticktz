@@ -11,6 +11,27 @@ the database.
 
 ## 1.2.0
 
+**php-fpm no longer segfaults after an upgrade.** Two opcache settings, each
+defensible alone: `validate_timestamps = 0` and `jit = tracing`.
+
+The first is standard production advice and wrong for this application
+specifically. Ticktz replaces its own code — the update screen swaps the whole
+tree under a running php-fpm — and it is the *worker* container that does the
+swapping, while opcache is per-process shared memory. Nothing in the worker can
+reach the app container to tell it to forget what it compiled, so the app went
+on serving scripts compiled from files that no longer existed. The JIT turned
+that into a crash, because its traces are machine code compiled against those
+scripts.
+
+It explains the 502s after an update, and why restarting Docker appeared to fix
+them: opcache lives in shared memory, so a fresh worker inherited the same bad
+state, and only tearing the container down cleared it.
+
+Timestamps are checked now and the JIT is off — not merely reconciled, because
+it was never the right trade: the JIT pays off in tight numeric loops, and a
+service desk waits on MySQL and Redis. CI asserts both against the built image,
+because an ini that is not being loaded looks identical to one that is.
+
 **A user manual, and a `?` that opens it at the page you are on.** Twenty
 chapters in English and Dutch, covering both sides of Ticktz — raising and
 following a request, working a ticket, service levels, approvals, the knowledge

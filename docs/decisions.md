@@ -1879,3 +1879,63 @@ that opens approximately the right chapter is worse still.
 - Every page named in the registry exists. A screen renamed without updating it
   leaves a `?` that never appears, which is invisible until somebody goes
   looking for help.
+
+---
+
+## D74 — An application that replaces its own code cannot cache it forever
+
+php-fpm was segfaulting. Not erroring — crashing:
+
+```
+WARNING: [pool www] child 40 exited on signal 11 (SIGSEGV) after 6261.522210 seconds
+WARNING: [pool www] child 7500 exited on signal 11 (SIGSEGV) after 42.405044 seconds
+```
+
+and nginx, with nothing behind it to answer, returned 502.
+
+Two settings we shipped, each defensible on its own:
+
+```ini
+opcache.validate_timestamps = 0
+opcache.jit = tracing
+```
+
+**`validate_timestamps = 0` is standard production advice and wrong here.** It
+tells PHP never to check whether a file changed, because in a normal deployment
+files do not change — a new release is a new container. Ticktz is not that. Its
+whole selling point is that the update screen replaces the application from the
+browser, which swaps the entire tree under a running php-fpm.
+
+Worse, it is the **worker** container that does the swapping, and opcache is
+per-process shared memory. Nothing in the worker can reach the app container to
+tell it to forget what it compiled. So there is not even a workaround available:
+the app goes on serving scripts compiled from files that no longer exist, and
+no part of the system can correct it.
+
+**The JIT turned that into a crash.** Its traces are machine code compiled
+against those scripts. Stale bytecode is a wrong answer; stale machine code is
+a segfault.
+
+That combination explains every symptom, including the two that looked
+unrelated:
+
+- Children alive for 6261 seconds died right after an upgrade — they had
+  compiled the old tree.
+- A child started 42 seconds earlier died too, which rules out a leak and rules
+  in shared state: opcache is in shared memory, so a fresh worker inherits it.
+- Restarting Docker "fixed" it, because tearing the container down is the only
+  thing that clears that memory. Which is why it came back.
+
+**Both are reversed.** Timestamps are checked on every request, and the JIT is
+off — not merely reconciled with the timestamps, because it was never the right
+trade. The JIT pays off in tight numeric loops; a service desk spends its time
+waiting on MySQL and Redis, where it buys close to nothing and costs a class of
+crash that is very hard to read from a log.
+
+The stat call per file is the price, and `realpath_cache` already absorbs most
+of it. Correctness over a benchmark nobody ran.
+
+**Asserted against the built image, not the file.** CI runs `php -r` inside the
+image and fails the build if timestamps are off or the JIT buffer is non-zero.
+An ini file that is not being loaded looks exactly like one that is, and the
+failure it produces is a segfault an hour later on somebody else's server.
