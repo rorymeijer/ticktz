@@ -9,7 +9,7 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
-## Unreleased
+## 1.1.8
 
 **A ticket can only be held by somebody on its team.** Its own team, or its
 queue's when it has none; a ticket with no team at all still goes to any agent,
@@ -57,6 +57,20 @@ A run started from **Run workflow** also no longer re-drafts the release it
 attaches to. That is how a release whose archive never uploaded gets its
 archive, and doing it by retracting the release from every instance checking for
 updates was the wrong trade.
+
+**A tag typed without its `v` now says so.** *Run workflow* passed whatever was
+in the box straight to `actions/checkout`, which retried a fetch for a ref that
+does not exist twice, sixteen seconds apart, and then reported `The process
+'/usr/bin/git' failed with exit code 1` — a message that names neither the tag
+nor the problem. Both `1.1.8` and `v1.1.8` are accepted now, anything that is
+not a version is refused in seconds, and a tag that does not exist is answered
+with the command to create it and a list of the tags that do.
+
+**`package.json` said 1.0.3.** It had said so for four releases while the
+application reported 1.1.7 and `docs/releasing.md` said the two must agree. The
+release now refuses to build unless the tag, `config/ticktz.php` and
+`package.json` all say the same thing — a rule nothing checks is a rule that is
+already broken.
 
 ## 1.1.7
 

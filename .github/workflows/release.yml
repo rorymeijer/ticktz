@@ -20,17 +20,68 @@ permissions:
   id-token: write
   attestations: write
 
-# The version being released, named once. On a tag push it is the tag; on a
-# `workflow_dispatch` it is what was typed into the box. Every job checks out
-# this ref and every tag is derived from it, so a re-run of an old release
-# cannot build one version's code and label it another's.
-env:
-  TICKTZ_TAG: ${{ github.event.inputs.tag || github.ref_name }}
-
 jobs:
+  # The version being released, worked out once and handed to every other job.
+  #
+  # On a tag push it is the tag; on a `workflow_dispatch` it is what somebody
+  # typed into the box, which is where this earns its keep. A tag typed without
+  # its `v` used to reach `actions/checkout` unchanged, which retried a fetch
+  # for a ref that does not exist twice at sixteen seconds apart and then said
+  # `The process '/usr/bin/git' failed with exit code 1`. Nothing in that names
+  # the tag, says it is missing, or suggests what to type instead.
+  #
+  # Both forms are accepted because both are correct somewhere: the tag is
+  # `v1.1.8` and the version in `config/ticktz.php` is `1.1.8`. Anything that
+  # is not a version at all, or names a tag that does not exist, stops here in
+  # about twenty seconds with a message that says so and lists what does exist.
+  prepare:
+    name: Work out what is being released
+    runs-on: ubuntu-latest
+
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Every tag, none of the file contents: this job reads refs and
+          # nothing else, and a blobless fetch of them is a couple of seconds.
+          fetch-depth: 0
+          filter: tree:0
+
+      - id: tag
+        env:
+          TYPED: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          TAG="$TYPED"
+          case "$TAG" in v*) ;; *) TAG="v$TAG" ;; esac
+
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::'$TYPED' is not a version. Give it as 1.2.3 or v1.2.3."
+            exit 1
+          fi
+
+          if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::There is no tag $TAG in this repository."
+            echo 'The tag has to exist before it can be built. Either push it:'
+            echo "    git tag -a $TAG -m \"Ticktz ${TAG#v}\" && git push origin $TAG"
+            echo 'or pick one of the tags that are already here:'
+            git tag --list 'v*' --sort=-v:refname | head -10 | sed 's/^/    /'
+            exit 1
+          fi
+
+          echo "Releasing $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
   verify:
     name: Verify before publishing
+    needs: prepare
     runs-on: ubuntu-latest
+
+    env:
+      TICKTZ_TAG: ${{ needs.prepare.outputs.tag }}
 
     services:
       mysql:
@@ -90,11 +141,28 @@ jobs:
         # A container that reports a different version from the tag it was
         # built from is the kind of thing nobody notices until they are trying
         # to work out which build is in production.
+        #
+        # `package.json` is checked as well because it is the second place the
+        # version is written and the first place nobody looks: it sat at 1.0.3
+        # through four releases while the application reported 1.1.7, and
+        # releasing.md said the two must agree the whole time. A rule nothing
+        # checks is a rule that is already broken.
         run: |
+          set -euo pipefail
           TAG="$TICKTZ_TAG"
           CODE="v$(grep -oP "(?<=TICKTZ_VERSION', ')[^']+" config/ticktz.php)"
-          echo "tag=${TAG} code=${CODE}"
-          test "${TAG}" = "${CODE}"
+          NPM="v$(node -p "require('./package.json').version")"
+          echo "tag=${TAG} config=${CODE} package.json=${NPM}"
+
+          if [ "${TAG}" != "${CODE}" ]; then
+            echo "::error::config/ticktz.php says ${CODE}, the tag says ${TAG}."
+            exit 1
+          fi
+
+          if [ "${TAG}" != "${NPM}" ]; then
+            echo "::error::package.json says ${NPM}, the tag says ${TAG}."
+            exit 1
+          fi
 
   # Two jobs, one per architecture, each on a runner of that architecture.
   #
@@ -116,8 +184,11 @@ jobs:
   # arm64 still building — is the failure this shape makes impossible.
   image:
     name: Build the image (${{ matrix.platform }})
-    needs: verify
+    needs: [prepare, verify]
     runs-on: ${{ matrix.runner }}
+
+    env:
+      TICKTZ_TAG: ${{ needs.prepare.outputs.tag }}
 
     strategy:
       # Both results are wanted even when one fails: knowing that arm64 broke
@@ -198,8 +269,11 @@ jobs:
   # registry and this only writes the index above them.
   manifest:
     name: Publish the image tags
-    needs: image
+    needs: [prepare, image]
     runs-on: ubuntu-latest
+
+    env:
+      TICKTZ_TAG: ${{ needs.prepare.outputs.tag }}
 
     steps:
       - uses: actions/download-artifact@v4
@@ -246,8 +320,11 @@ jobs:
 
   bundle:
     name: Build the installable archive
-    needs: verify
+    needs: [prepare, verify]
     runs-on: ubuntu-latest
+
+    env:
+      TICKTZ_TAG: ${{ needs.prepare.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
@@ -362,8 +439,11 @@ jobs:
 
   release:
     name: Draft the release notes
-    needs: [manifest, bundle]
+    needs: [prepare, manifest, bundle]
     runs-on: ubuntu-latest
+
+    env:
+      TICKTZ_TAG: ${{ needs.prepare.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
