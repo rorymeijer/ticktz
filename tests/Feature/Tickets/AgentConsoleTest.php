@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Label;
 use App\Models\Queue;
+use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Tickets\TicketService;
@@ -145,6 +146,77 @@ test('a requester cannot be made the assignee', function () {
         ->assertSessionHasErrors('assignee_id');
 
     expect($ticket->fresh()->assignee_id)->toBeNull();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Who may hold a ticket
+|--------------------------------------------------------------------------
+|
+| A ticket that belongs to a team can only be given to somebody on that team.
+| Enforced on the server rather than by leaving people out of a dropdown,
+| because the same assignment arrives from four places and only one of them
+| has a dropdown.
+*/
+
+test('a ticket can be assigned to somebody on its team', function () {
+    $agent = User::factory()->admin()->create();
+    $member = User::factory()->agent()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($member);
+
+    $ticket = Ticket::factory()->create(['team_id' => $team->id]);
+
+    $this->actingAs($agent)
+        ->put("/agent/tickets/{$ticket->key}/assignee", ['assignee_id' => $member->id])
+        ->assertSessionHasNoErrors();
+
+    expect($ticket->fresh()->assignee_id)->toBe($member->id);
+});
+
+test('a ticket cannot be assigned to somebody outside its team', function () {
+    $agent = User::factory()->admin()->create();
+    $outsider = User::factory()->agent()->create();
+    $team = Team::factory()->create();
+
+    $ticket = Ticket::factory()->create(['team_id' => $team->id]);
+
+    $this->actingAs($agent)
+        ->put("/agent/tickets/{$ticket->key}/assignee", ['assignee_id' => $outsider->id])
+        ->assertSessionHasErrors('assignee_id');
+
+    expect($ticket->fresh()->assignee_id)->toBeNull();
+});
+
+test('claiming a ticket obeys the same rule', function () {
+    // The way around it that everybody finds first: do not hand it to
+    // yourself, take it.
+    $outsider = User::factory()->agent()->create();
+    $team = Team::factory()->create();
+
+    $ticket = Ticket::factory()->create(['team_id' => $team->id]);
+
+    $this->actingAs($outsider)
+        ->post("/agent/tickets/{$ticket->key}/claim")
+        ->assertSessionHasErrors('assignee_id');
+
+    expect($ticket->fresh()->assignee_id)->toBeNull();
+});
+
+test('a ticket with no team can be assigned to any agent', function () {
+    // Plenty of work arrives without a team on it — an e-mail that matched no
+    // queue, a ticket typed straight in. Refusing to assign any of it would be
+    // strict and unusable.
+    $agent = User::factory()->admin()->create();
+    $anybody = User::factory()->agent()->create();
+
+    $ticket = Ticket::factory()->create(['team_id' => null]);
+
+    $this->actingAs($agent)
+        ->put("/agent/tickets/{$ticket->key}/assignee", ['assignee_id' => $anybody->id])
+        ->assertSessionHasNoErrors();
+
+    expect($ticket->fresh()->assignee_id)->toBe($anybody->id);
 });
 
 test('a transition that needs a comment is refused without one', function () {
