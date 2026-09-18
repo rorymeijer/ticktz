@@ -91,13 +91,21 @@ docker compose -f docker-compose.prod.yml up -d --build --wait
 
 Two lines really is enough. Which database to speak to, which Redis, and which
 drivers to use for sessions, cache and queues are properties of this compose
-file rather than opinions you hold, so it sets them — with `${VAR:-default}`
-throughout, so naming any of them in `.env` still overrides it.
+file rather than opinions you hold, so it supplies them — and `${VAR:-default}`
+throughout means naming any of them in `.env` still overrides it.
 
-That was not always true. Before 1.1.5 they came only from `.env`, and an
-instance whose `.env` omitted `DB_CONNECTION` fell through to Laravel's own
-default, which is `sqlite` — so it came up on a file, beside a MySQL it never
-spoke to.
+**It supplies them as defaults, not as environment.** The entrypoint writes
+what is missing into the instance's own `.env` on first boot and never touches
+a key that is already there. That is what lets the setup wizard change them
+afterwards: an environment variable is something `.env` can never replace, so
+settings delivered that way outrank the wizard's own file for the life of the
+instance — which is why, before 1.1.7, choosing your own database in the wizard
+migrated that database, created the administrator in it, and then served every
+request from the bundled one.
+
+Neither was true before 1.1.5: they came only from `.env`, and an instance whose
+`.env` omitted `DB_CONNECTION` fell through to Laravel's own default, which is
+`sqlite` — so it came up on a file, beside a MySQL it never spoke to.
 
 The production stack differs from the development one in the ways that matter:
 the image is self-contained with vendor and compiled assets baked in, there are
@@ -174,6 +182,14 @@ The one question worth thinking about, and the wizard asks it plainly:
 - **Your own database.** A MySQL or MariaDB server you already run — managed,
   clustered, or simply the one that is already in your backup schedule. Give
   it host, port, database, user and password.
+
+  On the Docker stack this did not work before 1.1.7: the compose file handed
+  the bundled database's details to the container as environment variables, and
+  Laravel's dotenv never replaces one of those, so the wizard migrated your
+  database, created the administrator in it, and every request afterwards
+  reconnected to the bundled one. Nothing to do on upgrade — the entrypoint
+  now writes those settings into the instance's `.env` and then takes them out
+  of the environment, so the file decides.
 
 If you choose your own, **create the database first**. Ticktz will not create
 it, because a process that can create databases is a process with more rights

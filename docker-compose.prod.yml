@@ -29,32 +29,36 @@
 name: ticktz
 
 x-app-env: &app-env
+  # Environment variables, for the two things that are genuinely the
+  # container's rather than the instance's. APP_ENV in particular has to
+  # outrank `.env`: this stack is production whatever a file says.
   APP_ENV: production
   APP_DEBUG: "false"
-  # What this stack *is*, rather than what an operator prefers. It ships a
-  # MySQL and a Redis, so which drivers to speak to them with is not a
-  # question — and a default that has to be written into every `.env` is a
-  # default that will eventually be missing from one. It was: Laravel's own
-  # fallback for DB_CONNECTION is `sqlite`, so an instance whose `.env` did not
-  # name it came up pointed at a file instead of the database beside it.
+
+  # Everything else goes in as a *default for the instance's own `.env`*, not
+  # as an environment variable, and the difference is not cosmetic. Laravel's
+  # dotenv is immutable: a variable already in the process environment is never
+  # replaced by `.env`. Delivered as environment, each of these silently
+  # outranked the file — including the file the setup wizard writes, which is
+  # why choosing "my own database" in the wizard migrated that database,
+  # created the administrator in it, and then served every request from the
+  # bundled one.
   #
-  # Each is still `${VAR:-default}`, so an operator pointing at their own
-  # database or an external Redis overrides it from `.env` exactly as before.
-  DB_CONNECTION: ${DB_CONNECTION:-mysql}
-  DB_HOST: ${DB_HOST:-mysql}
-  DB_PORT: ${DB_PORT:-3306}
-  DB_DATABASE: ${DB_DATABASE:-ticktz}
-  DB_USERNAME: ${DB_USERNAME:-ticktz}
-  # Named here rather than left to `env_file` alone, so that a missing one
-  # stops the stack with the sentence above rather than starting an app that
-  # cannot reach its own database.
-  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-  REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
-  REDIS_HOST: ${REDIS_HOST:-redis}
-  REDIS_PORT: ${REDIS_PORT:-6379}
-  SESSION_DRIVER: ${SESSION_DRIVER:-redis}
-  CACHE_STORE: ${CACHE_STORE:-redis}
-  QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+  # The entrypoint strips `TICKTZ_DEFAULT_` and writes what is missing into
+  # `.env` once. A key already there is never touched, so an operator's own
+  # settings and the wizard's both win, which is the precedence people expect.
+  TICKTZ_DEFAULT_DB_CONNECTION: ${DB_CONNECTION:-mysql}
+  TICKTZ_DEFAULT_DB_HOST: ${DB_HOST:-mysql}
+  TICKTZ_DEFAULT_DB_PORT: ${DB_PORT:-3306}
+  TICKTZ_DEFAULT_DB_DATABASE: ${DB_DATABASE:-ticktz}
+  TICKTZ_DEFAULT_DB_USERNAME: ${DB_USERNAME:-ticktz}
+  TICKTZ_DEFAULT_DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+  TICKTZ_DEFAULT_REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
+  TICKTZ_DEFAULT_REDIS_HOST: ${REDIS_HOST:-redis}
+  TICKTZ_DEFAULT_REDIS_PORT: ${REDIS_PORT:-6379}
+  TICKTZ_DEFAULT_SESSION_DRIVER: ${SESSION_DRIVER:-redis}
+  TICKTZ_DEFAULT_CACHE_STORE: ${CACHE_STORE:-redis}
+  TICKTZ_DEFAULT_QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
 
 x-app-base: &app-base
   build:

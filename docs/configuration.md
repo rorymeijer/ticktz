@@ -49,7 +49,7 @@ the public address, not the container's.
 | --- | --- | --- |
 | `DB_CONNECTION` | `mysql` | MySQL 8 with `utf8mb4` |
 | `DB_HOST` / `DB_PORT` | `mysql` / `3306` | |
-| `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | — | No defaults in the production stack, deliberately |
+| `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | `ticktz` / `ticktz` / — | In the production stack these are written into the instance's own `.env` on first boot and then removed from the environment, so that the setup wizard can change them afterwards |
 | `DB_ROOT_PASSWORD` | — | Only the bundled MySQL container uses it |
 | `REDIS_HOST` / `REDIS_PORT` | `redis` / `6379` | |
 | `REDIS_PASSWORD` | *(none)* | Set it if Redis is reachable from anywhere but the compose network |

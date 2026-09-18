@@ -1649,3 +1649,59 @@ the base's rather than merging into it, so the app and the worker each restated
 every key. Four places to keep in step is four places to forget one. They now
 merge a single map, which is what `<<:` does inside a mapping and what the base
 was reaching for all along.
+
+## D70 — A setting delivered as environment is a setting nobody can change
+
+The setup wizard offers two databases: the bundled one and your own. On the
+Docker stack the second had never worked. It migrated the database you named,
+created the administrator in it, wrote the credentials to `.env` — and then
+every request afterwards connected to the bundled one, where that administrator
+does not exist. Nothing reported an error, because nothing failed.
+
+**One sentence explains it.** Laravel builds its environment repository with
+`$builder->immutable()`, so a variable already in the process environment is
+never replaced by `.env`. The compose file set `DB_HOST`, `DB_DATABASE`,
+`DB_USERNAME` and the rest as environment variables. That looks equivalent to
+putting them in a file. It is the opposite: it makes them outrank every file,
+including the one the application writes about itself.
+
+**So the compose file stopped setting them and started suggesting them.** They
+arrive as `TICKTZ_DEFAULT_<KEY>`, which nothing in Laravel reads, and the
+entrypoint strips the prefix and writes what is missing into the instance's own
+`.env` — never touching a key already there. The precedence is then the one
+people assume they had: the file wins, and the stack only decides what it
+starts out containing.
+
+A prefix rather than a list, so that adding a setting is a line in the compose
+file and no change to the script that reads it.
+
+**The other half, which a prefix alone could not reach.** `env_file: [.env]`
+hands the operator's whole file to the container, so `DB_PASSWORD` is back in
+the environment by a second route whatever the compose file does. The first
+attempt renamed it to `TICKTZ_DB_PASSWORD`, which worked and cost an upgrade
+step — a manual change to a file this project's own versioning policy says a
+patch release must not require. It also needed nested interpolation,
+`${TICKTZ_DB_PASSWORD:-${DB_PASSWORD:?...}}`, which the Compose on this machine
+accepts and the one on the CI runner does not. That second fact is the useful
+one: it would have failed for every self-hoster on an older Compose, and the
+only reason it surfaced is that CI runs an older version than the author's
+laptop.
+
+So the environment is corrected rather than worked around. After the settings
+have been written into `.env`, the entrypoint unsets exactly those the stack
+supplied a default for, and nothing else. No rename, no upgrade step, no
+nesting. What the operator set is not lost — it seeded the file a moment
+earlier, where it is now the starting value rather than the final word; and
+what the stack has no opinion about, from `MAIL_HOST` to their own additions,
+is untouched.
+
+`APP_ENV` stays an environment variable and is deliberately not among the
+seeded set. This stack is production whatever a file says, and a `.env` copied
+from a developer's machine must not be able to turn debug output back on.
+
+**The general shape, which is the part worth keeping.** Configuration that an
+application may later rewrite about itself must not be delivered through a
+channel of higher precedence than the one it writes to. Environment variables
+are that channel. They are right for what the container *is* — `APP_ENV` stays
+one, because this stack is production whatever a file claims — and wrong for
+everything the instance is allowed to decide.

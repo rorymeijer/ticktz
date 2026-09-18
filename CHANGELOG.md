@@ -9,6 +9,58 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.1.7
+
+**Your own database now works on the Docker stack.** Choosing it in the setup
+wizard migrated that database, created the administrator in it, wrote the
+credentials to `.env` — and then every request reconnected to the bundled one,
+where that administrator does not exist. It had never worked.
+
+The cause is one sentence: Laravel's dotenv is immutable, so a variable already
+in the process environment is never replaced by `.env`. The compose file handed
+the database details over as environment variables, which looked equivalent to
+writing them in a file and is not: it made them outrank the very file the
+wizard writes, for the life of the instance.
+
+They are now delivered as *defaults for the instance's own `.env`*. The
+entrypoint writes what is missing on first boot and never touches a key that is
+already there, so an operator's settings and the wizard's both win — the
+precedence people expect from a file that is theirs.
+
+**And then taken back out of the environment.** `env_file` hands the operator's
+whole `.env` beside the compose file to the container, so `DB_PASSWORD` arrives
+there too, by a route the compose file cannot control. Having written the
+settings into the instance's `.env`, the entrypoint unsets exactly the keys the
+stack supplied a default for — and nothing else. `MAIL_HOST`, the queue tuning
+and anything else in that file reach the container as before.
+
+**Nothing to do on upgrade.** No renamed variables, no manual step. The first
+version of this change renamed the bundled password to avoid the same
+shadowing; it needed nested interpolation that older Docker Compose versions
+reject, and it asked for a hand edit that this project's versioning policy says
+a patch must not.
+
+Two more things had to move with it, both found in review.
+
+The setup wizard asked `env()` whether there was a bundled database to offer.
+In production the boot compiles the configuration and Laravel then skips `.env`
+entirely, so `env()` answers null for anything that is not also a real
+environment variable — which these deliberately no longer are. The built-in
+option would have disappeared from every production instance, one release after
+being fixed. It asks the configuration now, which is compiled from the same
+file. And the installer clears that compiled configuration after writing
+`.env`, so that somebody who chose a database of their own is not sent to a
+login page still querying the old one.
+
+A third thing had to move with it. The entrypoint waits for the database before
+migrating, and it was reading `getenv("DB_HOST")` — which, after this change, is
+not set. That does not fail loudly: it waits two minutes for 127.0.0.1 on every
+boot, logs one line, and then migrates the right database anyway, because the
+framework reads `.env`. It now resolves settings the way the application does,
+environment first and then `.env`, through `docker/php/instance-setting.php`
+with a test of its own.
+
+
 ## 1.1.6
 
 **The built-in database now asks for nothing.** Choosing it in the setup

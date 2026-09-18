@@ -40,13 +40,31 @@ enum DatabaseChoice: string
      */
     public static function bundledIsAvailable(): bool
     {
-        $host = (string) env('DB_HOST', '');
+        $host = self::connection('host');
 
         if ($host === '' || in_array($host, ['127.0.0.1', 'localhost', '::1'], true)) {
             return false;
         }
 
-        return (string) env('DB_PASSWORD', '') !== '' && (string) env('DB_DATABASE', '') !== '';
+        return self::connection('password') !== '' && self::connection('database') !== '';
+    }
+
+    /**
+     * One value of the connection this instance is configured with.
+     *
+     * The configuration rather than `env()`, and the difference is not
+     * academic. In production the boot compiles the configuration, and Laravel
+     * skips loading `.env` entirely when it finds a compiled one — so `env()`
+     * answers null for everything that is not also a real environment
+     * variable. Since 1.1.7 the database settings are deliberately not real
+     * environment variables: they are written into `.env` so that this very
+     * wizard can change them. Asked through `env()`, the bundled database
+     * would look absent on every production instance and the option would not
+     * be offered at all.
+     */
+    private static function connection(string $key): string
+    {
+        return (string) config("database.connections.mysql.{$key}", '');
     }
 
     /**
@@ -63,10 +81,10 @@ enum DatabaseChoice: string
     public static function defaults(): array
     {
         return [
-            'host' => (string) env('DB_HOST', '127.0.0.1'),
-            'port' => (string) env('DB_PORT', '3306'),
-            'database' => (string) env('DB_DATABASE', 'ticktz'),
-            'username' => (string) env('DB_USERNAME', 'ticktz'),
+            'host' => self::connection('host') ?: '127.0.0.1',
+            'port' => self::connection('port') ?: '3306',
+            'database' => self::connection('database') ?: 'ticktz',
+            'username' => self::connection('username') ?: 'ticktz',
         ];
     }
 
@@ -84,6 +102,6 @@ enum DatabaseChoice: string
      */
     public static function bundledCredentials(): array
     {
-        return self::defaults() + ['password' => (string) env('DB_PASSWORD', '')];
+        return self::defaults() + ['password' => self::connection('password')];
     }
 }

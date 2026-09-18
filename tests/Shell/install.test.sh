@@ -95,22 +95,35 @@ if command -v docker >/dev/null 2>&1 && command -v php >/dev/null 2>&1; then
     check "the two secrets satisfy the real compose file" \
         "$(env_of mysql MYSQL_PASSWORD)" "$pw"
 
-    # The bug this release fixes: left to Laravel's own fallbacks, a production
-    # instance comes up on sqlite with a synchronous queue, beside a MySQL and
-    # a Redis it never speaks to.
+    # Left to Laravel's own fallbacks a production instance comes up on sqlite
+    # with a synchronous queue, beside a MySQL and a Redis it never speaks to.
+    # The stack supplies them — as defaults for the instance's own `.env`
+    # rather than as environment variables, so that the setup wizard can still
+    # change them. The entrypoint strips the prefix; see place-code.sh, and
+    # drop-seeded-env.sh for the other half.
     for service in app worker; do
-        check "$service gets DB_CONNECTION=mysql from a two-line .env" \
-            "$(env_of "$service" DB_CONNECTION)" "mysql"
-        check "$service gets the database beside it" \
-            "$(env_of "$service" DB_HOST)" "mysql"
-        check "$service gets the generated password" \
-            "$(env_of "$service" DB_PASSWORD)" "$pw"
-        check "$service keeps sessions in redis" \
-            "$(env_of "$service" SESSION_DRIVER)" "redis"
-        check "$service queues to redis" \
-            "$(env_of "$service" QUEUE_CONNECTION)" "redis"
-        check "$service caches in redis" \
-            "$(env_of "$service" CACHE_STORE)" "redis"
+        check "$service is told which database to start with" \
+            "$(env_of "$service" TICKTZ_DEFAULT_DB_CONNECTION)" "mysql"
+        check "$service is told the database beside it" \
+            "$(env_of "$service" TICKTZ_DEFAULT_DB_HOST)" "mysql"
+        check "$service is told the generated password" \
+            "$(env_of "$service" TICKTZ_DEFAULT_DB_PASSWORD)" "$pw"
+        check "$service is told to keep sessions in redis" \
+            "$(env_of "$service" TICKTZ_DEFAULT_SESSION_DRIVER)" "redis"
+        check "$service is told to queue to redis" \
+            "$(env_of "$service" TICKTZ_DEFAULT_QUEUE_CONNECTION)" "redis"
+        check "$service is told to cache in redis" \
+            "$(env_of "$service" TICKTZ_DEFAULT_CACHE_STORE)" "redis"
+
+        # And under no name the application reads. The exception is the
+        # operator's own `.env`, which `env_file` hands over whole — DB_PASSWORD
+        # among it. That one the entrypoint removes at boot, because it cannot
+        # be kept out of here without taking the rest of their file with it.
+        for key in DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME \
+                   REDIS_HOST SESSION_DRIVER CACHE_STORE QUEUE_CONNECTION; do
+            check "$service is handed no $key by the compose file" \
+                "$(env_of "$service" "$key")" "MISSING"
+        done
     done
 
     check "and the image is one that exists" \

@@ -251,6 +251,68 @@ APP_KEY=base64:fromtheoperator run_place "$WORK/image" "$WORK/envkey"
 check "writes no .env when the environment supplies a key" \
     "$([ -f "$WORK/envkey/.env" ] && echo written || echo "left alone")" "left alone"
 
+# --- Settings seeded into the instance's own .env --------------------------
+#
+# They used to be environment variables from the compose file. Laravel's dotenv
+# is immutable, so a variable already in the environment is never replaced by
+# `.env` — and the file the setup wizard writes was therefore outranked by the
+# compose file for the life of the instance. Choosing "my own database" in the
+# wizard migrated that database, created the administrator in it, and then
+# served every request from the bundled one.
+
+seed() {
+    TICKTZ_DEFAULT_DB_CONNECTION=mysql \
+    TICKTZ_DEFAULT_DB_HOST=mysql \
+    TICKTZ_DEFAULT_DB_DATABASE=ticktz \
+    TICKTZ_DEFAULT_DB_PASSWORD=from-the-compose-file \
+    TICKTZ_DEFAULT_QUEUE_CONNECTION=redis \
+    run_place "$1" "$2"
+}
+
+rm -rf "$WORK/seeded"; mkdir -p "$WORK/seeded"
+APP_KEY=base64:supplied seed "$WORK/image" "$WORK/seeded"
+
+check "writes the stack's settings into the instance" \
+    "$(grep '^DB_HOST=' "$WORK/seeded/.env" 2>/dev/null)" "DB_HOST=mysql"
+check "including the bundled password" \
+    "$(grep '^DB_PASSWORD=' "$WORK/seeded/.env" 2>/dev/null)" "DB_PASSWORD=from-the-compose-file"
+# grep -c prints 0 and exits non-zero, so the `|| echo 0` this had at first
+# appended a second one.
+check "and strips the prefix as it goes" \
+    "$(grep -c '^TICKTZ_DEFAULT_' "$WORK/seeded/.env" 2>/dev/null)" "0"
+
+# The whole point: what the wizard writes afterwards has to survive. A second
+# boot must not put the bundled database back.
+sed -i 's|^DB_HOST=.*|DB_HOST=db.example.org|; s|^DB_PASSWORD=.*|DB_PASSWORD=chosen-in-the-wizard|' "$WORK/seeded/.env"
+APP_KEY=base64:supplied seed "$WORK/image" "$WORK/seeded"
+
+check "never overwrites what the wizard chose" \
+    "$(grep '^DB_HOST=' "$WORK/seeded/.env")" "DB_HOST=db.example.org"
+check "nor the password it chose" \
+    "$(grep '^DB_PASSWORD=' "$WORK/seeded/.env")" "DB_PASSWORD=chosen-in-the-wizard"
+check "and adds no second line for either" \
+    "$(grep -c '^DB_HOST=' "$WORK/seeded/.env")" "1"
+
+# A key that is there but empty is not a value. Left as it was, an instance
+# would come up with no database host at all.
+rm -rf "$WORK/emptied"; mkdir -p "$WORK/emptied"
+printf 'APP_NAME=Ticktz\nDB_HOST=\nMAIL_HOST=smtp.example.org\n' > "$WORK/emptied/.env"
+APP_KEY=base64:supplied seed "$WORK/image" "$WORK/emptied"
+
+check "fills a key that is present but empty" \
+    "$(grep '^DB_HOST=' "$WORK/emptied/.env")" "DB_HOST=mysql"
+check "without duplicating the line" "$(grep -c '^DB_HOST=' "$WORK/emptied/.env")" "1"
+check "and leaves the rest of the file alone" \
+    "$(grep '^MAIL_HOST=' "$WORK/emptied/.env")" "MAIL_HOST=smtp.example.org"
+
+# Outside the stack that sets them there is nothing to seed, which is what
+# keeps this away from a developer's bind-mounted working copy.
+rm -rf "$WORK/nodefaults"; mkdir -p "$WORK/nodefaults"
+APP_KEY=base64:supplied run_place "$WORK/image" "$WORK/nodefaults"
+
+check "writes nothing when the stack supplies no defaults" \
+    "$([ -f "$WORK/nodefaults/.env" ] && echo written || echo "left alone")" "left alone"
+
 echo
 if [ "$failures" -gt 0 ]; then
     echo "$failures of $checks checks failed"

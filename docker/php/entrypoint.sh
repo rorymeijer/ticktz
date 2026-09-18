@@ -9,6 +9,13 @@ if [ -x /usr/local/bin/ticktz-place-code ]; then
     /usr/local/bin/ticktz-place-code
 fi
 
+# It has just written the stack's settings into the instance's `.env`. Now take
+# them out of the environment, so that the file is what decides — including the
+# file the setup wizard writes. See docker/php/drop-seeded-env.sh.
+if [ -r "${TICKTZ_DROP_SEEDED_ENV:-/usr/local/bin/ticktz-drop-seeded-env}" ]; then
+    . "${TICKTZ_DROP_SEEDED_ENV:-/usr/local/bin/ticktz-drop-seeded-env}"
+fi
+
 cd "${TICKTZ_APP_ROOT:-/var/www/html}"
 
 # Throw away the compiled config before anything reads it.
@@ -25,16 +32,29 @@ cd "${TICKTZ_APP_ROOT:-/var/www/html}"
 # which is what a developer changing a setting expects.
 rm -f bootstrap/cache/config.php
 
+# One of this instance's settings, resolved the way the application resolves
+# it — environment first, then `.env`. See docker/php/instance-setting.php.
+setting() {
+    php "${TICKTZ_INSTANCE_SETTING:-/usr/local/bin/ticktz-instance-setting}" "$1" "${2:-}"
+}
+
 # Wait for the database before doing anything that touches it. Compose health
 # checks already gate startup, but self-hosters sometimes point Ticktz at an
 # external MySQL that is slower to come up.
 wait_for_database() {
     tries=0
+
+    # Read once rather than per attempt: these do not change while we wait, and
+    # sixty PHP startups to learn the same four values is sixty too many.
+    db_host=$(setting DB_HOST 127.0.0.1)
+    db_port=$(setting DB_PORT 3306)
+    db_user=$(setting DB_USERNAME)
+    db_pass=$(setting DB_PASSWORD)
+
     until php -r '
-        $dsn = sprintf("mysql:host=%s;port=%s", getenv("DB_HOST") ?: "127.0.0.1", getenv("DB_PORT") ?: "3306");
-        try { new PDO($dsn, getenv("DB_USERNAME"), getenv("DB_PASSWORD")); exit(0); }
+        try { new PDO(sprintf("mysql:host=%s;port=%s", $argv[1], $argv[2]), $argv[3], $argv[4]); exit(0); }
         catch (Throwable $e) { exit(1); }
-    ' 2>/dev/null; do
+    ' -- "$db_host" "$db_port" "$db_user" "$db_pass" 2>/dev/null; do
         tries=$((tries + 1))
         if [ "$tries" -ge 60 ]; then
             echo "ticktz: database not reachable after 60 attempts, continuing anyway" >&2

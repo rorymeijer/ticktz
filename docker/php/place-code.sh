@@ -293,6 +293,83 @@ ensure_app_key() {
     release_lock
 }
 
+# Write the stack's own settings into this instance's `.env`, once.
+#
+# They used to arrive as environment variables from the compose file, which
+# looked equivalent and is not. Laravel's dotenv is immutable: a variable
+# already in the process environment is never replaced by `.env`. So every
+# setting delivered that way silently outranked the file — including the file
+# the setup wizard writes. Choose "my own database" in the wizard and it would
+# migrate that database, create the administrator in it, write the credentials
+# to `.env`, and then every request afterwards would reconnect to the bundled
+# one, where that administrator does not exist.
+#
+# Delivered through the file instead, the precedence is the one people expect:
+# whatever is in `.env` wins, and these are only what it starts with.
+#
+# Never overwrites. A key already there — because the wizard wrote it, or the
+# operator did — is left exactly as it was, which is what makes this safe to
+# run on every boot rather than only the first.
+#
+# The compose file names them `TICKTZ_DEFAULT_<KEY>`; this strips the prefix.
+# A prefix rather than a list, so that adding a setting is a line in the
+# compose file and nothing here.
+seed_instance_settings() {
+    # Nothing to do outside the stack that sets them, which is what keeps this
+    # away from a developer's bind-mounted working copy.
+    env | grep -q '^TICKTZ_DEFAULT_' || return 0
+
+    env_file="$APP_ROOT/.env"
+
+    acquire_lock || return 0
+
+    [ -f "$env_file" ] || : > "$env_file"
+
+    wrote=0
+
+    # A subshell would lose `wrote`, so the list is materialised first.
+    env | grep '^TICKTZ_DEFAULT_' | sort > "$env_file.defaults.$$"
+
+    while IFS= read -r line; do
+        pair=${line#TICKTZ_DEFAULT_}
+        key=${pair%%=*}
+        value=${pair#*=}
+
+        [ -n "$key" ] || continue
+
+        # Present *with a value*. `DB_HOST=` is not a host, and treating it as
+        # set is how an instance ends up connecting to nothing.
+        if grep -q "^${key}=..*" "$env_file"; then
+            continue
+        fi
+
+        # There but empty: replace that line rather than adding a second one,
+        # which a line-based parser resolves in whichever direction it happens
+        # to read.
+        if grep -q "^${key}=" "$env_file"; then
+            awk -v k="$key" -v v="$value" \
+                'index($0, k "=") == 1 { print k "=" v; next } { print }' \
+                "$env_file" > "$env_file.seed.$$"
+            mv "$env_file.seed.$$" "$env_file"
+        else
+            printf '%s=%s\n' "$key" "$value" >> "$env_file"
+        fi
+
+        wrote=$((wrote + 1))
+    done < "$env_file.defaults.$$"
+
+    rm -f "$env_file.defaults.$$"
+
+    if [ "$wrote" -gt 0 ]; then
+        echo "ticktz: wrote ${wrote} setting(s) this instance did not have into ${env_file}"
+        chown www-data:www-data "$env_file" 2>/dev/null || true
+        chmod 640 "$env_file" 2>/dev/null || true
+    fi
+
+    release_lock
+}
+
 place_code
 own_instance_directories
 ensure_app_key
+seed_instance_settings

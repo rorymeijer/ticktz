@@ -181,9 +181,30 @@ it('reports requirements this very process satisfies', function (): void {
 | every value, the password included, from its own environment.
 */
 
-/** Make the environment look like the compose stack, and put it back after. */
+/**
+ * Make this instance look like one the compose stack started.
+ *
+ * The *configuration*, because that is what the installer asks. Production
+ * compiles it at boot and Laravel then skips `.env` entirely, so `env()`
+ * answers null for anything that is not also a real environment variable — and
+ * since 1.1.7 the database settings deliberately are not, so that this wizard
+ * can change them. The environment is set as well, for the entrypoint-facing
+ * parts that still read it.
+ */
 function withBundledEnvironment(Closure $body): void
 {
+    $connection = [
+        'host' => 'mysql',
+        'port' => '3306',
+        'database' => 'ticktz',
+        'username' => 'ticktz',
+        'password' => 'from-the-compose-file',
+    ];
+
+    foreach ($connection as $key => $value) {
+        config()->set("database.connections.mysql.{$key}", $value);
+    }
+
     $before = [];
 
     foreach (['DB_HOST' => 'mysql', 'DB_PORT' => '3306', 'DB_DATABASE' => 'ticktz', 'DB_USERNAME' => 'ticktz', 'DB_PASSWORD' => 'from-the-compose-file'] as $key => $value) {
@@ -297,10 +318,41 @@ it('reports a built-in database that stops answering where it can be read', func
     });
 });
 
+it('offers the built-in database even when the configuration is compiled', function (): void {
+    // Production compiles the configuration at boot, and Laravel then skips
+    // loading `.env` entirely. Since 1.1.7 the database settings are
+    // deliberately *not* real environment variables — they are written into
+    // `.env` so that this wizard can change them — so anything asking `env()`
+    // here answers null, and the built-in option would not be offered on any
+    // production instance at all.
+    withBundledEnvironment(function (): void {
+        config()->set('database.connections.mysql.host', 'mysql');
+        config()->set('database.connections.mysql.database', 'ticktz');
+        config()->set('database.connections.mysql.username', 'ticktz');
+        config()->set('database.connections.mysql.password', 'from-the-compose-file');
+
+        // What a compiled configuration looks like to `env()`: nothing.
+        foreach (['DB_HOST', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'] as $key) {
+            putenv($key);
+            unset($_ENV[$key], $_SERVER[$key]);
+        }
+
+        expect(DatabaseChoice::bundledIsAvailable())->toBeTrue()
+            ->and(DatabaseChoice::bundledCredentials())->toBe([
+                'host' => 'mysql',
+                'port' => '3306',
+                'database' => 'ticktz',
+                'username' => 'ticktz',
+                'password' => 'from-the-compose-file',
+            ]);
+    });
+});
+
 it('refuses the built-in database where there is none', function (): void {
     // Loopback, so `bundledIsAvailable()` says no. Without this the installer
-    // would read an empty environment and report a refused password for a
+    // would read an empty configuration and report a refused password for a
     // server that was never there.
+    config()->set('database.connections.mysql.host', '127.0.0.1');
     putenv('DB_HOST=127.0.0.1');
     $_ENV['DB_HOST'] = '127.0.0.1';
 
@@ -325,8 +377,6 @@ it('keeps the bundled password off the page', function (): void {
 
 it('does not offer the built-in database when there is visibly no container', function (): void {
     config()->set('database.connections.mysql.host', '127.0.0.1');
-    putenv('DB_HOST=127.0.0.1');
-    $_ENV['DB_HOST'] = '127.0.0.1';
 
     expect(DatabaseChoice::bundledIsAvailable())->toBeFalse();
 });
