@@ -205,6 +205,20 @@ it('does not hand the customer directory to somebody who only reads tickets', fu
     $this->actingAs($agent)->getJson('/people?scope=agent')->assertOk();
 });
 
+it('lets somebody who keeps the asset register find a person', function (): void {
+    // The asset dialog is the one screen whose only picker asks for the wider
+    // set, and `assets.manage` was not on the list — so an asset administrator
+    // who does not work tickets got a 403 from the picker their own screen
+    // offers them. They already read holders' names off every asset page,
+    // which is the test this map is supposed to apply.
+    $keeper = makeUserWithPermissions('assets.view', 'assets.manage');
+    User::factory()->requester()->create(['name' => 'Rita Requester']);
+
+    $response = $this->actingAs($keeper)->getJson('/people?scope=user&q=Rita')->assertOk();
+
+    expect(array_column($response->json('people'), 'name'))->toBe(['Rita Requester']);
+});
+
 it('lets somebody who files tickets find a requester', function (): void {
     $agent = makeUserWithPermissions('tickets.view', 'tickets.create');
     User::factory()->requester()->create(['name' => 'Rita Requester']);

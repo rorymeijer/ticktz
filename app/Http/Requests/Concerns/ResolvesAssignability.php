@@ -7,6 +7,7 @@ namespace App\Http\Requests\Concerns;
 use App\Models\Ticket;
 use App\Rules\AssignableToTeam;
 use App\Services\Tickets\Assignability;
+use Closure;
 
 /**
  * Works out which team's rule an `assignee_id` has to satisfy.
@@ -20,6 +21,38 @@ use App\Services\Tickets\Assignability;
  */
 trait ResolvesAssignability
 {
+    /**
+     * Everything `assignee_id` has to satisfy beyond existing.
+     *
+     * Two rules, and they answer different questions. The first is whether
+     * this person may hand a ticket to anybody at all; the second is whether
+     * this particular person may hold this particular ticket.
+     *
+     * The permission one was missing everywhere. `tickets.assign` gated the
+     * assign action and the button on the screen, and nothing on the way in:
+     * somebody with `tickets.create` and no assign permission could hand a
+     * ticket to whoever they liked by doing it while creating it, and somebody
+     * with `tickets.update` could do it through the ticket form. The API
+     * description has claimed this rule since the API existed.
+     *
+     * @return array<int, mixed>
+     */
+    protected function assigneeRules(?Ticket $ticket = null): array
+    {
+        return [
+            function (string $attribute, mixed $value, Closure $fail): void {
+                if ($value === null || $value === '') {
+                    return;
+                }
+
+                if (! ($this->user()?->hasPermission('tickets.assign') ?? false)) {
+                    $fail(__('tickets.errors.assignee_not_permitted'));
+                }
+            },
+            $this->assignableRule($ticket),
+        ];
+    }
+
     protected function assignableRule(?Ticket $ticket = null): AssignableToTeam
     {
         return new AssignableToTeam(Assignability::teamIdForAttributes(

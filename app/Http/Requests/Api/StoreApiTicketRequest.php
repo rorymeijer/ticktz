@@ -42,7 +42,7 @@ class StoreApiTicketRequest extends FormRequest
             'queue_id' => ['nullable', 'integer', 'exists:queues,id'],
             'team_id' => ['nullable', 'integer', 'exists:teams,id'],
             'request_type_id' => ['nullable', 'integer', 'exists:request_types,id'],
-            'assignee_id' => ['nullable', 'integer', 'exists:users,id', $this->assignableRule()],
+            'assignee_id' => ['nullable', 'integer', 'exists:users,id', ...$this->assigneeRules()],
             'label_ids' => ['nullable', 'array', 'max:20'],
             'label_ids.*' => ['integer', 'exists:labels,id'],
         ];

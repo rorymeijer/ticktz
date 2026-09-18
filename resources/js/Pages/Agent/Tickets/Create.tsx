@@ -21,7 +21,13 @@ import { useTranslations } from '@/hooks/useTranslations';
 import type { TicketOptions, UserSummary } from '@/types/tickets';
 import { RichTextField } from '@/Components/RichText/RichTextField';
 
-export default function TicketCreate({ options }: { options: TicketOptions }) {
+export default function TicketCreate({
+    options,
+    can,
+}: {
+    options: TicketOptions;
+    can: { assign: boolean };
+}) {
     const { t } = useTranslations();
     const fileInput = useRef<HTMLInputElement>(null);
 
@@ -204,6 +210,7 @@ export default function TicketCreate({ options }: { options: TicketOptions }) {
                                 )}
                             </Field>
 
+                            {can.assign ? (
                             <Field label={t('tickets.fields.assignee')} error={form.errors.assignee_id}>
                                 {(props) => (
                                     <PersonPicker
@@ -221,6 +228,7 @@ export default function TicketCreate({ options }: { options: TicketOptions }) {
                                     />
                                 )}
                             </Field>
+                            ) : null}
                         </CardBody>
                     </Card>
 
