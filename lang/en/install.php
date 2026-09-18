@@ -61,6 +61,8 @@ return [
         'bundled' => 'Use the built-in database',
         'bundled_help' => 'The MySQL server that ships with Ticktz, already running alongside it. Nothing to configure, nothing to maintain separately.',
         'bundled_unavailable' => 'No built-in database was detected. That is expected when you run Ticktz outside its Docker stack.',
+        'bundled_summary' => 'Ticktz will use the database :database on :host, as :username.',
+        'bundled_password' => 'Its password is read from this server\'s own environment. It is never shown here and never sent to your browser.',
 
         'external' => 'Use my own database',
         'external_help' => 'A MySQL or MariaDB server you already run — managed, clustered, or simply the one that is already in your backups.',

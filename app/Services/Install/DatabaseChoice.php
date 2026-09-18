@@ -50,7 +50,13 @@ enum DatabaseChoice: string
     }
 
     /**
-     * The credentials to prefill for this choice.
+     * What the bundled database is, for showing on the screen.
+     *
+     * The password is deliberately absent. This is served to an
+     * unauthenticated page — there is nobody to authenticate as yet — and a
+     * live database password in that HTML would be a secret handed to whoever
+     * reaches the installer first. The rest is not secret: it is the compose
+     * file, which ships in the repository.
      *
      * @return array<string, string>
      */
@@ -62,5 +68,22 @@ enum DatabaseChoice: string
             'database' => (string) env('DB_DATABASE', 'ticktz'),
             'username' => (string) env('DB_USERNAME', 'ticktz'),
         ];
+    }
+
+    /**
+     * What to actually connect with, read on the server and never sent out.
+     *
+     * The bundled database is not the operator's to configure: the compose
+     * file created it, named it and set its password, and every one of those
+     * values is already in this process's environment. Asking somebody to
+     * retype them is asking them to reproduce something the server can simply
+     * read — five chances to make a typo, and one of them, the password, was
+     * not even shown to them to copy.
+     *
+     * @return array<string, string>
+     */
+    public static function bundledCredentials(): array
+    {
+        return self::defaults() + ['password' => (string) env('DB_PASSWORD', '')];
     }
 }

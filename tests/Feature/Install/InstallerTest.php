@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Services\Install\DatabaseChoice;
+use App\Services\Install\DatabaseTester;
 use App\Services\Install\RequirementsChecker;
 use App\Support\Install\InstallationState;
 
@@ -163,6 +164,163 @@ it('reports requirements this very process satisfies', function (): void {
     // application does not actually need.
     expect($result['ok'])->toBeTrue()
         ->and(collect($result['required'])->where('ok', false)->pluck('label')->all())->toBe([]);
+});
+
+/*
+|--------------------------------------------------------------------------
+| The built-in database
+|--------------------------------------------------------------------------
+|
+| Picking it used to prefill four fields and leave the fifth — the password —
+| empty, because it is the one value that must not be sent to an
+| unauthenticated page. Pressing *Test connection* then offered the operator
+| "the server refused that username or password" for a password they had never
+| been asked for and could not have known.
+|
+| So the bundled database now asks for nothing at all, and the server reads
+| every value, the password included, from its own environment.
+*/
+
+/** Make the environment look like the compose stack, and put it back after. */
+function withBundledEnvironment(Closure $body): void
+{
+    $before = [];
+
+    foreach (['DB_HOST' => 'mysql', 'DB_PORT' => '3306', 'DB_DATABASE' => 'ticktz', 'DB_USERNAME' => 'ticktz', 'DB_PASSWORD' => 'from-the-compose-file'] as $key => $value) {
+        $before[$key] = getenv($key);
+        putenv("{$key}={$value}");
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
+    }
+
+    try {
+        $body();
+    } finally {
+        foreach ($before as $key => $value) {
+            if ($value === false) {
+                putenv($key);
+                unset($_ENV[$key], $_SERVER[$key]);
+
+                continue;
+            }
+
+            putenv("{$key}={$value}");
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
+    }
+}
+
+/** Stand in for the tester and record what it was asked to connect with. */
+function recordingTester(): stdClass
+{
+    $box = new stdClass;
+    $box->seen = null;
+
+    $tester = Mockery::mock(DatabaseTester::class);
+    $tester->shouldReceive('test')->andReturnUsing(function (array $credentials) use ($box): array {
+        $box->seen = $credentials;
+
+        return ['ok' => true, 'reason' => null, 'detail' => null, 'server' => '8.4.0', 'writable' => true, 'empty' => true];
+    });
+
+    app()->instance(DatabaseTester::class, $tester);
+
+    return $box;
+}
+
+it('asks for nothing when the built-in database is chosen', function (): void {
+    withBundledEnvironment(function (): void {
+        recordingTester();
+
+        // No host, no port, no name, no user, no password. This is the whole
+        // request the screen now sends.
+        post('/install/database', ['database_choice' => 'bundled'])
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+    });
+});
+
+it('connects with the environment rather than anything the browser sent', function (): void {
+    withBundledEnvironment(function (): void {
+        $spy = recordingTester();
+
+        // A request that names the bundled database but carries somebody
+        // else's server. Accepting it would make an unauthenticated endpoint
+        // into a way to point the installer wherever the caller likes.
+        post('/install/database', [
+            'database_choice' => 'bundled',
+            'host' => 'attacker.example.org',
+            'port' => 1234,
+            'database' => 'somewhere_else',
+            'username' => 'root',
+            'password' => 'guessed',
+        ])->assertOk();
+
+        expect($spy->seen)->toBe([
+            'host' => 'mysql',
+            'port' => '3306',
+            'database' => 'ticktz',
+            'username' => 'ticktz',
+            'password' => 'from-the-compose-file',
+        ]);
+    });
+});
+
+it('installs against the built-in database without being given its credentials', function (): void {
+    withBundledEnvironment(function (): void {
+        $payload = installPayload(['database_choice' => 'bundled']);
+
+        unset($payload['host'], $payload['port'], $payload['database'], $payload['username'], $payload['password']);
+
+        // Every one of the five, `host` included. There is no `mysql` for this
+        // suite to reach, so the install does fail — but on a screen with no
+        // fields the failure belongs to the instance rather than to a field,
+        // and the next test pins where it goes instead.
+        post('/install', $payload)
+            ->assertSessionDoesntHaveErrors(['database_choice', 'host', 'port', 'database', 'username', 'password']);
+    });
+});
+
+it('reports a built-in database that stops answering where it can be read', function (): void {
+    withBundledEnvironment(function (): void {
+        // The connection is tested again at the end, and this suite has no
+        // `mysql`, so this is that failure. It used to be reported on `host` —
+        // which the bundled screen no longer renders, so the button would have
+        // appeared to do nothing and going back a step would have explained
+        // nothing either.
+        $payload = installPayload(['database_choice' => 'bundled']);
+
+        unset($payload['host'], $payload['port'], $payload['database'], $payload['username'], $payload['password']);
+
+        post('/install', $payload)->assertSessionHasErrors('install');
+    });
+});
+
+it('refuses the built-in database where there is none', function (): void {
+    // Loopback, so `bundledIsAvailable()` says no. Without this the installer
+    // would read an empty environment and report a refused password for a
+    // server that was never there.
+    putenv('DB_HOST=127.0.0.1');
+    $_ENV['DB_HOST'] = '127.0.0.1';
+
+    post('/install/database', ['database_choice' => 'bundled'])
+        ->assertSessionHasErrors('database_choice');
+});
+
+it('still asks for every field when the database is somebody else\'s', function (): void {
+    post('/install/database', ['database_choice' => 'external'])
+        ->assertSessionHasErrors(['host', 'port', 'database', 'username']);
+});
+
+it('keeps the bundled password off the page', function (): void {
+    withBundledEnvironment(function (): void {
+        // What the screen is given, which is what ends up in the HTML.
+        expect(DatabaseChoice::defaults())->not->toHaveKey('password')
+            ->and(DatabaseChoice::bundledCredentials()['password'])->toBe('from-the-compose-file');
+
+        get('/install')->assertOk()->assertDontSee('from-the-compose-file');
+    });
 });
 
 it('does not offer the built-in database when there is visibly no container', function (): void {

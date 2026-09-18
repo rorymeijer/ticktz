@@ -9,6 +9,32 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## 1.1.6
+
+**The built-in database now asks for nothing.** Choosing it in the setup
+wizard used to prefill four fields and leave the fifth blank — the password,
+which is the only one that authenticates. Pressing *Test connection* then
+answered:
+
+> The server refused that username or password.
+
+for a password the operator had never been asked for and could not have known.
+It was the first screen of the installation, on the option labelled *nothing to
+configure*.
+
+The password was blank for a real reason: the installer runs before there is
+anybody to sign in as, so putting a live database password in that page would
+hand it to whoever reached the installer first. The mistake was asking for it
+at all. Every value of the bundled database — host, port, name, user and
+password — belongs to the container the compose file started, and the server
+already has all five in its environment. So the screen now shows one sentence
+saying which database will be used, and sends nothing but the choice; the
+server reads the credentials itself and ignores any that were submitted, which
+also stops an unauthenticated endpoint from being pointed at somebody else's
+server.
+
+Your own database is unchanged: every field is still asked for and tested.
+
 ## 1.1.5
 
 **Installing production no longer means editing a file.**

@@ -164,13 +164,22 @@ export default function Wizard({
                     'X-CSRF-TOKEN':
                         document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
                 },
-                body: JSON.stringify({
-                    host: form.data.host,
-                    port: form.data.port,
-                    database: form.data.database,
-                    username: form.data.username,
-                    password: form.data.password,
-                }),
+                // The bundled database sends nothing but the choice. Its host,
+                // name, user and password are the compose file's, already in
+                // the server's environment — and the password was never sent
+                // to this page, so there is nothing here to send back.
+                body: JSON.stringify(
+                    form.data.database_choice === 'bundled'
+                        ? { database_choice: 'bundled' }
+                        : {
+                              database_choice: 'external',
+                              host: form.data.host,
+                              port: form.data.port,
+                              database: form.data.database,
+                              username: form.data.username,
+                              password: form.data.password,
+                          },
+                ),
             });
 
             setTest(
@@ -227,6 +236,7 @@ export default function Wizard({
                                     <DatabaseStep
                                         form={form}
                                         available={database.bundledAvailable}
+                                        bundled={database.defaults}
                                         test={test}
                                         testing={testing}
                                         onTest={runTest}
@@ -253,7 +263,7 @@ export default function Wizard({
 
                                 {current === 'mail' && <MailStep form={form} />}
 
-                                {current === 'finish' && <FinishStep form={form} />}
+                                {current === 'finish' && <FinishStep form={form} bundled={database.defaults} />}
                             </div>
 
                             {/* `install` is not a form field, so it is not in
@@ -407,6 +417,7 @@ function RequirementsStep({
 function DatabaseStep({
     form,
     available,
+    bundled,
     test,
     testing,
     onTest,
@@ -415,6 +426,11 @@ function DatabaseStep({
 }: {
     form: WizardForm;
     available: boolean;
+    // The bundled database as the server described it, which is not the same
+    // thing as what is in the form: editing the external fields and switching
+    // back would otherwise have this summary name a database that is about to
+    // be ignored.
+    bundled: Record<string, string>;
     test: TestResult | null;
     testing: boolean;
     onTest: () => void;
@@ -444,67 +460,85 @@ function DatabaseStep({
                 />
             </div>
 
-            {choice === 'external' ? (
-                <p className="mt-4 text-xs text-slate-600">{t('install.database.prepare')}</p>
-            ) : null}
+            {choice === 'bundled' ? (
+                // Nothing to fill in. Every value belongs to the container the
+                // compose file started, and the one that authenticates was
+                // never sent to this page. Shown as a sentence rather than as
+                // five disabled boxes: a field you cannot edit still reads as
+                // a field you were supposed to check.
+                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                    <p>
+                        {t('install.database.bundled_summary', {
+                            database: bundled.database,
+                            host: bundled.host,
+                            username: bundled.username,
+                        })}
+                    </p>
+                    <p className="mt-2 text-xs text-slate-600">{t('install.database.bundled_password')}</p>
+                </div>
+            ) : (
+                <>
+                    <p className="mt-4 text-xs text-slate-600">{t('install.database.prepare')}</p>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <Field label={t('install.database.fields.host')} error={form.errors.host}>
-                    {(props) => (
-                        <TextInput
-                            {...props}
-                            value={form.data.host}
-                            readOnly={choice === 'bundled'}
-                            className={choice === 'bundled' ? 'bg-slate-50' : undefined}
-                            onChange={(event) => onChange('host', event.target.value)}
-                        />
-                    )}
-                </Field>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <Field label={t('install.database.fields.host')} error={form.errors.host}>
+                            {(props) => (
+                                <TextInput
+                                    {...props}
+                                    value={form.data.host}
+                                    onChange={(event) => onChange('host', event.target.value)}
+                                />
+                            )}
+                        </Field>
 
-                <Field label={t('install.database.fields.port')} error={form.errors.port}>
-                    {(props) => (
-                        <TextInput
-                            {...props}
-                            value={form.data.port}
-                            readOnly={choice === 'bundled'}
-                            className={choice === 'bundled' ? 'bg-slate-50' : undefined}
-                            onChange={(event) => onChange('port', event.target.value)}
-                        />
-                    )}
-                </Field>
+                        <Field label={t('install.database.fields.port')} error={form.errors.port}>
+                            {(props) => (
+                                <TextInput
+                                    {...props}
+                                    value={form.data.port}
+                                    onChange={(event) => onChange('port', event.target.value)}
+                                />
+                            )}
+                        </Field>
 
-                <Field label={t('install.database.fields.database')} error={form.errors.database}>
-                    {(props) => (
-                        <TextInput
-                            {...props}
-                            value={form.data.database}
-                            onChange={(event) => onChange('database', event.target.value)}
-                        />
-                    )}
-                </Field>
+                        <Field label={t('install.database.fields.database')} error={form.errors.database}>
+                            {(props) => (
+                                <TextInput
+                                    {...props}
+                                    value={form.data.database}
+                                    onChange={(event) => onChange('database', event.target.value)}
+                                />
+                            )}
+                        </Field>
 
-                <Field label={t('install.database.fields.username')} error={form.errors.username}>
-                    {(props) => (
-                        <TextInput
-                            {...props}
-                            value={form.data.username}
-                            onChange={(event) => onChange('username', event.target.value)}
-                        />
-                    )}
-                </Field>
+                        <Field label={t('install.database.fields.username')} error={form.errors.username}>
+                            {(props) => (
+                                <TextInput
+                                    {...props}
+                                    value={form.data.username}
+                                    onChange={(event) => onChange('username', event.target.value)}
+                                />
+                            )}
+                        </Field>
 
-                <Field label={t('install.database.fields.password')} error={form.errors.password} className="sm:col-span-2">
-                    {(props) => (
-                        <TextInput
-                            {...props}
-                            type="password"
-                            autoComplete="new-password"
-                            value={form.data.password}
-                            onChange={(event) => onChange('password', event.target.value)}
-                        />
-                    )}
-                </Field>
-            </div>
+                        <Field
+                            label={t('install.database.fields.password')}
+                            error={form.errors.password}
+                            className="sm:col-span-2"
+                        >
+                            {(props) => (
+                                <TextInput
+                                    {...props}
+                                    type="password"
+                                    autoComplete="new-password"
+                                    value={form.data.password}
+                                    onChange={(event) => onChange('password', event.target.value)}
+                                />
+                            )}
+                        </Field>
+                    </div>
+                </>
+            )}
 
             <div className="mt-4 flex items-center gap-3">
                 <Button type="button" variant="secondary" onClick={onTest} disabled={testing}>
@@ -860,13 +894,19 @@ function MailStep({ form }: { form: WizardForm }) {
     );
 }
 
-function FinishStep({ form }: { form: WizardForm }) {
+function FinishStep({ form, bundled }: { form: WizardForm; bundled: Record<string, string> }) {
     const { t } = useTranslations();
+    const isBundled = form.data.database_choice === 'bundled';
+
+    // Read from the server's values for the bundled database, for the same
+    // reason the step above does: the form still holds whatever was typed into
+    // the external fields, and none of it is going to be used.
+    const db = isBundled ? bundled : form.data;
 
     const rows: [string, string][] = [
         [
             t('install.finish.database'),
-            `${form.data.database_choice === 'bundled' ? t('install.finish.bundled') : t('install.finish.external')} — ${form.data.database}@${form.data.host}:${form.data.port}`,
+            `${isBundled ? t('install.finish.bundled') : t('install.finish.external')} — ${db.database}@${db.host}:${db.port}`,
         ],
         [t('install.finish.application'), `${form.data.app.name} — ${form.data.app.url}`],
         [t('install.finish.administrator'), `${form.data.admin.name} <${form.data.admin.email}>`],
