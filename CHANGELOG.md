@@ -9,6 +9,38 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## Unreleased
+
+**A release takes eight minutes instead of forty-five.** Nothing about the
+application changed; this is how it is built.
+
+The container image was built for both architectures in one job, with
+`linux/arm64` running through QEMU on an Intel runner. The runtime stage
+compiles a dozen PHP extensions from C, and emulating a compiler means
+translating every instruction of it: forty-one of the forty-five minutes were
+that one step, and a log frozen on `docker-php-ext-install` for half an hour is
+indistinguishable from a build that has died. Two releases were cancelled on
+that suspicion.
+
+Each architecture is now built on a runner of its own architecture — GitHub
+provides arm64 runners free to public repositories — and the two run side by
+side, so a release costs the slower rather than the sum. Neither pushes a tag:
+they push by digest, and a final job writes one manifest list over both and tags
+that. `:latest` therefore never exists as one architecture while the other is
+still building.
+
+Two corrections came with it. Build caches are scoped per architecture, so the
+second build no longer evicts the first's layers. And every job now checks out
+the version being released rather than the ref the run started from: rebuilding
+an old tag from **Run workflow** used to build the branch's code, and the image
+tags — derived from a branch name by a semver pattern — came out empty, giving
+a release whose image was reachable only by digest.
+
+A run started from **Run workflow** also no longer re-drafts the release it
+attaches to. That is how a release whose archive never uploaded gets its
+archive, and doing it by retracting the release from every instance checking for
+updates was the wrong trade.
+
 ## 1.1.7
 
 **Your own database now works on the Docker stack.** Choosing it in the setup

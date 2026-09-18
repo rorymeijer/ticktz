@@ -20,7 +20,19 @@
 # ---------------------------------------------------------------------------
 
 # --- Stage 1: composer dependencies ----------------------------------------
-FROM php:8.4-fpm-alpine AS vendor
+#
+# Pinned to the platform doing the building rather than the one being built
+# for. What comes out of this stage is PHP source and JavaScript — a `vendor`
+# tree and a bundle, neither of which has an instruction set — so building it
+# twice, once per architecture, is the same files produced twice, and building
+# it under emulation is that plus the emulation.
+#
+# It changes nothing on the release runners, where each architecture is built
+# by a machine of that architecture and the two platforms are already the same.
+# It is for the person cross-building one image on their laptop, and for the
+# day the arm64 runners are unavailable and CI falls back to QEMU: then only
+# the runtime stage, which genuinely does compile C, is emulated.
+FROM --platform=$BUILDPLATFORM php:8.4-fpm-alpine AS vendor
 
 # `ldap` is not optional here even though only directory sign-in uses it:
 # directorytree/ldaprecord declares ext-ldap as a hard requirement, so
@@ -59,7 +71,7 @@ COPY . .
 RUN composer dump-autoload --no-dev --optimize
 
 # --- Stage 2: frontend bundle ----------------------------------------------
-FROM node:22-alpine AS assets
+FROM --platform=$BUILDPLATFORM node:22-alpine AS assets
 
 WORKDIR /app
 

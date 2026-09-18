@@ -12,7 +12,7 @@ those two is the workflow's job.
 
 | | |
 | --- | --- |
-| `ghcr.io/<owner>/ticktz:<version>` | The container image, for `linux/amd64` and `linux/arm64` |
+| `ghcr.io/<owner>/ticktz:<version>` | The container image — one tag, `linux/amd64` and `linux/arm64` under it |
 | `ticktz-<version>.zip` | The whole application, ready to run — `vendor` and the built assets included |
 | `ticktz-<version>.zip.sha256` | The digest an in-place upgrade checks the archive against |
 | A build attestation | Signed proof the archive came out of this repository, at this commit |
@@ -125,7 +125,19 @@ published releases only, and a draft is not one.
 ### Publishing from the browser instead
 
 **Actions → Release → Run workflow**, and give it the tag. Same result, useful
-when the tag already exists and something needs rebuilding.
+when the tag already exists and something needs rebuilding — a cancelled run,
+or a release whose archive never attached.
+
+Every job checks out the tag you type, not the branch you started the run from,
+and the image tags are derived from it too. Rebuilding `v1.1.7` from `main`
+therefore builds `v1.1.7`'s code and labels it `1.1.7`, however far ahead `main`
+has moved.
+
+**A run from here does not draft.** It attaches its files to the release for
+that tag and leaves it published, because that release usually already is — and
+re-drafting it to attach a file would retract it from every instance checking
+for updates. A tag push still drafts. So: write the paragraph first, then
+dispatch.
 
 ---
 
@@ -170,11 +182,58 @@ no `.git`.
 
 ---
 
+## How long it takes, and how the image is built
+
+A release is about **eight minutes**, nearly all of it in two places that run at
+the same time:
+
+| Job | Roughly |
+| --- | --- |
+| Verify before publishing | 3–4 min — the full suite against MySQL and Redis |
+| Build the image (×2, in parallel) | 4–6 min each |
+| Build the installable archive | under a minute |
+| Publish the image tags | seconds |
+| Draft the release notes | seconds |
+
+**It used to be forty-five.** One job built both architectures, and `linux/arm64`
+was built through QEMU on an Intel runner: the runtime stage compiles a dozen
+PHP extensions from C, and every instruction of that compile was being
+translated. Forty-one of the forty-five minutes were that one step. Nothing was
+hanging — a build log that sits on `docker-php-ext-install` for half an hour
+looks identical to one that has died, which is most of why it was worth fixing.
+
+GitHub gives **public** repositories arm64 runners at no cost, so the emulation
+was only ever buying the convenience of a single job. Now:
+
+- `linux/amd64` builds on `ubuntu-latest`, `linux/arm64` on `ubuntu-24.04-arm`,
+  each compiled by a processor that speaks its own instruction set.
+- The two run side by side, so the release costs the slower of them rather than
+  the sum.
+- Each pushes **by digest and without a tag**. An image nobody can pull by name
+  is not published.
+- A last job joins the two digests into one manifest list and puts the tags on
+  that. `latest` moves once, when both architectures exist — there is no moment
+  where `:latest` is amd64-only because arm64 is still building.
+- Each architecture has its own build cache. Sharing one would mean the second
+  build evicts the first's layers and neither ever hits.
+
+If the arm64 runners are ever unavailable, the fallback is to add
+`docker/setup-qemu-action` back and give one job both platforms. It will work
+and it will be slow. The Dockerfile's first two stages are pinned to
+`$BUILDPLATFORM` to soften that: `vendor` and `assets` produce PHP source and a
+JavaScript bundle, neither of which has an instruction set, so only the runtime
+stage — which genuinely does compile C — would be emulated. That pin does
+nothing on the runners above, where the two platforms are already the same. It
+is for that fallback, and for anyone cross-building one image on their laptop.
+
+---
+
 ## What it costs
 
-`rorymeijer/ticktz` is a **private** repository, so Actions minutes come out of
-the account's monthly allowance. On a public repository all of this is free and
-none of the below applies.
+`rorymeijer/ticktz` is a **public** repository, so Actions minutes on the
+standard Linux runners are free and nothing below comes out of an allowance.
+It matters anyway if the repository is ever made private, and the shape of the
+bill is worth knowing either way.
 
 Check the real numbers against your own plan — GitHub moves them, and this was
 written in September 2026:
@@ -183,12 +242,12 @@ written in September 2026:
 
 Roughly, at the time of writing: a Free account gets 2,000 minutes a month, Pro
 and Team 3,000. Every job here runs on Linux, which bills at ×1 — macOS is ×10
-and Windows ×2, so it is worth noticing that nothing here needs either.
+and Windows ×2, so it is worth noticing that nothing here needs either. The
+arm64 runners are free on public repositories and billed on private ones.
 
-A release costs somewhere around 25–40 minutes. Most of that is the container
-image: `linux/arm64` is built under emulation on an amd64 runner, which is slow
-in a way nothing else here is. The archive and the test suite are a few minutes
-each.
+Were this repository private, a release would now cost roughly **fifteen
+billed minutes** — eight of wall clock, but two jobs overlapping — against the
+forty-five it cost before.
 
 **The recurring cost is CI, not releases.** A full run is about ten minutes, and
 it runs on every push to an open pull request. Ten pushes in a day is roughly a
@@ -207,8 +266,9 @@ Storage is separate from minutes and easier to overlook. Release assets are
 free and unlimited; **Actions artifacts are not** and count against the
 account's storage quota, which starts at 500 MB on Free. The installable
 archive is uploaded as an artifact only to hand it from one job to the next, so
-it is kept for a day rather than a week. Container images in `ghcr.io` count
-too when the package is private, which is one more reason to make it public.
+it is kept for a day rather than a week — as are the two files naming the image
+digests, which are empty. Container images in `ghcr.io` count too when the
+package is private, which is one more reason to make it public.
 
 ## When it goes wrong
 
@@ -218,11 +278,24 @@ above. Check the organisation-level setting as well as the repository one.
 **The image pushes but nobody can pull it** — the package is still private,
 step 2.
 
-**The release has no `ticktz-*.zip`** — the `bundle` job failed. It runs after
-`verify`, so a failing test stops it; the image is built in parallel and can
-succeed while the archive does not, which is why a release can appear with an
-image and no archive. Instances see that and say the release cannot be
-installed in place rather than installing something they did not verify.
+**The release has no `ticktz-*.zip`** — the `bundle` job failed, or the run was
+cancelled before it finished. It runs after `verify`, so a failing test stops
+it; the image is built in parallel and can succeed while the archive does not,
+which is why a release can appear with an image and no archive. Instances see
+that and say the release cannot be installed in place rather than installing
+something they did not verify. Re-run the workflow with the tag — see
+*Publishing from the browser instead* above.
+
+**`Build the image (linux/arm64)` sits in `Queued`** — it wants an
+`ubuntu-24.04-arm` runner. Those are free on public repositories; on a private
+one they are billed, and an organisation can restrict which runner labels a
+repository may ask for. A job that never gets a runner eventually times out
+rather than failing with anything readable.
+
+**One architecture built and the tags never appeared** — `manifest` needs both.
+Nothing is published in that case, which is the intent: the digests are in the
+registry but no tag points at them, so no operator can pull a release that is
+half an architecture. Re-run the failed job.
 
 **`npm run build` fails in `bundle` but works locally** — `npm ci` installs
 what `package-lock.json` says, exactly. If a dependency was added with

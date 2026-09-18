@@ -1705,3 +1705,57 @@ channel of higher precedence than the one it writes to. Environment variables
 are that channel. They are right for what the container *is* — `APP_ENV` stays
 one, because this stack is production whatever a file claims — and wrong for
 everything the instance is allowed to decide.
+
+---
+
+## D71 — Emulating a compiler is not a build strategy
+
+A release took forty-five minutes. Forty-one of them were one step: `Build and
+push`, in a single job that built `linux/amd64` and `linux/arm64` together
+through QEMU on an Intel runner.
+
+That job's log looks the same whether it is working or dead. It stops on
+`docker-php-ext-install` — a dozen PHP extensions compiled from C — and the only
+sign of life is a timestamp counting upward beside a line about `ld`. Somebody
+watching it cancels, reasonably, at thirty minutes. Two releases were cancelled
+that way, which is the actual cost: not the minutes, but that cutting a release
+became a thing you avoided doing.
+
+**Emulation is the wrong tool for a compile.** QEMU translates instruction by
+instruction, which is fine for running a finished binary and pathological for
+producing one — the work is nothing but instructions. A ten-second `apk add` is
+still ten seconds; a two-minute compile is forty.
+
+GitHub gives public repositories arm64 runners at no cost, so the emulation was
+buying nothing but the convenience of a single job. Each platform is now built
+by a processor that speaks its own instruction set, and the two run at the same
+time, so a release costs the slower of them rather than the sum of both. About
+eight minutes.
+
+**The part that needed care is publishing.** Two jobs cannot each push the same
+tag: whichever finished second would replace the first, and `:latest` would be
+one architecture. So neither pushes a tag at all. Each pushes **by digest** —
+content-addressed, unreachable by name — and a third job writes a manifest list
+over both digests and puts the tags on that. There is no moment at which
+`:latest` exists and is only half the platforms it claims.
+
+The digests travel between jobs as empty files named after themselves, which is
+the smallest thing that carries a digest through an artifact.
+
+**Two smaller things came out of the same read.** The build caches are scoped per
+architecture, because one shared scope means the second build evicts the first's
+layers and neither ever hits again. And every job now checks out the version
+being released rather than the ref the run started from: on a `workflow_dispatch`
+the ref is a branch, so rebuilding an old tag built the branch's code — and the
+semver tag patterns, handed a branch name, produced no tags at all. A release
+reachable only by digest, from a dispatch that reported success.
+
+**The general shape.** A cross-architecture build has three kinds of stage in
+it: ones that produce bytes with an instruction set, ones that produce bytes
+without, and ones that only move files. Only the first has any reason to run on
+the target architecture. The Dockerfile's `vendor` and `assets` stages are
+pinned to `$BUILDPLATFORM` accordingly — a `vendor` tree and a JavaScript bundle
+are the same files whoever builds them. On the runners above that pin is a
+no-op, since the two platforms are already the same. It is there for the laptop
+cross-building one image, and for the day the arm64 runners are unavailable and
+the fallback is QEMU again: then it is one stage emulated instead of three.
