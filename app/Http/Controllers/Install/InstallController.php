@@ -75,17 +75,24 @@ class InstallController extends Controller
      */
     public function testDatabase(Request $request): JsonResponse
     {
-        $credentials = $request->validate($this->databaseRules());
+        $choice = $this->choice($request);
 
-        return new JsonResponse($this->tester->test($credentials));
+        $validated = $request->validate([
+            'database_choice' => $this->choiceRules(),
+            ...$this->databaseRules($choice),
+        ]);
+
+        return new JsonResponse($this->tester->test($this->credentials($choice, $validated)));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            ...$this->databaseRules(),
+        $choice = $this->choice($request);
 
-            'database_choice' => ['required', Rule::enum(DatabaseChoice::class)],
+        $validated = $request->validate([
+            ...$this->databaseRules($choice),
+
+            'database_choice' => $this->choiceRules(),
 
             'app.name' => ['required', 'string', 'max:64'],
             'app.url' => ['required', 'url', 'max:255'],
@@ -117,13 +124,7 @@ class InstallController extends Controller
         ]);
 
         $payload = [
-            'database' => [
-                'host' => $validated['host'],
-                'port' => $validated['port'],
-                'database' => $validated['database'],
-                'username' => $validated['username'],
-                'password' => $validated['password'] ?? '',
-            ],
+            'database' => $this->credentials($choice, $validated),
             'database_choice' => $validated['database_choice'],
             'app' => $validated['app'],
             'admin' => $validated['admin'] + ['locale' => $validated['app']['locale']],
@@ -156,14 +157,83 @@ class InstallController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function databaseRules(): array
+    /**
+     * Which database the request is asking for.
+     *
+     * Read before validation because it decides what else there is to
+     * validate. An unrecognised value becomes External, whose rules demand
+     * every field — so a malformed choice fails on the fields it did not send
+     * rather than being quietly treated as the bundled one.
+     */
+    private function choice(Request $request): DatabaseChoice
     {
+        return DatabaseChoice::tryFrom((string) $request->input('database_choice'))
+            ?? DatabaseChoice::External;
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function choiceRules(): array
+    {
+        return [
+            'required',
+            Rule::enum(DatabaseChoice::class),
+            // Asking for the bundled database where there is none would read
+            // an empty environment and connect to nothing, reporting a refused
+            // password for a server that was never there.
+            function (string $attribute, mixed $value, callable $fail): void {
+                if ($value === DatabaseChoice::Bundled->value && ! DatabaseChoice::bundledIsAvailable()) {
+                    $fail(__('install.database.bundled_unavailable'));
+                }
+            },
+        ];
+    }
+
+    /**
+     * The fields the operator has to supply — none, for the bundled database.
+     *
+     * @return array<string, array<int, string>>
+     */
+    private function databaseRules(DatabaseChoice $choice): array
+    {
+        if ($choice === DatabaseChoice::Bundled) {
+            return [];
+        }
+
         return [
             'host' => ['required', 'string', 'max:255'],
             'port' => ['required', 'integer', 'min:1', 'max:65535'],
             'database' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9_\-]+$/'],
             'username' => ['required', 'string', 'max:64'],
             'password' => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
+    /**
+     * What to connect with.
+     *
+     * For the bundled database this ignores the request entirely and reads the
+     * environment. The values are the compose file's own, the password among
+     * them was never sent to the browser, and accepting a submitted one would
+     * turn an unauthenticated endpoint into a way to point the installer at
+     * somebody else's server.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, string>
+     */
+    private function credentials(DatabaseChoice $choice, array $validated): array
+    {
+        if ($choice === DatabaseChoice::Bundled) {
+            return DatabaseChoice::bundledCredentials();
+        }
+
+        return [
+            'host' => (string) $validated['host'],
+            'port' => (string) $validated['port'],
+            'database' => (string) $validated['database'],
+            'username' => (string) $validated['username'],
+            'password' => (string) ($validated['password'] ?? ''),
         ];
     }
 

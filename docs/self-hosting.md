@@ -164,9 +164,12 @@ service desk, your account, and optionally outgoing e-mail.
 The one question worth thinking about, and the wizard asks it plainly:
 
 - **The built-in database.** The MySQL container that came with the compose
-  file, already running next to the app. Its credentials are already in the
-  environment, so the wizard fills them in and you press *Test connection*.
-  Nothing to configure, nothing to maintain separately. This is the right
+  file, already running next to the app. It asks you for nothing: the host,
+  the name, the user and the password all belong to that container, the server
+  reads them from its own environment, and you press *Test connection*. The
+  password is never shown and never sent to your browser — the installer runs
+  before there is anybody to sign in as, so a live database password in that
+  page would be a secret handed to whoever reached it first. This is the right
   answer for most self-hosters.
 - **Your own database.** A MySQL or MariaDB server you already run — managed,
   clustered, or simply the one that is already in your backup schedule. Give

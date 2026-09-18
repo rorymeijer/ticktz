@@ -61,6 +61,8 @@ return [
         'bundled' => 'De ingebouwde database gebruiken',
         'bundled_help' => 'De MySQL-server die met Ticktz meekomt en er al naast draait. Niets in te stellen, niets apart te onderhouden.',
         'bundled_unavailable' => 'Er is geen ingebouwde database gevonden. Dat klopt als je Ticktz buiten de meegeleverde Docker-stack draait.',
+        'bundled_summary' => 'Ticktz gebruikt de database :database op :host, als :username.',
+        'bundled_password' => 'Het wachtwoord wordt van de server zelf gelezen. Het wordt hier nooit getoond en nooit naar je browser gestuurd.',
 
         'external' => 'Mijn eigen database gebruiken',
         'external_help' => 'Een MySQL- of MariaDB-server die je al draait — beheerd, in een cluster, of gewoon die al in je back-ups zit.',
