@@ -95,8 +95,10 @@ release, so whoever can push one can publish one.
 ## Cutting a release
 
 ```bash
-# 1. The version lives in two files. They must agree — the update screen reads
-#    the first and the built assets carry the second.
+# 1. The version lives in two files. They must agree, and the release refuses
+#    to build if they do not — the update screen reads the first, and a
+#    package.json that disagrees is a second answer to "what version is this"
+#    sitting where nobody looks. It sat at 1.0.3 for four releases.
 #    config/ticktz.php  →  'version' => env('TICKTZ_VERSION', '1.1.0')
 #    package.json       →  "version": "1.1.0"
 
@@ -124,9 +126,14 @@ published releases only, and a draft is not one.
 
 ### Publishing from the browser instead
 
-**Actions → Release → Run workflow**, and give it the tag. Same result, useful
-when the tag already exists and something needs rebuilding — a cancelled run,
-or a release whose archive never attached.
+**Actions → Release → Run workflow**, and give it the tag. Either form —
+`1.1.8` or `v1.1.8` — the run normalises it. Same result as a tag push, useful
+when the tag already exists and something needs rebuilding: a cancelled run, or
+a release whose archive never attached.
+
+**The tag has to exist first.** This box builds a tag, it does not create one.
+A tag that is not there stops the run in about twenty seconds with the command
+to create it and a list of the tags that are.
 
 Every job checks out the tag you type, not the branch you started the run from,
 and the image tags are derived from it too. Rebuilding `v1.1.7` from `main`
