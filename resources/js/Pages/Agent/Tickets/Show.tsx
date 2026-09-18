@@ -7,6 +7,7 @@ import { ReplyBox } from '@/Components/Tickets/ReplyBox';
 import { Timeline } from '@/Components/Tickets/Timeline';
 import { ApprovalPanel } from '@/Components/Tickets/ApprovalPanel';
 import { AssetPanel } from '@/Components/Tickets/AssetPanel';
+import { CloneDialog } from '@/Components/Tickets/CloneDialog';
 import { KbPanel } from '@/Components/Tickets/KbPanel';
 import { SlaPanel } from '@/Components/Tickets/SlaPanel';
 import { TicketSidebar } from '@/Components/Tickets/TicketSidebar';
@@ -45,6 +46,7 @@ export default function TicketShow({
 }) {
     const { t, locale } = useTranslations();
     const [pendingTransition, setPendingTransition] = useState<TransitionOption | null>(null);
+    const [cloning, setCloning] = useState(false);
 
     return (
         <AppLayout
@@ -62,6 +64,12 @@ export default function TicketShow({
             }
             actions={
                 <div className="flex flex-wrap items-center gap-1.5">
+                    {can.create ? (
+                        <Button size="sm" variant="ghost" onClick={() => setCloning(true)}>
+                            {t('tickets.actions.clone')}
+                        </Button>
+                    ) : null}
+
                     {transitions.map((transition) => (
                         <Button
                             key={transition.id}
@@ -128,6 +136,30 @@ export default function TicketShow({
                                     className="mt-4 break-words border-t border-slate-100 pt-4"
                                 />
                             ) : null}
+
+                            {/* The answers to the form the requester filled
+                                in. They sit with the description because that
+                                is what they are — the rest of what was asked —
+                                and an agent reading the request should not
+                                have to go looking for half of it. */}
+                            {ticket.fields.length > 0 ? (
+                                <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
+                                    {ticket.fields.map((field) => (
+                                        <div key={field.key}>
+                                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                                {field.label}
+                                            </dt>
+                                            <dd className="mt-0.5 break-words text-sm text-slate-800">
+                                                {field.type === 'textarea' ? (
+                                                    <RichText html={String(field.value ?? '')} />
+                                                ) : (
+                                                    field.display
+                                                )}
+                                            </dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            ) : null}
                         </CardBody>
                     </Card>
 
@@ -149,7 +181,6 @@ export default function TicketShow({
                             ticketKey={ticket.key}
                             approvals={approvals}
                             workflows={approvalWorkflows}
-                            assignees={options.assignees ?? []}
                             canRequest={can.approve && can.update}
                         />
                     ) : null}
@@ -165,6 +196,10 @@ export default function TicketShow({
                     {can.kb ? <KbPanel ticketKey={ticket.key} articles={kbArticles} canLink={can.update} /> : null}
                 </div>
             </div>
+
+            {cloning ? (
+                <CloneDialog ticket={ticket} options={options} onClose={() => setCloning(false)} />
+            ) : null}
 
             {pendingTransition ? (
                 <TransitionDialog

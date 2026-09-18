@@ -86,6 +86,17 @@ export function agentNavigation(user: User | null, t: Translator): NavItem[] {
         items.push({ key: 'admin', label: t('nav.admin'), href: '/admin', icon: IconCog, match: ['/admin'] });
     }
 
+    // Last, and for everybody. There is no permission on it because the manual
+    // gates itself chapter by chapter: what somebody finds there is already
+    // the part of Ticktz they can reach.
+    items.push({
+        key: 'manual',
+        label: t('common.manual.title'),
+        href: '/manual',
+        icon: IconBook,
+        match: ['/manual'],
+    });
+
     return items;
 }
 

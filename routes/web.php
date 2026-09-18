@@ -6,6 +6,8 @@ use App\Http\Controllers\Approvals\ApprovalController;
 use App\Http\Controllers\Approvals\ApprovalTokenController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ManualController;
+use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Reports\ReportController;
 use App\Http\Controllers\RichTextImageController;
@@ -89,6 +91,31 @@ Route::middleware('auth')->group(function (): void {
         ->name('approvals.decide');
     Route::post('/approvals/{approval}/cancel', [ApprovalController::class, 'cancel'])
         ->name('approvals.cancel');
+
+    // Who a picker may offer. Its own endpoint rather than a list rendered
+    // into each page, because a desk with four hundred agents has no page big
+    // enough — the lists this replaced sent the first few hundred users and
+    // dropped the rest silently.
+    //
+    // Mounted here rather than under /agent or /admin because half the screens
+    // that pick a person are administrative — team membership, a user's
+    // manager, an approval step, an automation action — and none of those
+    // permissions implies `tickets.view`. Each scope authorises itself; see
+    // the controller.
+    //
+    // Throttled because it fires while somebody types: generous for typing,
+    // mean for scraping.
+    Route::get('/people', [PeopleController::class, 'index'])
+        ->middleware('throttle:120,1')
+        ->name('people.index');
+
+    // The manual, and the `?` that opens it at the right place without
+    // leaving the screen somebody is stuck on. Behind `auth` and nothing else:
+    // every chapter gates itself on the permission its subject needs, so the
+    // table of contents is already the part of Ticktz this reader can reach.
+    Route::get('/manual', [ManualController::class, 'index'])->name('manual.index');
+    Route::get('/manual/{slug}', [ManualController::class, 'show'])->name('manual.show');
+    Route::get('/help', [ManualController::class, 'panel'])->name('manual.panel');
 
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 

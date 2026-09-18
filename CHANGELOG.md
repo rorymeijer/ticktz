@@ -9,6 +9,61 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## Unreleased
+
+**A release is about six minutes rather than eight.** The test suite in the
+release runs the same `pest` and `composer audit` that CI has usually already
+run twice — on the pull request, and on `main` after the merge — and its only
+step CI does not also run is the tag-versus-version check.
+
+It is still there, because a tag can be pushed at any commit and this is then
+the only thing between that commit and everybody's `docker pull`. It just no
+longer holds the image builds up: they start beside it and push by digest under
+no tag, so nothing they produce is reachable by name until the job that applies
+the tags, which does wait for the suite. A failing suite leaves a few untagged
+blobs in the registry and nothing anybody can pull.
+
+## Unreleased
+
+**A user manual, and a `?` that opens it at the page you are on.** Twenty
+chapters in English and Dutch, covering both sides of Ticktz — raising and
+following a request, working a ticket, service levels, approvals, the knowledge
+base, assets, reporting, every administration area and the API.
+
+It is permission-aware chapter by chapter, so an administrator's manual and an
+agent's manual are different documents. A manual that describes doors you
+cannot open makes somebody feel locked out rather than helped.
+
+The `?` in the top bar opens the chapter for the screen you are on, without
+navigating away from what you were stuck on. It does not appear on screens
+with no chapter: a `?` that opens and admits there is nothing written is worse
+than no `?`.
+
+The chapters are Markdown in the repository rather than rows in the database,
+so the manual an instance shows is the manual for the version it is running,
+and an upgrade replaces it without touching anything anybody wrote in the
+knowledge base. Documented as D73.
+
+**The agent console shows the answers the requester gave.** A custom field
+exists so the person who has to act on a request has the information without
+asking. The portal collected the answers, stored them and showed them back to
+the customer — and the agent console never rendered them, so the whole feature
+was half a feature.
+
+**A ticket held by a deactivated agent no longer reads "Unassigned".** The
+assignee control was a `<select>` whose option list was filtered to active
+agents. Deactivate somebody holding tickets and no option matched any more, so
+the browser fell back to rendering the first one. The picker reads who holds
+the ticket off the ticket, so it cannot disagree with it.
+
+**Cloning a ticket**, optionally as another kind of request. What carries over
+is what describes the request; what does not is everything recording the
+original being handled. Filing the copy as another type moves it to that type's
+queue, team and workflow, and drops answers the new form does not ask for.
+
+**Searchable person pickers everywhere somebody is chosen**, and the staff
+directory is off the forms that used to carry it.
+
 ## 1.1.8
 
 **The redis extension is built from source rather than fetched through pecl.**

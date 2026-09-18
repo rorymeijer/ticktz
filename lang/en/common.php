@@ -75,6 +75,47 @@ return [
         'overdue_by' => 'overdue by :duration',
         'remaining' => ':duration remaining',
     ],
+    /*
+    |--------------------------------------------------------------------------
+    | Choosing a person
+    |--------------------------------------------------------------------------
+    |
+    | The picker searches the server as you type rather than holding the whole
+    | directory, so it has states a dropdown does not: nothing typed yet,
+    | nothing found, and the search itself having failed. The third has to say
+    | so — an empty list that means "the request was refused" reads as "there
+    | is nobody", and somebody will believe it.
+    |
+    */
+    'people' => [
+        'search' => 'Search by name or e-mail',
+        'searching' => 'Searching…',
+        'no_matches' => 'Nobody matches :term.',
+        'failed' => 'That search could not be run. Try again in a moment.',
+        'nobody' => 'Nobody',
+        'clear' => 'Clear the selection',
+        'remove' => 'Remove :name',
+        'result_count' => ':count found',
+        'more_hint' => 'Keep typing to narrow this down.',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | The manual
+    |--------------------------------------------------------------------------
+    */
+    'manual' => [
+        'title' => 'Manual',
+        'subtitle' => 'How Ticktz works, and how to use it.',
+        'explain_this_page' => 'Explain this page',
+        'open_full' => 'Open the full manual',
+        'loading' => 'Fetching the chapter…',
+        'failed' => 'That chapter could not be fetched. Try again in a moment.',
+        'empty' => 'There are no chapters you can read yet.',
+        'back' => 'All chapters',
+        'contents' => 'Chapters',
+    ],
+
     'errors' => [
         'forbidden' => 'You do not have permission to perform this action.',
         'not_found' => 'The requested item could not be found.',

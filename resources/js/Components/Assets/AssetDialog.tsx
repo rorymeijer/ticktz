@@ -1,8 +1,11 @@
 import { useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
 import { Button, Field, Modal, Select, TextInput, Textarea } from '@/Components/UI';
+import { PersonPicker } from '@/Components/UI/PersonPicker';
 import { useTranslations } from '@/hooks/useTranslations';
 import type { AssetDetail, AssetOptions } from '@/types/assets';
+import type { UserSummary } from '@/types/tickets';
 import { RichTextField } from '@/Components/RichText/RichTextField';
 
 /**
@@ -34,10 +37,17 @@ export function AssetDialog({
         location: asset?.location ?? '',
         organization_id: asset?.organization?.id ? String(asset.organization.id) : '',
         team_id: asset?.team?.id ? String(asset.team.id) : '',
+        assigned_to: asset?.assignee?.id ? String(asset.assignee.id) : '',
         purchased_at: asset?.purchased_at ?? '',
         warranty_ends_at: asset?.warranty_ends_at ?? '',
         notes: asset?.notes ?? '',
     });
+
+    // Who holds the asset. The field has always been on the server —
+    // `assigned_to` is validated by AssetController and shown read-only on the
+    // asset page — and there has never been anywhere to set it. Until now the
+    // only way to say who has a laptop was the API or an import.
+    const [holder, setHolder] = useState<UserSummary | null>(asset?.assignee ?? null);
 
     const submit = () => {
         asset
@@ -193,6 +203,25 @@ export function AssetDialog({
                                 </option>
                             ))}
                         </Select>
+                    )}
+                </Field>
+
+                <Field label={t('assets.fields.assigned_to')} error={form.errors.assigned_to}>
+                    {(props) => (
+                        <PersonPicker
+                            {...props}
+                            value={holder}
+                            allowNobody
+                            // Anybody with an account: a laptop belongs to
+                            // whoever uses it, and most of those people are
+                            // customers rather than agents.
+                            query={{ scope: 'user' }}
+                            placeholder={t('common.labels.none')}
+                            onChange={(person) => {
+                                setHolder(person);
+                                form.setData('assigned_to', person ? String(person.id) : '');
+                            }}
+                        />
                     )}
                 </Field>
 

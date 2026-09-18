@@ -17,6 +17,7 @@ use App\Models\KbArticle;
 use App\Models\Label;
 use App\Models\Priority;
 use App\Models\Queue;
+use App\Models\RequestType;
 use App\Models\SlaEvent;
 use App\Models\SlaTimer;
 use App\Models\Team;
@@ -130,9 +131,7 @@ class TicketController extends Controller
         $this->authorize('tickets.create');
 
         return Inertia::render('Agent/Tickets/Create', [
-            'options' => $this->filterOptions() + [
-                'requesters' => $this->requesterOptions($request),
-            ],
+            'options' => $this->filterOptions(),
         ]);
     }
 
@@ -170,6 +169,7 @@ class TicketController extends Controller
             'kbArticles.category',
             'approvals.decisions.approver', 'approvals.workflow', 'approvals.requester',
             'assets.type', 'assets.assignee',
+            'customFieldValues.field',
         ]);
 
         $comments = $ticket->comments()
@@ -182,10 +182,21 @@ class TicketController extends Controller
             'ticket' => $this->detailPayload($ticket, $user),
             'timeline' => $this->timeline($ticket, $comments->all()),
             'transitions' => $this->availableTransitions($ticket, $user),
-            'options' => $this->filterOptions() + ['assignees' => $this->assigneeOptions()],
+            'options' => $this->filterOptions() + [
+                // For the clone dialog: filing the copy somewhere else is half
+                // of what cloning is for. Active types only — a retired form is
+                // not somewhere to file new work.
+                'request_types' => RequestType::query()
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get(['id', 'name'])
+                    ->all(),
+            ],
             'can' => [
                 'update' => $user->can('update', $ticket),
                 'assign' => $user->can('assign', $ticket),
+                // Cloning is a creation, not an edit of what is on screen.
+                'create' => $user->can('create', Ticket::class),
                 'transition' => $user->can('transition', $ticket),
                 'comment' => $user->can('comment', $ticket),
                 'comment_internal' => $user->can('commentInternally', $ticket),
@@ -258,6 +269,15 @@ class TicketController extends Controller
     {
         return $ticket->toListArray() + [
             'description' => $ticket->description,
+            // The answers to the form the requester filled in.
+            //
+            // These were missing entirely, which made the whole custom-field
+            // feature half a feature: the portal collected the answers, showed
+            // them back to the customer, and never showed them to the agent
+            // who had to act on them. `includePrivate` is true here because
+            // the fields marked private are the ones meant for the desk — the
+            // portal is where that argument is false.
+            'fields' => $ticket->customFieldSummary(includePrivate: true),
             'queue' => $ticket->queue?->only('id', 'name', 'slug'),
             'workflow' => ['id' => $ticket->workflow_id, 'name' => $ticket->workflow->name],
             'watchers' => $ticket->watchers->map(fn (User $watcher) => $watcher->toSummaryArray())->all(),
@@ -429,35 +449,17 @@ class TicketController extends Controller
         ];
     }
 
-    /**
-     * @return array<int, array<string, mixed>>
+    /*
+     * There were two more option builders here: `assigneeOptions()`, the first
+     * five hundred active agents by name, and `requesterOptions()`, the first
+     * hundred users. Both filled a `<select>` and both truncated to do it,
+     * silently — on a desk of four hundred, half the staff simply could not be
+     * chosen. `requesterOptions()` also read a `requester_search` parameter
+     * that no page ever sent, which is what half-built search plumbing looks
+     * like after a while.
+     *
+     * Both are gone. The pickers search `GET /people` instead, which answers
+     * out of the set the server will actually accept rather than out of
+     * whatever fitted in the page. See App\Http\Controllers\PeopleController.
      */
-    private function assigneeOptions(): array
-    {
-        return User::query()
-            ->active()
-            ->agents()
-            ->orderBy('name')
-            ->limit(500)
-            ->get()
-            ->map(fn (User $user) => $user->toSummaryArray())
-            ->all();
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function requesterOptions(Request $request): array
-    {
-        return User::query()
-            ->active()
-            ->search($request->string('requester_search')->toString())
-            ->orderBy('name')
-            ->limit(100)
-            ->get()
-            ->map(fn (User $user) => $user->toSummaryArray() + [
-                'organization_id' => $user->organization_id,
-            ])
-            ->all();
-    }
 }

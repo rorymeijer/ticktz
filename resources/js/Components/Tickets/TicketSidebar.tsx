@@ -1,6 +1,7 @@
 import { router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
+import { PersonPicker } from '@/Components/UI/PersonPicker';
 import { PriorityBadge, LabelChip } from '@/Components/Tickets/Badges';
 import { tintedChip } from '@/lib/contrast';
 import { IconPlus, IconX } from '@/Components/Icons';
@@ -47,28 +48,31 @@ export function TicketSidebar({
             <Card>
                 <CardHeader title={t('tickets.detail.properties')} />
                 <CardBody className="space-y-3.5">
+                    {/* Searched rather than listed, and searched through the
+                        server's own idea of who may hold this ticket. The
+                        dropdown this replaced offered every agent on the desk
+                        while the server refused anybody off the ticket's team,
+                        so the rule reached the operator as a red message under
+                        a name they had just been offered. */}
                     <Field label={t('tickets.fields.assignee')}>
                         {(props) => (
                             <div className="flex gap-2">
-                                <Select
-                                    {...props}
-                                    value={String(ticket.assignee?.id ?? '')}
-                                    disabled={!can.assign}
-                                    onChange={(event) =>
-                                        router.put(
-                                            `/agent/tickets/${ticket.key}/assignee`,
-                                            { assignee_id: event.target.value ? Number(event.target.value) : null },
-                                            { preserveScroll: true },
-                                        )
-                                    }
-                                >
-                                    <option value="">{t('common.labels.unassigned')}</option>
-                                    {(options.assignees ?? []).map((agent) => (
-                                        <option key={agent.id} value={agent.id}>
-                                            {agent.name}
-                                        </option>
-                                    ))}
-                                </Select>
+                                <div className="min-w-0 flex-1">
+                                    <PersonPicker
+                                        {...props}
+                                        value={ticket.assignee ?? null}
+                                        disabled={!can.assign}
+                                        allowNobody
+                                        query={{ scope: 'assignee', ticket: ticket.key }}
+                                        onChange={(person) =>
+                                            router.put(
+                                                `/agent/tickets/${ticket.key}/assignee`,
+                                                { assignee_id: person?.id ?? null },
+                                                { preserveScroll: true },
+                                            )
+                                        }
+                                    />
+                                </div>
 
                                 {can.assign && !ticket.assignee ? (
                                     <Button
@@ -248,6 +252,32 @@ export function TicketSidebar({
                             ))}
                         </ul>
                     )}
+
+                    {/* The endpoint for this has existed since watchers did;
+                        there has never been anything on the screen that reaches
+                        it, so the only way to put somebody on a ticket was the
+                        API. Anybody with an account, because the person who
+                        needs to follow a ticket is as often the requester's
+                        manager as another agent. */}
+                    {can.update ? (
+                        <div className="mt-3">
+                            <PersonPicker
+                                value={null}
+                                query={{ scope: 'user' }}
+                                exclude={ticket.watchers.map((watcher) => watcher.id)}
+                                placeholder={t('tickets.actions.add_watcher')}
+                                onChange={(person) => {
+                                    if (!person) return;
+
+                                    router.post(
+                                        `/agent/tickets/${ticket.key}/watchers`,
+                                        { user_id: person.id },
+                                        { preserveScroll: true },
+                                    );
+                                }}
+                            />
+                        </div>
+                    ) : null}
                 </CardBody>
             </Card>
 

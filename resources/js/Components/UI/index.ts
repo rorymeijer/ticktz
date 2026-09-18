@@ -13,3 +13,4 @@ export { Toggle } from './Toggle';
 export { ConfirmDialog } from './ConfirmDialog';
 export { CheckboxGroup, type CheckboxOption } from './CheckboxGroup';
 export { PageHeader } from './PageHeader';
+export { HelpButton } from './HelpButton';

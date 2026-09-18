@@ -1825,3 +1825,57 @@ state is invalid.
 `create` is deliberately not given the same clearing. Everything that files a
 ticket validates first, so a mismatch there is a programming error, and
 silently fixing one is how it stays unfound.
+
+---
+
+## D73 — A manual that knows which door you are standing at
+
+Two things were asked for and they are one thing: a user manual, and a `?` that
+explains the page you are on. Built separately they drift — the manual gets a
+chapter the screens no longer match, and the `?` opens something that was true
+last year.
+
+So there is one table of contents, and it names both the permission a chapter
+needs and the page components it explains. The `?` asks which chapter covers
+the component it is sitting in; the manual asks which chapters this reader may
+read. Same registry, two questions.
+
+**Markdown in the repository, not the database and not the knowledge base.**
+
+The database is tempting and wrong: a manual stored there ships empty, drifts
+from the version of Ticktz somebody is running, and cannot be reviewed
+alongside the change it describes. These files travel with the code, so the
+manual an instance shows is the manual for the version it is running.
+
+The knowledge base is the other tempting place, and it is wrong for a different
+reason. The knowledge base belongs to the desk — its articles are about
+printers and passwords and whatever this organisation supports. The manual is
+about Ticktz. An upgrade should replace one and never touch the other.
+
+**A chapter's title is its own first heading**, and its summary is its first
+paragraph. Keeping either in the registry would be a second copy, and a table
+of contents that can promise something the chapter does not say.
+
+**Permission-aware means chapter by chapter.** An administrator's manual and an
+agent's manual are different documents. A manual that describes doors you
+cannot open makes somebody feel locked out rather than helped, and it is also a
+way to enumerate what a product does — which is why a chapter this reader may
+not have is a 404 rather than a 403.
+
+**The `?` does not render where there is nothing written.** The covered page
+list is shared with every response, so the button knows before anybody clicks.
+A `?` that opens and then admits there is no help is worse than no `?`, and one
+that opens approximately the right chapter is worse still.
+
+**Four tests hold the shape**, and they are the reason this does not rot:
+
+- Every registered chapter exists, in every language. A chapter registered and
+  never written is a gap nobody notices; one translated into a single language
+  silently serves English to half the desk.
+- Every chapter opens with the heading its title comes from.
+- No page is claimed by two chapters. The `?` takes the first match, so a
+  duplicate would open whichever was declared first — a coin toss that looks
+  like a decision.
+- Every page named in the registry exists. A screen renamed without updating it
+  leaves a `?` that never appears, which is invisible until somebody goes
+  looking for help.

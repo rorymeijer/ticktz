@@ -21,7 +21,9 @@ import {
     TextInput,
     Textarea,
 } from '@/Components/UI';
+import { PersonMultiPicker } from '@/Components/UI/PersonPicker';
 import { useTranslations } from '@/hooks/useTranslations';
+import type { UserSummary } from '@/types/tickets';
 import { RichTextField } from '@/Components/RichText/RichTextField';
 import type {
     ApprovalAdminOptions,
@@ -330,14 +332,22 @@ function StepEditor({
     // Which list of ids the chosen approver type picks from. `manager` and
     // `field` pick from nothing: one reads the org chart, the other reads the
     // form.
+    // Teams and roles are short lists that belong to this desk, so they stay
+    // checkboxes. People are not: that pool was every agent rendered into the
+    // page, and it is the one that stops working at the size where approval
+    // workflows start to matter. It gets a picker instead, below.
     const pool =
         step.approver_type === 'team'
             ? options.teams
             : step.approver_type === 'role'
               ? options.roles
-              : step.approver_type === 'users'
-                ? options.users
-                : null;
+              : null;
+
+    // The step holds ids; the picker shows people. Seeded from the ones the
+    // saved workflow already names.
+    const [approvers, setApprovers] = useState<UserSummary[]>(() =>
+        options.people.filter((person) => step.approver_ids.includes(person.id)),
+    );
 
     return (
         <div className="rounded-xl border border-slate-200 p-3">
@@ -375,10 +385,13 @@ function StepEditor({
                                 // The id list belongs to the old type; keeping
                                 // it would leave team ids sitting in a step
                                 // that now asks for roles.
-                                onChange({
-                                    approver_type: event.target.value as ApproverType,
-                                    approver_ids: [],
-                                })
+                                {
+                                    setApprovers([]);
+                                    onChange({
+                                        approver_type: event.target.value as ApproverType,
+                                        approver_ids: [],
+                                    });
+                                }
                             }
                         >
                             {options.approver_types.map((type) => (
@@ -400,6 +413,28 @@ function StepEditor({
                                 options={pool.map((entry) => ({ value: entry.id, label: entry.name }))}
                                 selected={step.approver_ids}
                                 onChange={(values) => onChange({ approver_ids: values as number[] })}
+                            />
+                        )}
+                    </Field>
+                </div>
+            ) : null}
+
+            {step.approver_type === 'users' ? (
+                <div className="mt-3">
+                    <Field label={t('approvals.fields.approvers')}>
+                        {(props) => (
+                            <PersonMultiPicker
+                                {...props}
+                                value={approvers}
+                                // Anybody with an account, not only agents: an
+                                // approver is very often a budget holder who
+                                // never opens the console.
+                                query={{ scope: 'user' }}
+                                emptyLabel={t('common.labels.none')}
+                                onChange={(people) => {
+                                    setApprovers(people);
+                                    onChange({ approver_ids: people.map((person) => person.id) });
+                                }}
                             />
                         )}
                     </Field>

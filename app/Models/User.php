@@ -274,6 +274,38 @@ class User extends Authenticatable
      *
      * @return array<string, mixed>
      */
+    /**
+     * The summaries for a set of ids, in name order.
+     *
+     * A page that used to render a picker filled every option into itself; now
+     * it needs only the few people it already refers to, so that their names
+     * show while the picker searches for the rest. One method rather than four
+     * near-identical queries, because "which fields does a person show as"
+     * should have one answer.
+     *
+     * @param  iterable<mixed>  $ids
+     * @return array<int, array<string, mixed>>
+     */
+    public static function summariesFor(iterable $ids): array
+    {
+        $keys = collect($ids)
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($keys->isEmpty()) {
+            return [];
+        }
+
+        return self::query()
+            ->whereKey($keys)
+            ->orderBy('name')
+            ->get()
+            ->map(fn (self $user) => $user->toSummaryArray())
+            ->all();
+    }
+
     public function toSummaryArray(): array
     {
         return [

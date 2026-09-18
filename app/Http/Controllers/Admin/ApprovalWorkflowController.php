@@ -33,16 +33,44 @@ class ApprovalWorkflowController extends Controller
 {
     public function __construct(private readonly AuditLogger $audit) {}
 
+    /**
+     * The people the saved steps already name.
+     *
+     * Not every agent on the desk, which is what this used to render into the
+     * page so a checkbox list could hold them. A step's approvers live inside
+     * its JSON, so the ids come from there; the picker searches `GET /people`
+     * for anybody being added.
+     *
+     * @param  iterable<ApprovalWorkflow>  $workflows
+     * @return array<int, array<string, mixed>>
+     */
+    private function namedApprovers(iterable $workflows): array
+    {
+        $ids = [];
+
+        foreach ($workflows as $workflow) {
+            foreach ($workflow->steps as $step) {
+                foreach ((array) ($step->approver_ids ?? []) as $id) {
+                    $ids[] = $id;
+                }
+            }
+        }
+
+        return User::summariesFor($ids);
+    }
+
     public function index(): Response
     {
         $this->authorize('approvals.manage');
 
+        $workflows = ApprovalWorkflow::query()
+            ->with('steps')
+            ->withCount('requestTypes')
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('Admin/Approvals/Index', [
-            'workflows' => ApprovalWorkflow::query()
-                ->with('steps')
-                ->withCount('requestTypes')
-                ->orderBy('name')
-                ->get()
+            'workflows' => $workflows
                 ->map(fn (ApprovalWorkflow $workflow) => $workflow->toAdminArray())
                 ->all(),
             'options' => [
@@ -50,8 +78,7 @@ class ApprovalWorkflowController extends Controller
                 'approver_types' => ApprovalStep::APPROVER_TYPES,
                 'teams' => Team::query()->orderBy('name')->get(['id', 'name'])->all(),
                 'roles' => Role::query()->orderBy('name')->get(['id', 'name'])->all(),
-                'users' => User::query()->active()->agents()->orderBy('name')
-                    ->get(['id', 'name', 'email'])->all(),
+                'people' => $this->namedApprovers($workflows),
             ],
         ]);
     }

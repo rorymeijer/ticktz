@@ -253,13 +253,24 @@ it('carries the approval gate through the workflow admin form', function (): voi
     )->toBeTruthy();
 });
 
-it('lists the users an approval step can pick from', function (): void {
+it('ships the people its steps already name, and not the rest of the desk', function (): void {
+    // This page used to render every active agent into itself so a checkbox
+    // list could hold them — a directory on a form, which stops being usable
+    // at the size where approval workflows start to matter. It now carries
+    // only the people the saved steps refer to, so their names render, and the
+    // picker searches `GET /people` for anybody being added.
     $admin = makeAdmin();
-    /** @var User $agent */
-    $agent = makeAgent();
+    /** @var User $named */
+    $named = makeAgent();
+    /** @var User $stranger */
+    $stranger = makeAgent();
+
+    ApprovalWorkflow::factory()->single($named)->create();
 
     $response = $this->actingAs($admin)->get('/admin/approvals')->assertOk();
 
-    expect(collect($response->viewData('page')['props']['options']['users'])->pluck('id'))
-        ->toContain($agent->getKey());
+    $people = collect($response->viewData('page')['props']['options']['people'])->pluck('id');
+
+    expect($people)->toContain($named->getKey())
+        ->and($people)->not->toContain($stranger->getKey());
 });

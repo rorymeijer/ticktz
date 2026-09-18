@@ -21,6 +21,7 @@ use App\Services\Automation\AutomationEngine;
 use Cron\CronExpression;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -188,10 +189,48 @@ class AutomationRuleController extends Controller
                 ->get(['id', 'name'])->all(),
             'request_types' => RequestType::query()->where('is_active', true)->orderBy('name')
                 ->get(['id', 'name'])->all(),
-            'agents' => User::query()->agents()->where('is_active', true)->orderBy('name')
-                ->get()->map(fn (User $user) => $user->toSummaryArray())->all(),
+            'people' => $this->namedPeople(),
             'sources' => Ticket::SOURCES,
         ];
+    }
+
+    /**
+     * The people the saved rules already name.
+     *
+     * Not every agent on the desk, which is what this used to render into the
+     * page. A rule refers to somebody in two places — an `assign_user` or
+     * `add_watcher` action, and an `assignee` condition — and both live inside
+     * the rule's JSON, so that is where the ids come from. The picker searches
+     * `GET /people` for anybody being added.
+     *
+     * A condition's value may be a single id or a list, because "is one of"
+     * exists; both shapes are read.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function namedPeople(): array
+    {
+        $ids = [];
+
+        foreach (AutomationRule::query()->get(['conditions', 'actions']) as $rule) {
+            foreach ((array) ($rule->actions ?? []) as $action) {
+                if (isset($action['user_id'])) {
+                    $ids[] = $action['user_id'];
+                }
+            }
+
+            foreach ((array) ($rule->conditions ?? []) as $condition) {
+                if (($condition['field'] ?? null) !== 'assignee') {
+                    continue;
+                }
+
+                foreach (Arr::wrap($condition['value'] ?? null) as $value) {
+                    $ids[] = $value;
+                }
+            }
+        }
+
+        return User::summariesFor($ids);
     }
 
     /**

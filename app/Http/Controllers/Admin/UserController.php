@@ -109,7 +109,7 @@ class UserController extends Controller
 
         $user->load(['roles:id,name', 'teams:id,name']);
 
-        return Inertia::render('Admin/Users/Form', $this->formOptions() + [
+        return Inertia::render('Admin/Users/Form', $this->formOptions($user) + [
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -209,16 +209,19 @@ class UserController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function formOptions(): array
+    private function formOptions(?User $user = null): array
     {
         return [
             'roles' => Role::query()->orderBy('position')->get(['id', 'name', 'display_name', 'description', 'scope']),
             'teams' => Team::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'organizations' => Organization::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
-            // Candidate managers, for approval steps that ask for "the
-            // requester's manager". Agents only: somebody who cannot sign in
-            // to answer an approval is not a useful answer to that question.
-            'managers' => User::query()->active()->agents()->orderBy('name')->get(['id', 'name', 'email']),
+            // Only the manager this person already has, so the form can show
+            // a name. It used to be every active agent on the desk rendered
+            // into the page; the picker searches `GET /people` for the rest,
+            // which is the same set — agents only, because somebody who cannot
+            // sign in to answer an approval is not a useful answer to "the
+            // requester's manager".
+            'managers' => User::summariesFor([$user?->manager_id]),
             'canAssignRoles' => request()->user()->hasPermission('roles.manage'),
         ];
     }

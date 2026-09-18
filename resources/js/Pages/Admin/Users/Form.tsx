@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import type { FormEventHandler } from 'react';
+import { useState, type FormEventHandler } from 'react';
 
 import AdminLayout from '@/Layouts/AdminLayout';
 import {
@@ -17,7 +17,9 @@ import {
     Textarea,
     Toggle,
 } from '@/Components/UI';
+import { PersonPicker } from '@/Components/UI/PersonPicker';
 import { useTranslations } from '@/hooks/useTranslations';
+import type { UserSummary } from '@/types/tickets';
 import { RichTextField } from '@/Components/RichText/RichTextField';
 
 interface RoleOption {
@@ -57,12 +59,17 @@ export default function UserForm({
     roles: RoleOption[];
     teams: { id: number; name: string }[];
     organizations: { id: number; name: string }[];
-    managers: { id: number; name: string; email: string }[];
+    /** Only the manager this person already has — the rest are searched for. */
+    managers: UserSummary[];
     canAssignRoles: boolean;
 }) {
     const { t, locales } = useTranslations();
     const isEdit = user !== null;
     const directoryManaged = user?.directory === 'ldap';
+
+    // The form posts an id; the picker shows a person. `managers` carries only
+    // the one already set, so there is a name to render before anybody types.
+    const [manager, setManager] = useState<UserSummary | null>(managers[0] ?? null);
 
     const form = useForm({
         name: user?.name ?? '',
@@ -268,25 +275,21 @@ export default function UserForm({
                                     help={t('approvals.fields.manager_help')}
                                 >
                                     {(props) => (
-                                        <Select
+                                        <PersonPicker
                                             {...props}
-                                            value={String(form.data.manager_id ?? '')}
-                                            onChange={(event) =>
-                                                form.setData(
-                                                    'manager_id',
-                                                    event.target.value ? Number(event.target.value) : '',
-                                                )
-                                            }
-                                        >
-                                            <option value="">{t('approvals.fields.manager_none')}</option>
-                                            {managers
-                                                .filter((candidate) => candidate.id !== user?.id)
-                                                .map((candidate) => (
-                                                    <option key={candidate.id} value={candidate.id}>
-                                                        {candidate.name}
-                                                    </option>
-                                                ))}
-                                        </Select>
+                                            value={manager}
+                                            allowNobody
+                                            query={{ scope: 'agent' }}
+                                            // The server refuses it too; this
+                                            // is so the name is never offered
+                                            // in the first place.
+                                            exclude={user ? [user.id] : []}
+                                            placeholder={t('approvals.fields.manager_none')}
+                                            onChange={(person) => {
+                                                setManager(person);
+                                                form.setData('manager_id', person ? person.id : '');
+                                            }}
+                                        />
                                     )}
                                 </Field>
                             </div>

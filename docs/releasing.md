@@ -191,16 +191,33 @@ no `.git`.
 
 ## How long it takes, and how the image is built
 
-A release is about **eight minutes**, nearly all of it in two places that run at
-the same time:
+A release is about **six minutes**. Almost everything in it runs beside
+something else:
 
-| Job | Roughly |
-| --- | --- |
-| Verify before publishing | 3–4 min — the full suite against MySQL and Redis |
-| Build the image (×2, in parallel) | 4–6 min each |
-| Build the installable archive | under a minute |
-| Publish the image tags | seconds |
-| Draft the release notes | seconds |
+| Job | Roughly | Waits for |
+| --- | --- | --- |
+| Work out what is being released | seconds | — |
+| Verify before publishing | 3–4 min — the full suite against MySQL and Redis | — |
+| Build the image (×2) | 4–6 min each, side by side | — |
+| Build the installable archive | under a minute | Verify |
+| Publish the image tags | seconds | Verify **and** both images |
+| Draft the release notes | seconds | everything |
+
+**Why `verify` runs beside the builds rather than before them.** It runs the
+suite a third time on a commit CI has usually already checked twice — once on
+the pull request, once on `main` after the merge — and its only step CI does
+not also run is the tag-versus-version check.
+
+Deleting it would be the wrong fix. A tag can be pushed at any commit,
+including one no pull request ever covered, and then this is the only thing
+between that commit and everybody's `docker pull`. So it keeps its job and
+stops costing time: the image builds start beside it, and because they push by
+digest under no tag, nothing they make is reachable by name. `manifest` is the
+line the work crosses to become something an operator can pull, and that waits
+for the suite.
+
+A failing suite therefore leaves a few untagged blobs in the registry and
+nothing anybody can pull. That is the whole price.
 
 **It used to be forty-five.** One job built both architectures, and `linux/arm64`
 was built through QEMU on an Intel runner: the runtime stage compiles a dozen
@@ -214,8 +231,8 @@ was only ever buying the convenience of a single job. Now:
 
 - `linux/amd64` builds on `ubuntu-latest`, `linux/arm64` on `ubuntu-24.04-arm`,
   each compiled by a processor that speaks its own instruction set.
-- The two run side by side, so the release costs the slower of them rather than
-  the sum.
+- The two run side by side, and beside the test suite, so the release costs the
+  slowest of the three rather than the sum.
 - Each pushes **by digest and without a tag**. An image nobody can pull by name
   is not published.
 - A last job joins the two digests into one manifest list and puts the tags on
@@ -253,8 +270,9 @@ and Windows ×2, so it is worth noticing that nothing here needs either. The
 arm64 runners are free on public repositories and billed on private ones.
 
 Were this repository private, a release would now cost roughly **fifteen
-billed minutes** — eight of wall clock, but two jobs overlapping — against the
-forty-five it cost before.
+billed minutes** — six of wall clock, but three jobs overlapping — against the
+forty-five it cost before. The billed total is the same whether the jobs
+overlap or not; overlapping only buys the wall clock.
 
 **The recurring cost is CI, not releases.** A full run is about ten minutes, and
 it runs on every push to an open pull request. Ten pushes in a day is roughly a

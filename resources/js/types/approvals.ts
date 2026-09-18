@@ -97,5 +97,6 @@ export interface ApprovalAdminOptions {
     approver_types: ApproverType[];
     teams: { id: number; name: string }[];
     roles: { id: number; name: string }[];
-    users: { id: number; name: string; email: string }[];
+    /** Only the people the saved steps already name — the rest are searched for. */
+    people: UserSummary[];
 }

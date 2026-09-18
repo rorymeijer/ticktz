@@ -6,6 +6,7 @@ import { LocaleSwitcher } from '@/Components/Nav/LocaleSwitcher';
 import { Avatar, Dropdown, DropdownDivider, DropdownLink, FlashMessages } from '@/Components/UI';
 import { IconChevronDown } from '@/Components/Icons';
 import { useAuth } from '@/hooks/useAuth';
+import { HelpButton } from '@/Components/UI/HelpButton';
 import { useTranslations } from '@/hooks/useTranslations';
 import { cn } from '@/lib/cn';
 import type { SharedProps } from '@/types';
@@ -81,6 +82,7 @@ export default function PortalLayout({
                         </nav>
 
                         <div className="ml-auto flex items-center gap-1.5">
+                            <HelpButton />
                             <LocaleSwitcher />
                             {user ? (
                                 /* The avatar is decorative and the chevron is an icon, so
