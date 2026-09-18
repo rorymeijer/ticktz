@@ -500,3 +500,74 @@ test('the agent sees the fields the portal keeps to the desk', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('ticket.fields.0.display', 'CHG-44'));
 });
+
+/*
+|--------------------------------------------------------------------------
+| Handing a ticket to somebody is its own permission
+|--------------------------------------------------------------------------
+|
+| `tickets.assign` gated the assign action and the button on the screen, and
+| nothing on the way in. So the way to hand a ticket to somebody without the
+| permission to hand out tickets was to do it while creating one — the same
+| shape of hole as the team rule had, one layer further out.
+|
+| The API description has claimed this rule since the API existed, which is the
+| part that makes it a defect rather than a decision.
+*/
+
+test('filing a ticket already assigned needs the permission to assign', function () {
+    $filer = makeUserWithPermissions('tickets.view', 'tickets.create');
+    $agent = User::factory()->agent()->create();
+
+    $this->actingAs($filer)
+        ->post('/agent/tickets', [
+            'subject' => 'Mail loop on the finance alias',
+            'requester_id' => User::factory()->requester()->create()->id,
+            'assignee_id' => $agent->id,
+        ])
+        ->assertSessionHasErrors('assignee_id');
+
+    expect(Ticket::query()->count())->toBe(0);
+});
+
+test('filing a ticket without an assignee needs no such permission', function () {
+    $filer = makeUserWithPermissions('tickets.view', 'tickets.create');
+
+    $this->actingAs($filer)
+        ->post('/agent/tickets', [
+            'subject' => 'Mail loop on the finance alias',
+            'requester_id' => User::factory()->requester()->create()->id,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Ticket::query()->sole()->assignee_id)->toBeNull();
+});
+
+test('changing the assignee through the ticket form needs it too', function () {
+    // `tickets.view.all` as well, or the policy refuses before validation ever
+    // runs and the test passes for the wrong reason.
+    $editor = makeUserWithPermissions('tickets.view', 'tickets.view.all', 'tickets.update');
+    $agent = User::factory()->agent()->create();
+    $ticket = Ticket::factory()->create(['team_id' => null, 'queue_id' => null]);
+
+    $this->actingAs($editor)
+        ->put("/agent/tickets/{$ticket->key}", ['assignee_id' => $agent->id])
+        ->assertSessionHasErrors('assignee_id');
+
+    expect($ticket->fresh()->assignee_id)->toBeNull();
+});
+
+test('the create form does not offer a field its reader cannot use', function () {
+    // Offering a control and then refusing what it submits is a worse way to
+    // express a permission than not drawing it.
+    $filer = makeUserWithPermissions('tickets.view', 'tickets.create');
+    $assigner = makeUserWithPermissions('tickets.view', 'tickets.create', 'tickets.assign');
+
+    $this->actingAs($filer)
+        ->get('/agent/tickets/create')
+        ->assertInertia(fn ($page) => $page->where('can.assign', false));
+
+    $this->actingAs($assigner)
+        ->get('/agent/tickets/create')
+        ->assertInertia(fn ($page) => $page->where('can.assign', true));
+});

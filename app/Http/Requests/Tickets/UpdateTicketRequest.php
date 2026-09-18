@@ -35,7 +35,7 @@ class UpdateTicketRequest extends FormRequest
             'priority_id' => ['sometimes', 'required', 'integer', Rule::exists('priorities', 'id')],
             'queue_id' => ['sometimes', 'nullable', 'integer', Rule::exists('queues', 'id')],
             'team_id' => ['sometimes', 'nullable', 'integer', Rule::exists('teams', 'id')],
-            'assignee_id' => ['sometimes', 'nullable', 'integer', Rule::exists('users', 'id'), $this->assignableRule($this->route('ticket'))],
+            'assignee_id' => ['sometimes', 'nullable', 'integer', Rule::exists('users', 'id'), ...$this->assigneeRules($this->route('ticket'))],
             'label_ids' => ['sometimes', 'array'],
             'label_ids.*' => ['integer', Rule::exists('labels', 'id')],
         ];

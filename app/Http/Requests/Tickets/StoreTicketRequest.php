@@ -32,7 +32,7 @@ class StoreTicketRequest extends FormRequest
             'status_id' => ['nullable', 'integer', Rule::exists('ticket_statuses', 'id')],
             'workflow_id' => ['nullable', 'integer', Rule::exists('workflows', 'id')],
             'queue_id' => ['nullable', 'integer', Rule::exists('queues', 'id')],
-            'assignee_id' => ['nullable', 'integer', Rule::exists('users', 'id'), $this->assignableRule()],
+            'assignee_id' => ['nullable', 'integer', Rule::exists('users', 'id'), ...$this->assigneeRules()],
             'team_id' => ['nullable', 'integer', Rule::exists('teams', 'id')],
             'label_ids' => ['array'],
             'label_ids.*' => ['integer', Rule::exists('labels', 'id')],

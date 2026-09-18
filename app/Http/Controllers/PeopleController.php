@@ -66,6 +66,12 @@ class PeopleController extends Controller
         ],
         'user' => [
             'tickets.create', 'tickets.update', 'users.manage', 'approvals.manage',
+            // Whoever keeps the asset register. They set who holds a laptop,
+            // and they already read those names off every asset page and off
+            // the register list — which is exactly the test this map applies.
+            // Leaving it out meant an asset administrator who does not work
+            // tickets got a 403 from the one picker their own screen offers.
+            'assets.manage',
         ],
     ];
 

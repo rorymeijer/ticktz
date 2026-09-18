@@ -39,7 +39,7 @@ class UpdateApiTicketRequest extends FormRequest
             'queue_id' => ['sometimes', 'nullable', 'integer', 'exists:queues,id'],
             'team_id' => ['sometimes', 'nullable', 'integer', 'exists:teams,id'],
             'organization_id' => ['sometimes', 'nullable', 'integer', 'exists:organizations,id'],
-            'assignee_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id', $this->assignableRule($this->route('ticket'))],
+            'assignee_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id', ...$this->assigneeRules($this->route('ticket'))],
             'label_ids' => ['sometimes', 'array', 'max:20'],
             'label_ids.*' => ['integer', 'exists:labels,id'],
         ];

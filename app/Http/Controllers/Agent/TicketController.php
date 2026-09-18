@@ -132,6 +132,12 @@ class TicketController extends Controller
 
         return Inertia::render('Agent/Tickets/Create', [
             'options' => $this->filterOptions(),
+            'can' => [
+                // Filing a ticket and handing one to somebody are different
+                // permissions, so the form offers the field only to whoever
+                // holds the second. The server refuses it either way.
+                'assign' => $request->user()?->hasPermission('tickets.assign') ?? false,
+            ],
         ]);
     }
 

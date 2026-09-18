@@ -64,6 +64,15 @@ carrying the staff directory too. A team's leads and an approval step's teams
 and roles deliberately stay checkbox lists: the rule is the size of the pool,
 not the kind of thing in it.
 
+**Handing a ticket to somebody is its own permission, on the way in too.**
+`tickets.assign` gated the assign action and the button on the screen, and
+nothing on the way in — so the way to hand a ticket to somebody without the
+permission to hand out tickets was to do it while creating one, or through the
+ticket form. The same shape of hole the team rule had, one layer further out,
+and the API description had claimed the rule since the API existed. All four
+doors check it now, and the create form stops drawing a field its reader cannot
+use.
+
 **Two things that were built and unreachable.** Adding a watcher to a ticket
 had an endpoint, a permission and a translated label in both languages, and
 nothing on any screen that called it — so putting somebody on a ticket meant
