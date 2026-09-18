@@ -40,6 +40,18 @@ shadowing; it needed nested interpolation that older Docker Compose versions
 reject, and it asked for a hand edit that this project's versioning policy says
 a patch must not.
 
+Two more things had to move with it, both found in review.
+
+The setup wizard asked `env()` whether there was a bundled database to offer.
+In production the boot compiles the configuration and Laravel then skips `.env`
+entirely, so `env()` answers null for anything that is not also a real
+environment variable — which these deliberately no longer are. The built-in
+option would have disappeared from every production instance, one release after
+being fixed. It asks the configuration now, which is compiled from the same
+file. And the installer clears that compiled configuration after writing
+`.env`, so that somebody who chose a database of their own is not sent to a
+login page still querying the old one.
+
 A third thing had to move with it. The entrypoint waits for the database before
 migrating, and it was reading `getenv("DB_HOST")` — which, after this change, is
 not set. That does not fail loudly: it waits two minutes for 127.0.0.1 on every

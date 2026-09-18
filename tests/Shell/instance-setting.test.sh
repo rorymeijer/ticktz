@@ -49,6 +49,7 @@ DB_PORT=3307
 DB_USERNAME=ticktz
   DB_INDENTED=indented
 DB_QUOTED="has a space and # a hash"
+DB_ESCAPED="a \\ backslash, a \" quote and a \$ dollar"
 DB_SINGLE='single quoted'
 DB_EMPTY=
 DB_EQUALS=pa=ss=word
@@ -68,6 +69,13 @@ check "reads a numeric one" "$(ask DB_PORT)" "3307"
 check "unwraps a double-quoted value" "$(ask DB_QUOTED)" "has a space and # a hash"
 check "unwraps a single-quoted one" "$(ask DB_SINGLE)" "single quoted"
 check "keeps every character after the first =" "$(ask DB_EQUALS)" "pa=ss=word"
+
+# The installer writes `\\`, `\"` and `\$` inside a double-quoted value.
+# Stripping the quotes and stopping there hands back a password with extra
+# backslashes in it: sixty failed connections, then "database unreachable",
+# while the framework reads the same line and connects.
+check "decodes the escapes inside a quoted value" \
+    "$(ask DB_ESCAPED)" 'a \ backslash, a " quote and a $ dollar'
 check "tolerates a leading space on the line" "$(ask DB_INDENTED)" "indented"
 check "ignores a commented-out key" "$(ask DB_COMMENTED fallback)" "fallback"
 

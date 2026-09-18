@@ -100,6 +100,20 @@ class Installer
         // Everything that could fail has not. Now make it permanent.
         $this->env->write($this->environment($payload, $key));
 
+        // And make the next request read it. In production the boot compiles
+        // the configuration, and Laravel skips `.env` entirely when it finds a
+        // compiled one — so without this the instance would keep serving the
+        // database it was started with, and somebody who chose a database of
+        // their own would be sent to a login page querying the wrong server
+        // until the container was restarted.
+        //
+        // Cleared rather than rebuilt: this request is running with
+        // `cache.default`, `session.driver` and `queue.default` overridden in
+        // memory above, and compiling now would make those overrides the
+        // instance's permanent configuration. The entrypoint compiles a fresh
+        // one on the next boot.
+        Artisan::call('config:clear');
+
         InstallationState::markInstalled([
             'database' => $payload['database_choice'] ?? 'external',
             'installed_by' => $admin->email,
