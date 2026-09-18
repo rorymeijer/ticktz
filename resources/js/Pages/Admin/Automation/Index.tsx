@@ -26,6 +26,7 @@ import {
     Toggle,
 } from '@/Components/UI';
 import AdminLayout from '@/Layouts/AdminLayout';
+import { PersonPicker } from '@/Components/UI/PersonPicker';
 import { useTranslations } from '@/hooks/useTranslations';
 import { formatDateTime, relativeTime } from '@/lib/datetime';
 import { slugify } from '@/lib/slug';
@@ -118,7 +119,8 @@ interface Options {
     labels: LabelSummary[];
     organizations: NamedOption[];
     request_types: NamedOption[];
-    agents: UserSummary[];
+    /** Only the people the saved rules already name — the rest are searched for. */
+    people: UserSummary[];
     sources: string[];
 }
 
@@ -140,7 +142,8 @@ function choicesFor(field: string, options: Options): { value: string; label: st
         priority: options.priorities.map((p) => ({ value: String(p.id), label: p.name })),
         queue: options.queues.map((q) => ({ value: String(q.id), label: q.name })),
         team: options.teams.map((t) => ({ value: String(t.id), label: t.name })),
-        assignee: options.agents.map((a) => ({ value: String(a.id), label: a.name })),
+        // `assignee` is absent on purpose: a person is not a dropdown once
+        // there are four hundred of them. ConditionRow renders a picker.
         organization: options.organizations.map((o) => ({ value: String(o.id), label: o.name })),
         request_type: options.request_types.map((r) => ({ value: String(r.id), label: r.name })),
         label: options.labels.map((l) => ({ value: String(l.id), label: l.name })),
@@ -416,7 +419,7 @@ function describeAction(action: Action, options: Options, t: Translator): string
     const label = t(`automation.actions.${action.type}`);
 
     const target =
-        options.agents.find((a) => a.id === action.user_id)?.name ??
+        options.people.find((person) => person.id === action.user_id)?.name ??
         options.teams.find((team) => team.id === action.team_id)?.name ??
         options.priorities.find((p) => p.id === action.priority_id)?.name ??
         options.queues.find((q) => q.id === action.queue_id)?.name ??
@@ -887,12 +890,22 @@ function ConditionRow({
     const choices = choicesFor(condition.field, options);
     const needsValue = !options.valueless_operators.includes(condition.operator);
     const isNumeric = options.fields[condition.field] === 'age';
+    const picksPerson = condition.field === 'assignee';
+
+    // The condition stores an id; the picker shows a person. Seeded from the
+    // people the saved rules already name.
+    const [person, setPerson] = useState<UserSummary | null>(
+        () => options.people.find((candidate) => String(candidate.id) === String(condition.value)) ?? null,
+    );
 
     return (
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 p-2">
             <Select
                 value={condition.field}
-                onChange={(event) => onChange({ ...condition, field: event.target.value, value: '' })}
+                onChange={(event) => {
+                    setPerson(null);
+                    onChange({ ...condition, field: event.target.value, value: '' });
+                }}
                 aria-label={t('automation.conditions.field')}
                 className="w-auto"
             >
@@ -917,7 +930,20 @@ function ConditionRow({
             </Select>
 
             {needsValue ? (
-                choices ? (
+                picksPerson ? (
+                    <div className="w-64">
+                        <PersonPicker
+                            value={person}
+                            allowNobody
+                            query={{ scope: 'agent' }}
+                            placeholder={t('automation.conditions.value')}
+                            onChange={(chosen) => {
+                                setPerson(chosen);
+                                onChange({ ...condition, value: chosen ? String(chosen.id) : '' });
+                            }}
+                        />
+                    </div>
+                ) : choices ? (
                     <Select
                         value={String(condition.value ?? '')}
                         onChange={(event) => onChange({ ...condition, value: event.target.value })}
@@ -968,8 +994,12 @@ function ActionRow({
     const { t } = useTranslations();
     const shape = actionShape(action.type);
 
+    // `user_id` is deliberately not in here. Everything else in this map is a
+    // list that belongs to the desk and fits in a dropdown — statuses,
+    // priorities, queues, teams. People are not, and rendering every agent
+    // into this page was the thing that stopped working at four hundred of
+    // them. It gets a picker below.
     const pickers: Record<string, { key: keyof Action; items: { id: number; name: string }[]; label: string }> = {
-        user_id: { key: 'user_id', items: options.agents, label: t('automation.action_config.user') },
         team_id: { key: 'team_id', items: options.teams, label: t('automation.action_config.team') },
         priority_id: { key: 'priority_id', items: options.priorities, label: t('automation.action_config.priority') },
         queue_id: { key: 'queue_id', items: options.queues, label: t('automation.action_config.queue') },
@@ -978,6 +1008,12 @@ function ActionRow({
     };
 
     const picker = shape && shape in pickers ? pickers[shape as string] : null;
+
+    // The rule stores an id; the picker shows a person. Seeded from the people
+    // the saved rules already name.
+    const [person, setPerson] = useState<UserSummary | null>(
+        () => options.people.find((candidate) => candidate.id === action.user_id) ?? null,
+    );
 
     return (
         <div className="space-y-2 rounded-md border border-slate-200 p-2">
@@ -1011,6 +1047,21 @@ function ActionRow({
                             </option>
                         ))}
                     </Select>
+                ) : null}
+
+                {shape === 'user_id' ? (
+                    <div className="w-64">
+                        <PersonPicker
+                            value={person}
+                            allowNobody
+                            query={{ scope: 'agent' }}
+                            placeholder={t('automation.action_config.user')}
+                            onChange={(chosen) => {
+                                setPerson(chosen);
+                                onChange({ ...action, user_id: chosen?.id ?? null });
+                            }}
+                        />
+                    </div>
                 ) : null}
 
                 <button

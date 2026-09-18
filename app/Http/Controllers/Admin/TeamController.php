@@ -49,7 +49,7 @@ class TeamController extends Controller
 
         return Inertia::render('Admin/Teams/Form', [
             'team' => null,
-            'agents' => $this->agentOptions(),
+            'people' => [],
         ]);
     }
 
@@ -85,7 +85,7 @@ class TeamController extends Controller
                 'member_ids' => $team->members->pluck('id')->all(),
                 'lead_ids' => $team->members->filter(fn (User $member) => $member->pivot->role === 'lead')->pluck('id')->values()->all(),
             ],
-            'agents' => $this->agentOptions(),
+            'people' => $this->memberSummaries($team),
         ]);
     }
 
@@ -151,14 +151,18 @@ class TeamController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function agentOptions(): array
+    /**
+     * The people this team already has, so the form can show their names.
+     *
+     * It used to be every active agent on the desk, rendered into the page so
+     * a checkbox list could hold them. That is a directory on a form, and it
+     * stops being usable at the size where teams start to matter. The picker
+     * searches `GET /people` for everybody else.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function memberSummaries(?Team $team): array
     {
-        return User::query()
-            ->active()
-            ->agents()
-            ->orderBy('name')
-            ->get(['id', 'name', 'email'])
-            ->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email])
-            ->all();
+        return $team === null ? [] : User::summariesFor($team->members->pluck('id'));
     }
 }

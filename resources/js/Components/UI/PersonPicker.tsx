@@ -319,6 +319,7 @@ export function PersonPicker({
     value,
     onChange,
     query,
+    exclude,
     allowNobody = false,
     disabled,
     placeholder,
@@ -327,6 +328,12 @@ export function PersonPicker({
     value: UserSummary | null;
     onChange: (person: UserSummary | null) => void;
     query: PeopleQuery;
+    /**
+     * Ids the list must not offer, for a rule the server also enforces —
+     * nobody is their own manager. Offering a name that will come back as a
+     * validation error is worse than leaving it out.
+     */
+    exclude?: number[];
     /** Whether clearing the field is a legitimate answer, e.g. unassigned. */
     allowNobody?: boolean;
     disabled?: boolean;
@@ -362,6 +369,7 @@ export function PersonPicker({
     return (
         <PersonSearchBox
             query={query}
+            exclude={exclude}
             disabled={disabled}
             placeholder={placeholder ?? (allowNobody ? t('common.people.nobody') : undefined)}
             onPick={onChange}

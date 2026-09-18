@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { useEffect, type FormEventHandler } from 'react';
+import { useEffect, useState, type FormEventHandler } from 'react';
 
 import AdminLayout from '@/Layouts/AdminLayout';
 import {
@@ -15,8 +15,10 @@ import {
     TextInput,
     Toggle,
 } from '@/Components/UI';
+import { PersonMultiPicker } from '@/Components/UI/PersonPicker';
 import { useTranslations } from '@/hooks/useTranslations';
 import { slugify } from '@/lib/slug';
+import type { UserSummary } from '@/types/tickets';
 
 interface TeamPayload {
     id: number;
@@ -31,13 +33,20 @@ interface TeamPayload {
 
 export default function TeamForm({
     team,
-    agents,
+    people,
 }: {
     team: TeamPayload | null;
-    agents: { id: number; name: string; email: string }[];
+    /** Only the people this team already has — the rest are searched for. */
+    people: UserSummary[];
 }) {
     const { t } = useTranslations();
     const isEdit = team !== null;
+
+    // The form posts ids; the picker shows people. This holds the second half
+    // for the members, and the leads list is drawn from it — a team's own
+    // membership is a short list by construction, so that one stays a set of
+    // checkboxes rather than a second search box.
+    const [members, setMembers] = useState<UserSummary[]>(people);
 
     const form = useForm({
         name: team?.name ?? '',
@@ -68,10 +77,10 @@ export default function TeamForm({
         }
     };
 
-    const memberOptions = agents.map((agent) => ({
-        value: agent.id,
-        label: agent.name,
-        description: agent.email,
+    const leadOptions = members.map((member) => ({
+        value: member.id,
+        label: member.name,
+        description: member.email,
     }));
 
     return (
@@ -149,16 +158,23 @@ export default function TeamForm({
                     <Card>
                         <CardHeader title={t('admin.teams.fields.members')} />
                         <CardBody>
-                            <CheckboxGroup
-                                options={memberOptions}
-                                selected={form.data.member_ids}
-                                onChange={(values) =>
+                            <PersonMultiPicker
+                                value={members}
+                                query={{ scope: 'agent' }}
+                                emptyLabel={t('common.labels.none')}
+                                onChange={(chosen) => {
+                                    setMembers(chosen);
+
+                                    const ids = chosen.map((person) => person.id);
+
                                     form.setData((data) => ({
                                         ...data,
-                                        member_ids: values,
-                                        lead_ids: data.lead_ids.filter((id) => values.includes(id)),
-                                    }))
-                                }
+                                        member_ids: ids,
+                                        // Somebody taken off the team cannot
+                                        // stay one of its leads.
+                                        lead_ids: data.lead_ids.filter((id) => ids.includes(id)),
+                                    }));
+                                }}
                             />
                         </CardBody>
                     </Card>
@@ -170,7 +186,7 @@ export default function TeamForm({
                         />
                         <CardBody>
                             <CheckboxGroup
-                                options={memberOptions.filter((option) => form.data.member_ids.includes(option.value))}
+                                options={leadOptions}
                                 selected={form.data.lead_ids}
                                 onChange={(values) => form.setData('lead_ids', values)}
                                 emptyLabel={t('common.labels.none')}
