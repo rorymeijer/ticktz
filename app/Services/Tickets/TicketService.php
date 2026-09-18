@@ -132,6 +132,23 @@ class TicketService
 
         $ticket->fill($editable);
 
+        // A ticket moved to another team does not stay in the hands of
+        // somebody who is not on that team. Refusing the move instead would
+        // make routine triage a two-step job — unassign, then move — and
+        // letting it sit outside the rule would make the rule a suggestion.
+        //
+        // Only when the move is what this update is doing. An installation
+        // upgrading into this rule has tickets that already break it, and
+        // editing the subject of one is not the moment to take it off whoever
+        // is working on it.
+        if (($ticket->isDirty('team_id') || $ticket->isDirty('queue_id'))
+            && $ticket->assignee_id !== null
+            && ! Assignability::allowsForTeam(Assignability::teamIdFor($ticket), (int) $ticket->assignee_id)
+        ) {
+            $ticket->assignee_id = null;
+            $assigneeChanged = true;
+        }
+
         if (! $ticket->isDirty() && ! array_key_exists('label_ids', $attributes)) {
             return $ticket;
         }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Tickets;
 
+use App\Models\Queue;
+use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,13 +30,34 @@ class Assignability
      */
     public static function teamIdFor(Ticket $ticket): ?int
     {
-        if ($ticket->team_id !== null) {
-            return (int) $ticket->team_id;
+        // From the attributes rather than a loaded `queue` relation, which may
+        // be the queue the ticket was in a moment ago: the caller asking this
+        // is sometimes the code that is moving it. A ticket with its own team
+        // answers without a query at all, which is most of them.
+        return self::teamIdForAttributes(
+            $ticket->team_id !== null ? (int) $ticket->team_id : null,
+            $ticket->queue_id !== null ? (int) $ticket->queue_id : null,
+        );
+    }
+
+    /**
+     * The team a ticket being created would belong to.
+     *
+     * Creation has no ticket to ask, only the fields somebody filled in, and
+     * the rule has to hold there too — otherwise the way to give a ticket to
+     * somebody outside the team is to do it while creating it.
+     */
+    public static function teamIdForAttributes(?int $teamId, ?int $queueId): ?int
+    {
+        if ($teamId !== null) {
+            return $teamId;
         }
 
-        $queueTeam = $ticket->relationLoaded('queue')
-            ? $ticket->queue?->team_id
-            : $ticket->queue()->value('team_id');
+        if ($queueId === null) {
+            return null;
+        }
+
+        $queueTeam = Queue::query()->whereKey($queueId)->value('team_id');
 
         return $queueTeam !== null ? (int) $queueTeam : null;
     }
@@ -49,9 +72,15 @@ class Assignability
      */
     public static function query(Ticket $ticket): Builder
     {
-        $query = User::query()->active()->agents();
+        return self::queryForTeam(self::teamIdFor($ticket));
+    }
 
-        $teamId = self::teamIdFor($ticket);
+    /**
+     * @return Builder<User>
+     */
+    public static function queryForTeam(?int $teamId): Builder
+    {
+        $query = User::query()->active()->agents();
 
         // A ticket belonging to no team at all is assignable to any agent.
         // Refusing instead would be defensible on paper and unusable in
@@ -68,7 +97,13 @@ class Assignability
     /** Whether this particular person may hold this particular ticket. */
     public static function allows(Ticket $ticket, User $user): bool
     {
-        return self::query($ticket)->whereKey($user->getKey())->exists();
+        return self::queryForTeam(self::teamIdFor($ticket))->whereKey($user->getKey())->exists();
+    }
+
+    /** The same question for a ticket that does not exist yet. */
+    public static function allowsForTeam(?int $teamId, int $userId): bool
+    {
+        return self::queryForTeam($teamId)->whereKey($userId)->exists();
     }
 
     /**
@@ -79,16 +114,33 @@ class Assignability
      */
     public static function refusalFor(Ticket $ticket, User $user): ?string
     {
-        if (self::allows($ticket, $user)) {
+        return self::refusalForTeam(self::teamIdFor($ticket), (int) $user->getKey());
+    }
+
+    /**
+     * The same, for a ticket that does not exist yet.
+     *
+     * This is the primitive the other one delegates to, so that the four
+     * places that ask get the same sentence. Both extra queries are on the
+     * failure path: the answer is one `exists` until it is no, and only then
+     * does anybody need a name to put in the message.
+     */
+    public static function refusalForTeam(?int $teamId, int $userId): ?string
+    {
+        if (self::allowsForTeam($teamId, $userId)) {
             return null;
         }
 
-        if (! $user->isAgent() || ! $user->is_active) {
+        $user = User::query()->find($userId);
+
+        if ($user === null || ! $user->isAgent() || ! $user->is_active) {
             return __('tickets.errors.assignee_not_agent');
         }
 
+        // Only reachable with a team: without one every active agent is
+        // allowed, so the branch above has already answered.
         return __('tickets.errors.assignee_not_in_team', [
-            'team' => $ticket->team?->name ?? $ticket->queue?->team?->name ?? '',
+            'team' => (string) Team::query()->whereKey($teamId)->value('name'),
         ]);
     }
 }

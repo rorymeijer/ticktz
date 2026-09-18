@@ -219,6 +219,155 @@ test('a ticket with no team can be assigned to any agent', function () {
     expect($ticket->fresh()->assignee_id)->toBe($anybody->id);
 });
 
+test('a ticket cannot be created already in the wrong hands', function () {
+    // The way around the rule that costs nothing to find: do not assign the
+    // ticket afterwards, assign it while creating it.
+    $agent = User::factory()->admin()->create();
+    $outsider = User::factory()->agent()->create();
+    $team = Team::factory()->create();
+
+    $this->actingAs($agent)
+        ->post('/agent/tickets', [
+            'subject' => 'Mail loop on the finance alias',
+            'requester_id' => User::factory()->requester()->create()->id,
+            'team_id' => $team->id,
+            'assignee_id' => $outsider->id,
+        ])
+        ->assertSessionHasErrors('assignee_id');
+
+    expect(Ticket::query()->count())->toBe(0);
+});
+
+test('a ticket can be created in the right hands', function () {
+    $agent = User::factory()->admin()->create();
+    $member = User::factory()->agent()->create();
+    $team = Team::factory()->create();
+    $team->members()->attach($member);
+
+    $this->actingAs($agent)
+        ->post('/agent/tickets', [
+            'subject' => 'Mail loop on the finance alias',
+            'requester_id' => User::factory()->requester()->create()->id,
+            'team_id' => $team->id,
+            'assignee_id' => $member->id,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Ticket::query()->sole()->assignee_id)->toBe($member->id);
+});
+
+test('the ticket form obeys the rule as well as the assign action', function () {
+    $agent = User::factory()->admin()->create();
+    $outsider = User::factory()->agent()->create();
+    $team = Team::factory()->create();
+
+    $ticket = Ticket::factory()->create(['team_id' => $team->id]);
+
+    $this->actingAs($agent)
+        ->put("/agent/tickets/{$ticket->key}", ['assignee_id' => $outsider->id])
+        ->assertSessionHasErrors('assignee_id');
+
+    expect($ticket->fresh()->assignee_id)->toBeNull();
+});
+
+test('the team a ticket is being moved to is the one that decides', function () {
+    // Moving and assigning in one post. The team that matters is the one the
+    // ticket will belong to when the post is applied, not the one it belongs
+    // to while the form is open — otherwise the rule refuses a correct
+    // assignment and permits a wrong one, in the same request.
+    $agent = User::factory()->admin()->create();
+    $member = User::factory()->agent()->create();
+    $before = Team::factory()->create();
+    $after = Team::factory()->create();
+    $after->members()->attach($member);
+
+    $ticket = Ticket::factory()->create(['team_id' => $before->id]);
+
+    $this->actingAs($agent)
+        ->put("/agent/tickets/{$ticket->key}", [
+            'team_id' => $after->id,
+            'assignee_id' => $member->id,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($ticket->fresh()->assignee_id)->toBe($member->id);
+});
+
+test("a ticket with no team of its own inherits its queue's", function () {
+    $agent = User::factory()->admin()->create();
+    $outsider = User::factory()->agent()->create();
+    $team = Team::factory()->create();
+    $queue = Queue::factory()->create(['team_id' => $team->id]);
+
+    $ticket = Ticket::factory()->create(['team_id' => null, 'queue_id' => $queue->id]);
+
+    $this->actingAs($agent)
+        ->put("/agent/tickets/{$ticket->key}/assignee", ['assignee_id' => $outsider->id])
+        ->assertSessionHasErrors('assignee_id');
+
+    expect($ticket->fresh()->assignee_id)->toBeNull();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Moving a ticket out from under the person holding it
+|--------------------------------------------------------------------------
+|
+| Refusing the move instead would make routine triage a two-step job, and
+| leaving the ticket assigned outside its new team would make the rule a
+| suggestion. So the move wins and the assignment is let go — audibly.
+*/
+
+test('moving a ticket to another team lets go of an assignee who is not on it', function () {
+    $agent = User::factory()->admin()->create();
+    $member = User::factory()->agent()->create();
+    $first = Team::factory()->create();
+    $second = Team::factory()->create();
+    $first->members()->attach($member);
+
+    $ticket = Ticket::factory()->create(['team_id' => $first->id, 'assignee_id' => $member->id]);
+
+    $this->actingAs($agent)
+        ->put("/agent/tickets/{$ticket->key}", ['team_id' => $second->id])
+        ->assertSessionHasNoErrors();
+
+    expect($ticket->fresh()->assignee_id)->toBeNull();
+});
+
+test('moving a ticket keeps an assignee who is on both teams', function () {
+    $agent = User::factory()->admin()->create();
+    $member = User::factory()->agent()->create();
+    $first = Team::factory()->create();
+    $second = Team::factory()->create();
+    $first->members()->attach($member);
+    $second->members()->attach($member);
+
+    $ticket = Ticket::factory()->create(['team_id' => $first->id, 'assignee_id' => $member->id]);
+
+    $this->actingAs($agent)
+        ->put("/agent/tickets/{$ticket->key}", ['team_id' => $second->id])
+        ->assertSessionHasNoErrors();
+
+    expect($ticket->fresh()->assignee_id)->toBe($member->id);
+});
+
+test('an edit that does not move the ticket leaves an older mismatch alone', function () {
+    // An installation upgrading into this rule has tickets that already break
+    // it. Editing the subject of one is not the moment to take it off whoever
+    // has been working on it all week.
+    $agent = User::factory()->admin()->create();
+    $outsider = User::factory()->agent()->create();
+    $team = Team::factory()->create();
+
+    $ticket = Ticket::factory()->create(['team_id' => $team->id, 'assignee_id' => $outsider->id]);
+
+    $this->actingAs($agent)
+        ->put("/agent/tickets/{$ticket->key}", ['subject' => 'Renamed while triaging'])
+        ->assertSessionHasNoErrors();
+
+    expect($ticket->fresh()->assignee_id)->toBe($outsider->id);
+});
+
 test('a transition that needs a comment is refused without one', function () {
     $agent = User::factory()->admin()->create();
     $ticket = Ticket::factory()->create();

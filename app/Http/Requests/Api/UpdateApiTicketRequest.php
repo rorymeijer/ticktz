@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Http\Requests\Concerns\ResolvesAssignability;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -19,6 +20,8 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class UpdateApiTicketRequest extends FormRequest
 {
+    use ResolvesAssignability;
+
     public function authorize(): bool
     {
         return true;
@@ -36,7 +39,7 @@ class UpdateApiTicketRequest extends FormRequest
             'queue_id' => ['sometimes', 'nullable', 'integer', 'exists:queues,id'],
             'team_id' => ['sometimes', 'nullable', 'integer', 'exists:teams,id'],
             'organization_id' => ['sometimes', 'nullable', 'integer', 'exists:organizations,id'],
-            'assignee_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
+            'assignee_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id', $this->assignableRule($this->route('ticket'))],
             'label_ids' => ['sometimes', 'array', 'max:20'],
             'label_ids.*' => ['integer', 'exists:labels,id'],
         ];

@@ -1759,3 +1759,69 @@ are the same files whoever builds them. On the runners above that pin is a
 no-op, since the two platforms are already the same. It is there for the laptop
 cross-building one image, and for the day the arm64 runners are unavailable and
 the fallback is QEMU again: then it is one stage emulated instead of three.
+
+---
+
+## D72 — A rule four doors keep, or a dropdown
+
+A ticket that belongs to a team can only be held by somebody on that team.
+
+The obvious way to build that is to leave everyone else out of the dropdown,
+and it is not a rule — it is a shorter list. An assignment arrives from four
+places: the assign action in the agent console, the ticket form, the public
+API, and an automation rule. One of them has a dropdown.
+
+So it is one service, `Assignability`, and every door asks it. The service
+answers three questions from one place: who may hold this ticket (a query, so
+the picker can search inside it and the validator can ask about one person
+without loading everybody), may this person hold it, and — when not — which of
+the two halves is wrong. Two sentences rather than one, because "you cannot
+assign that" leaves the operator guessing whether the problem is the person or
+the ticket.
+
+**A ticket with no team is assignable to anybody.** Refusing would be
+defensible on paper and unusable: a desk routes plenty of work with no team on
+it — an e-mail that matched no queue, a ticket typed straight in — and none of
+it should be impossible to hand to someone.
+
+**The team is read from the attributes, not from a loaded relation.** A ticket
+carries its own `team_id` and inherits its queue's when it has none, which is
+already how `Ticket::visibleTo` decides who can see it. The catch is that the
+code asking the question is sometimes the code doing the moving, so a `queue`
+relation loaded a moment ago answers about the queue the ticket used to be in.
+A ticket with its own team answers with no query at all, which is most of them.
+
+**Creation had to be included or the rule has a hole with a sign on it.** If the
+check lives only on the assign action, the way to give a ticket to somebody
+outside the team is to do it while creating the ticket. Hence the second
+entry point that takes a `team_id` and a `queue_id` rather than a ticket.
+
+**`claim` was the same hole, found while wiring this up.** Do not hand it to
+yourself — take it. It went through no assignment check at all.
+
+### Moving a ticket out from under the person holding it
+
+The case with no comfortable answer: a ticket assigned to somebody on team A is
+moved to team B.
+
+- Refuse the move → routine triage becomes two steps, unassign then move, and
+  the operator has to work out which of the two the error was about.
+- Allow it and leave the ticket assigned → the invariant holds only at the
+  moment of assignment, which is another way of saying it does not hold.
+- Let the move win and release the assignment.
+
+The third. A team move is a deliberate act and the assignment is the part that
+no longer makes sense, so the assignment goes. It goes *audibly*: through the
+same path as any other unassignment, so it is in the audit trail, it notifies,
+and the API response comes back with `assignee` null rather than the operator
+finding out later.
+
+**Only when the move is what the update is doing.** An installation upgrading
+into this rule has tickets that already break it, and editing the subject of
+one is not the moment to take it off whoever has been working on it all week.
+The condition is that `team_id` or `queue_id` is dirty — not that the current
+state is invalid.
+
+`create` is deliberately not given the same clearing. Everything that files a
+ticket validates first, so a mismatch there is a programming error, and
+silently fixing one is how it stays unfound.

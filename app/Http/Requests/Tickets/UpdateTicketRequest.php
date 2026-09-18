@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Tickets;
 
+use App\Http\Requests\Concerns\ResolvesAssignability;
 use App\Models\Ticket;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateTicketRequest extends FormRequest
 {
+    use ResolvesAssignability;
+
     public function authorize(): bool
     {
         /** @var Ticket|null $ticket */
@@ -32,7 +35,7 @@ class UpdateTicketRequest extends FormRequest
             'priority_id' => ['sometimes', 'required', 'integer', Rule::exists('priorities', 'id')],
             'queue_id' => ['sometimes', 'nullable', 'integer', Rule::exists('queues', 'id')],
             'team_id' => ['sometimes', 'nullable', 'integer', Rule::exists('teams', 'id')],
-            'assignee_id' => ['sometimes', 'nullable', 'integer', Rule::exists('users', 'id')],
+            'assignee_id' => ['sometimes', 'nullable', 'integer', Rule::exists('users', 'id'), $this->assignableRule($this->route('ticket'))],
             'label_ids' => ['sometimes', 'array'],
             'label_ids.*' => ['integer', Rule::exists('labels', 'id')],
         ];

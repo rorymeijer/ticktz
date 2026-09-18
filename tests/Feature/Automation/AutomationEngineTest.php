@@ -310,6 +310,62 @@ it('reports an action that could not do anything rather than claiming success', 
 });
 
 /**
+ * The fourth door. The console, the ticket form and the API all refuse to put
+ * a ticket in the hands of somebody outside its team; a rule that could do it
+ * anyway would be the way in, and the quietest one — it happens at three in
+ * the morning and the trail says no person did it.
+ */
+it('refuses to assign a ticket to somebody outside its team', function (): void {
+    $outsider = makeAgent();
+    $team = Team::factory()->create();
+
+    AutomationRule::factory()
+        ->then([['type' => 'assign_user', 'user_id' => $outsider->getKey()]])
+        ->create();
+
+    $ticket = autoTicket(['team_id' => $team->getKey()]);
+
+    $execution = AutomationExecution::query()->sole();
+
+    expect($ticket->fresh()->assignee_id)->toBeNull()
+        ->and($execution->actions[0]['ok'])->toBeFalse()
+        ->and($execution->actions[0]['detail'])->toBe("not on this ticket's team");
+});
+
+it('assigns a ticket to somebody on its team', function (): void {
+    $member = makeAgent();
+    $team = Team::factory()->create();
+    $team->members()->attach($member);
+
+    AutomationRule::factory()
+        ->then([['type' => 'assign_user', 'user_id' => $member->getKey()]])
+        ->create();
+
+    $ticket = autoTicket(['team_id' => $team->getKey()]);
+
+    expect($ticket->fresh()->assignee_id)->toBe($member->getKey())
+        ->and(AutomationExecution::query()->sole()->actions[0]['ok'])->toBeTrue();
+});
+
+it('moves a ticket to a team and lets go of an assignee who is not on it', function (): void {
+    // assign_team goes through the same update() the ticket form does, so the
+    // rule it enforces is the same one — including this consequence of it.
+    $member = makeAgent();
+    $first = Team::factory()->create();
+    $second = Team::factory()->create();
+    $first->members()->attach($member);
+
+    AutomationRule::factory()
+        ->then([['type' => 'assign_team', 'team_id' => $second->getKey()]])
+        ->create();
+
+    $ticket = autoTicket(['team_id' => $first->getKey(), 'assignee_id' => $member->getKey()]);
+
+    expect($ticket->fresh()->assignee_id)->toBeNull()
+        ->and($ticket->fresh()->team_id)->toBe($second->getKey());
+});
+
+/**
  * The workflow is the authority on what a ticket may do. A rule that could
  * override it would make the workflow a suggestion.
  */

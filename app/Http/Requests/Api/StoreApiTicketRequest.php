@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Http\Requests\Concerns\ResolvesAssignability;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -20,6 +21,8 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class StoreApiTicketRequest extends FormRequest
 {
+    use ResolvesAssignability;
+
     public function authorize(): bool
     {
         return true;
@@ -39,7 +42,7 @@ class StoreApiTicketRequest extends FormRequest
             'queue_id' => ['nullable', 'integer', 'exists:queues,id'],
             'team_id' => ['nullable', 'integer', 'exists:teams,id'],
             'request_type_id' => ['nullable', 'integer', 'exists:request_types,id'],
-            'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
+            'assignee_id' => ['nullable', 'integer', 'exists:users,id', $this->assignableRule()],
             'label_ids' => ['nullable', 'array', 'max:20'],
             'label_ids.*' => ['integer', 'exists:labels,id'],
         ];

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Comment;
+use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Tickets\TicketService;
@@ -195,4 +196,79 @@ it('returns a validation error in the shared error shape', function (): void {
         ->assertStatus(422)
         ->assertJsonPath('error.code', 'validation_failed')
         ->assertJsonStructure(['error' => ['code', 'message', 'fields' => ['subject']]]);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Who may hold a ticket, over the API
+|--------------------------------------------------------------------------
+|
+| The same rule as the console. It is worth its own tests rather than trusting
+| that both call the same validator, because the API is the door with no
+| dropdown behind it: whatever it accepts is what somebody's script will send.
+*/
+
+it('refuses to file a ticket into hands outside its team', function (): void {
+    $agent = makeAgent();
+    $outsider = makeAgent();
+    $team = Team::factory()->create();
+    $token = $agent->createToken('deploy bot', ['tickets.write'])->plainTextToken;
+
+    withToken($token)->postJson('/api/v1/tickets', [
+        'subject' => 'Node 3 is unreachable',
+        'team_id' => $team->id,
+        'assignee_id' => $outsider->id,
+    ])->assertStatus(422)
+        ->assertJsonPath('error.code', 'validation_failed')
+        ->assertJsonStructure(['error' => ['fields' => ['assignee_id']]]);
+
+    expect(Ticket::query()->count())->toBe(0);
+});
+
+it('files a ticket into hands on its team', function (): void {
+    $agent = makeAgent();
+    $member = makeAgent();
+    $team = Team::factory()->create();
+    $team->members()->attach($member);
+    $token = $agent->createToken('deploy bot', ['tickets.write'])->plainTextToken;
+
+    withToken($token)->postJson('/api/v1/tickets', [
+        'subject' => 'Node 3 is unreachable',
+        'team_id' => $team->id,
+        'assignee_id' => $member->id,
+    ])->assertCreated();
+
+    expect(Ticket::query()->sole()->assignee_id)->toBe($member->id);
+});
+
+it('refuses to patch a ticket into hands outside its team', function (): void {
+    $agent = makeAgent();
+    $outsider = makeAgent();
+    $team = Team::factory()->create();
+    $ticket = Ticket::factory()->create(['team_id' => $team->id]);
+    $token = $agent->createToken('deploy bot', ['tickets.write'])->plainTextToken;
+
+    withToken($token)->patchJson("/api/v1/tickets/{$ticket->key}", [
+        'assignee_id' => $outsider->id,
+    ])->assertStatus(422)
+        ->assertJsonPath('error.code', 'validation_failed')
+        ->assertJsonStructure(['error' => ['fields' => ['assignee_id']]]);
+
+    expect($ticket->fresh()->assignee_id)->toBeNull();
+});
+
+it('lets a patch move a ticket and assign it in one call', function (): void {
+    $agent = makeAgent();
+    $member = makeAgent();
+    $team = Team::factory()->create();
+    $team->members()->attach($member);
+    $ticket = Ticket::factory()->create(['team_id' => null]);
+    $token = $agent->createToken('deploy bot', ['tickets.write'])->plainTextToken;
+
+    withToken($token)->patchJson("/api/v1/tickets/{$ticket->key}", [
+        'team_id' => $team->id,
+        'assignee_id' => $member->id,
+    ])->assertOk();
+
+    expect($ticket->fresh()->assignee_id)->toBe($member->id);
 });

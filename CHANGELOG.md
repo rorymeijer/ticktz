@@ -11,6 +11,23 @@ the database.
 
 ## Unreleased
 
+**A ticket can only be held by somebody on its team.** Its own team, or its
+queue's when it has none; a ticket with no team at all still goes to any agent,
+because plenty of work arrives without one. Enforced on the server at all four
+places an assignment can come from — the assign action, the ticket form, the
+API and an automation rule — rather than by leaving people out of a dropdown,
+which only one of the four has.
+
+Two of those four were open. Creating a ticket already assigned skipped the
+check entirely, and so did **claim**: the difference between being handed a
+ticket and taking it was the difference between the rule applying and not.
+
+**Moving a ticket to another team releases an assignee who is not on it.**
+Refusing the move would make routine triage a two-step job. The release is
+audible — the audit trail, the notification and the API response all show it —
+and it happens only when the move is what you are doing, so editing the subject
+of an older ticket that already breaks the rule leaves it alone.
+
 **A release takes eight minutes instead of forty-five.** Nothing about the
 application changed; this is how it is built.
 
