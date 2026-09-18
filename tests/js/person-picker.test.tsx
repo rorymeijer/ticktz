@@ -205,6 +205,25 @@ describe('PersonPicker', () => {
         expect(screen.getByRole('status').textContent).toBe('Nobody matches zwart.');
     });
 
+    it('shows who holds it even when the search would not offer them', async () => {
+        // The bug this replaced. The old control was a `<select>` whose value
+        // was the assignee's id, with "Unassigned" as its first option and a
+        // list filtered to *active agents*. Deactivate somebody who is holding
+        // tickets and no option matches any more, so the browser falls back to
+        // showing the first one: every ticket they hold reads "Unassigned"
+        // while still being assigned to them.
+        //
+        // A picker reads who holds the ticket off the ticket, so it cannot
+        // disagree with it — and it never asks the server at all.
+        answerWith([]);
+
+        render(<PersonPicker value={ada} onChange={() => {}} query={{ scope: 'assignee' }} allowNobody />);
+
+        expect(screen.getByText('Ada Lovelace')).toBeTruthy();
+        expect(screen.queryByText('Nobody')).toBeNull();
+        expect(asked).toHaveLength(0);
+    });
+
     it('shows who is chosen instead of a box to search in', async () => {
         render(<PersonPicker value={ada} onChange={() => {}} query={{ scope: 'agent' }} allowNobody />);
 

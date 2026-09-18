@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\CustomField;
 use App\Models\Label;
 use App\Models\Queue;
 use App\Models\Team;
@@ -443,4 +444,59 @@ test('the queue overview counts tickets per queue', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('Agent/Queues/Index')
             ->has('queues', Queue::query()->count()));
+});
+
+/*
+|--------------------------------------------------------------------------
+| The answers to the form
+|--------------------------------------------------------------------------
+|
+| A custom field exists so that the person who has to act on a request has the
+| information without asking for it. The portal collected the answers, stored
+| them and showed them back to the customer — and the agent console never
+| rendered them at all, which made the whole feature half a feature.
+*/
+
+test('an agent sees the answers the requester gave', function () {
+    $agent = User::factory()->admin()->create();
+
+    $field = CustomField::factory()->create([
+        'key' => 'serial_number',
+        'label' => 'Serial number',
+        'type' => 'text',
+    ]);
+
+    $ticket = Ticket::factory()->create();
+    $ticket->setCustomFields(['serial_number' => 'PF-0X91223']);
+
+    $this->actingAs($agent)
+        ->get("/agent/tickets/{$ticket->key}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Agent/Tickets/Show')
+            ->where('ticket.fields.0.label', 'Serial number')
+            ->where('ticket.fields.0.display', 'PF-0X91223'));
+
+    expect($field->fresh())->not->toBeNull();
+});
+
+test('the agent sees the fields the portal keeps to the desk', function () {
+    // The portal asks for `includePrivate: false`; the console is the side
+    // those fields were marked private *for*.
+    $agent = User::factory()->admin()->create();
+
+    CustomField::factory()->create([
+        'key' => 'internal_reference',
+        'label' => 'Internal reference',
+        'type' => 'text',
+        'is_public' => false,
+    ]);
+
+    $ticket = Ticket::factory()->create();
+    $ticket->setCustomFields(['internal_reference' => 'CHG-44']);
+
+    $this->actingAs($agent)
+        ->get("/agent/tickets/{$ticket->key}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('ticket.fields.0.display', 'CHG-44'));
 });

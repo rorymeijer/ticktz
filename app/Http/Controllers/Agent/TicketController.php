@@ -169,6 +169,7 @@ class TicketController extends Controller
             'kbArticles.category',
             'approvals.decisions.approver', 'approvals.workflow', 'approvals.requester',
             'assets.type', 'assets.assignee',
+            'customFieldValues.field',
         ]);
 
         $comments = $ticket->comments()
@@ -268,6 +269,15 @@ class TicketController extends Controller
     {
         return $ticket->toListArray() + [
             'description' => $ticket->description,
+            // The answers to the form the requester filled in.
+            //
+            // These were missing entirely, which made the whole custom-field
+            // feature half a feature: the portal collected the answers, showed
+            // them back to the customer, and never showed them to the agent
+            // who had to act on them. `includePrivate` is true here because
+            // the fields marked private are the ones meant for the desk — the
+            // portal is where that argument is false.
+            'fields' => $ticket->customFieldSummary(includePrivate: true),
             'queue' => $ticket->queue?->only('id', 'name', 'slug'),
             'workflow' => ['id' => $ticket->workflow_id, 'name' => $ticket->workflow->name],
             'watchers' => $ticket->watchers->map(fn (User $watcher) => $watcher->toSummaryArray())->all(),

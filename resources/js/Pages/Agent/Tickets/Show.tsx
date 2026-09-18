@@ -136,6 +136,30 @@ export default function TicketShow({
                                     className="mt-4 break-words border-t border-slate-100 pt-4"
                                 />
                             ) : null}
+
+                            {/* The answers to the form the requester filled
+                                in. They sit with the description because that
+                                is what they are — the rest of what was asked —
+                                and an agent reading the request should not
+                                have to go looking for half of it. */}
+                            {ticket.fields.length > 0 ? (
+                                <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
+                                    {ticket.fields.map((field) => (
+                                        <div key={field.key}>
+                                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                                {field.label}
+                                            </dt>
+                                            <dd className="mt-0.5 break-words text-sm text-slate-800">
+                                                {field.type === 'textarea' ? (
+                                                    <RichText html={String(field.value ?? '')} />
+                                                ) : (
+                                                    field.display
+                                                )}
+                                            </dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            ) : null}
                         </CardBody>
                     </Card>
 

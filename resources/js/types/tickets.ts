@@ -101,8 +101,19 @@ export interface TicketLinkItem {
     ticket: { key: string; subject: string; status: StatusSummary | null };
 }
 
+/** One answer to a custom field, ready to render. */
+export interface CustomFieldAnswer {
+    key: string;
+    label: string;
+    type: string;
+    value: unknown;
+    display: string;
+}
+
 export interface TicketDetail extends TicketListItem {
     description: string | null;
+    /** The answers to the form the requester filled in. */
+    fields: CustomFieldAnswer[];
     queue: { id: number; name: string; slug: string } | null;
     workflow: { id: number; name: string };
     watchers: UserSummary[];
