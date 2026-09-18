@@ -5,7 +5,7 @@
 # The script's whole job is to write two secrets into a file it does not own,
 # and the ways that goes wrong are all quiet: a password overwritten on a
 # second run points a working instance at a database it can no longer reach,
-# and an empty `TICKTZ_DB_PASSWORD=` left alone — the line a copied example
+# and an empty `DB_PASSWORD=` left alone — the line a copied `.env.example`
 # leaves behind — starts MySQL with no password at all.
 #
 # Everything here runs with --no-start, so nothing touches Docker.
@@ -58,8 +58,8 @@ make_checkout "$C"
 check "runs on a checkout with no .env" "$(run_install "$C")" "ok"
 check "creates the .env" "$([ -f "$C/.env" ] && echo yes || echo no)" "yes"
 
-pw=$(value_of "$C" TICKTZ_DB_PASSWORD)
-root=$(value_of "$C" TICKTZ_DB_ROOT_PASSWORD)
+pw=$(value_of "$C" DB_PASSWORD)
+root=$(value_of "$C" DB_ROOT_PASSWORD)
 check "generates a database password" "$([ -n "$pw" ] && echo yes || echo no)" "yes"
 check "generates a root password" "$([ -n "$root" ] && echo yes || echo no)" "yes"
 check "the two differ" "$([ "$pw" != "$root" ] && echo yes || echo no)" "yes"
@@ -95,11 +95,12 @@ if command -v docker >/dev/null 2>&1 && command -v php >/dev/null 2>&1; then
     check "the two secrets satisfy the real compose file" \
         "$(env_of mysql MYSQL_PASSWORD)" "$pw"
 
-    # What the stack needs, delivered as defaults for the instance's own
-    # `.env` rather than as environment variables. Laravel's dotenv is
-    # immutable, so anything handed over as environment can never be changed by
-    # `.env` afterwards — which is what stopped the setup wizard from being
-    # able to point an instance at a database of its own.
+    # Left to Laravel's own fallbacks a production instance comes up on sqlite
+    # with a synchronous queue, beside a MySQL and a Redis it never speaks to.
+    # The stack supplies them — as defaults for the instance's own `.env`
+    # rather than as environment variables, so that the setup wizard can still
+    # change them. The entrypoint strips the prefix; see place-code.sh, and
+    # drop-seeded-env.sh for the other half.
     for service in app worker; do
         check "$service is told which database to start with" \
             "$(env_of "$service" TICKTZ_DEFAULT_DB_CONNECTION)" "mysql"
@@ -111,13 +112,16 @@ if command -v docker >/dev/null 2>&1 && command -v php >/dev/null 2>&1; then
             "$(env_of "$service" TICKTZ_DEFAULT_SESSION_DRIVER)" "redis"
         check "$service is told to queue to redis" \
             "$(env_of "$service" TICKTZ_DEFAULT_QUEUE_CONNECTION)" "redis"
+        check "$service is told to cache in redis" \
+            "$(env_of "$service" TICKTZ_DEFAULT_CACHE_STORE)" "redis"
 
-        # And none of it under a name Laravel reads. A single one of these
-        # present in the environment is a setting the wizard can no longer
-        # change, silently, for the life of the instance.
-        for key in DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD \
+        # And under no name the application reads. The exception is the
+        # operator's own `.env`, which `env_file` hands over whole — DB_PASSWORD
+        # among it. That one the entrypoint removes at boot, because it cannot
+        # be kept out of here without taking the rest of their file with it.
+        for key in DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME \
                    REDIS_HOST SESSION_DRIVER CACHE_STORE QUEUE_CONNECTION; do
-            check "$service is handed no $key of its own" \
+            check "$service is handed no $key by the compose file" \
                 "$(env_of "$service" "$key")" "MISSING"
         done
     done
@@ -133,33 +137,33 @@ fi
 
 # --- A second run ----------------------------------------------------------
 check "runs again without complaint" "$(run_install "$C")" "ok"
-check "does not change the database password" "$(value_of "$C" TICKTZ_DB_PASSWORD)" "$pw"
-check "does not change the root password" "$(value_of "$C" TICKTZ_DB_ROOT_PASSWORD)" "$root"
+check "does not change the database password" "$(value_of "$C" DB_PASSWORD)" "$pw"
+check "does not change the root password" "$(value_of "$C" DB_ROOT_PASSWORD)" "$root"
 check "says so rather than pretending it did something" \
     "$(grep -c 'already set' "$WORK/out" || true)" "2"
 
 # --- A .env copied from the example ---------------------------------------
-# A key with nothing after it is not a password, and the empty string
+# `DB_PASSWORD=` with nothing after it is not a password, and the empty string
 # is what MySQL would be started with if this were treated as set.
 C="$WORK/copied"
 make_checkout "$C"
-printf '# a comment worth keeping\nAPP_NAME=Ticktz\nTICKTZ_DB_PASSWORD=\nTICKTZ_DB_ROOT_PASSWORD=\nMAIL_HOST=smtp.example.org\n' > "$C/.env"
+printf '# a comment worth keeping\nAPP_NAME=Ticktz\nDB_PASSWORD=\nDB_ROOT_PASSWORD=\nMAIL_HOST=smtp.example.org\n' > "$C/.env"
 check "runs on an .env from the example" "$(run_install "$C")" "ok"
 check "fills in the empty database password" \
-    "$([ -n "$(value_of "$C" TICKTZ_DB_PASSWORD)" ] && echo yes || echo no)" "yes"
+    "$([ -n "$(value_of "$C" DB_PASSWORD)" ] && echo yes || echo no)" "yes"
 check "fills in the empty root password" \
-    "$([ -n "$(value_of "$C" TICKTZ_DB_ROOT_PASSWORD)" ] && echo yes || echo no)" "yes"
+    "$([ -n "$(value_of "$C" DB_ROOT_PASSWORD)" ] && echo yes || echo no)" "yes"
 check "keeps the other settings" "$(value_of "$C" MAIL_HOST)" "smtp.example.org"
 check "keeps the comments" "$(grep -c 'a comment worth keeping' "$C/.env")" "1"
-check "adds no second password line" "$(grep -c '^TICKTZ_DB_PASSWORD=' "$C/.env")" "1"
+check "adds no second DB_PASSWORD line" "$(grep -c '^DB_PASSWORD=' "$C/.env")" "1"
 
 # --- A .env somebody has already set up ------------------------------------
 C="$WORK/existing"
 make_checkout "$C"
-printf 'TICKTZ_DB_PASSWORD=chosen-by-hand\nTICKTZ_DB_ROOT_PASSWORD=also-by-hand\nAPP_URL=https://desk.example.org\n' > "$C/.env"
+printf 'DB_PASSWORD=chosen-by-hand\nDB_ROOT_PASSWORD=also-by-hand\nAPP_URL=https://desk.example.org\n' > "$C/.env"
 check "runs on a configured .env" "$(run_install "$C")" "ok"
-check "never replaces a chosen password" "$(value_of "$C" TICKTZ_DB_PASSWORD)" "chosen-by-hand"
-check "never replaces a chosen root password" "$(value_of "$C" TICKTZ_DB_ROOT_PASSWORD)" "also-by-hand"
+check "never replaces a chosen password" "$(value_of "$C" DB_PASSWORD)" "chosen-by-hand"
+check "never replaces a chosen root password" "$(value_of "$C" DB_ROOT_PASSWORD)" "also-by-hand"
 check "leaves everything else alone" "$(value_of "$C" APP_URL)" "https://desk.example.org"
 
 # --- What it refuses to write ----------------------------------------------
@@ -186,23 +190,6 @@ chmod 640 "$C/.env"
 run_install "$C" >/dev/null
 check "leaves an existing file's permissions alone" \
     "$(stat -c '%a' "$C/.env" 2>/dev/null || stat -f '%Lp' "$C/.env")" "640"
-
-# --- An instance installed before the rename --------------------------------
-# Its bundled MySQL was initialised with DB_PASSWORD, and that data directory
-# keeps the password it was created with. Generating a second one under the new
-# name would hand the application a password its own database has never heard
-# of — a working instance broken by an upgrade.
-C="$WORK/legacy"
-make_checkout "$C"
-printf 'DB_PASSWORD=from-before-the-rename\nDB_ROOT_PASSWORD=root-from-before\n' > "$C/.env"
-check "runs on an .env from before the rename" "$(run_install "$C")" "ok"
-check "generates no second database password" \
-    "$(grep -c '^TICKTZ_DB_PASSWORD=' "$C/.env" || true)" "0"
-check "generates no second root password" \
-    "$(grep -c '^TICKTZ_DB_ROOT_PASSWORD=' "$C/.env" || true)" "0"
-check "leaves the original where it is" "$(value_of "$C" DB_PASSWORD)" "from-before-the-rename"
-check "says why rather than silently doing nothing" \
-    "$(grep -c 'what your database was created with' "$WORK/out" || true)" "2"
 
 # --- Run from somewhere else ------------------------------------------------
 # A deployment runs this by absolute path from wherever cron happens to be.

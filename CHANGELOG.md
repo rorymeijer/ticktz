@@ -27,28 +27,27 @@ entrypoint writes what is missing on first boot and never touches a key that is
 already there, so an operator's settings and the wizard's both win — the
 precedence people expect from a file that is theirs.
 
-**The bundled database's password is renamed.** It is `TICKTZ_DB_PASSWORD` in
-the `.env` beside the compose file, and `TICKTZ_DB_ROOT_PASSWORD` for root.
-Everything in that file reaches the container as an environment variable, so
-under the plain name `DB_PASSWORD` it stayed in the environment and shadowed
-`.env` no matter what else changed. The old names still start the stack, so
-nothing breaks on upgrade.
+**And then taken back out of the environment.** `env_file` hands the operator's
+whole `.env` beside the compose file to the container, so `DB_PASSWORD` arrives
+there too, by a route the compose file cannot control. Having written the
+settings into the instance's `.env`, the entrypoint unsets exactly the keys the
+stack supplied a default for — and nothing else. `MAIL_HOST`, the queue tuning
+and anything else in that file reach the container as before.
 
-A second thing had to move with it. The entrypoint waits for the database
-before migrating, and it was reading `getenv("DB_HOST")` — which, after this
-change, is not set. That does not fail loudly: it waits two minutes for
-127.0.0.1 on every boot, logs one line, and then migrates the right database
-anyway, because the framework reads `.env`. It now resolves settings the way
-the application does, environment first and then `.env`, through
-`docker/php/instance-setting.php` with a test of its own.
+**Nothing to do on upgrade.** No renamed variables, no manual step. The first
+version of this change renamed the bundled password to avoid the same
+shadowing; it needed nested interpolation that older Docker Compose versions
+reject, and it asked for a hand edit that this project's versioning policy says
+a patch must not.
 
-**Upgrading an instance installed before this:** rename those two lines in your
-`.env` and delete any other `DB_*` line in it. Until you do, the bundled
-database keeps working exactly as before and the wizard still cannot be pointed
-elsewhere — the shadowing is coming from your file rather than from the compose
-file. `scripts/install.sh` leaves an existing `DB_PASSWORD` alone rather than
-generating a second one, because the MySQL data directory keeps the password it
-was created with.
+A third thing had to move with it. The entrypoint waits for the database before
+migrating, and it was reading `getenv("DB_HOST")` — which, after this change, is
+not set. That does not fail loudly: it waits two minutes for 127.0.0.1 on every
+boot, logs one line, and then migrates the right database anyway, because the
+framework reads `.env`. It now resolves settings the way the application does,
+environment first and then `.env`, through `docker/php/instance-setting.php`
+with a test of its own.
+
 
 ## 1.1.6
 

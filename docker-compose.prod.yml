@@ -52,11 +52,7 @@ x-app-env: &app-env
   TICKTZ_DEFAULT_DB_PORT: ${DB_PORT:-3306}
   TICKTZ_DEFAULT_DB_DATABASE: ${DB_DATABASE:-ticktz}
   TICKTZ_DEFAULT_DB_USERNAME: ${DB_USERNAME:-ticktz}
-  # The bundled database's password, under a name Laravel does not read. It
-  # reaches the app through `env_file` as well, and under its own name it would
-  # be back in the environment outranking `.env` — the one value the wizard
-  # most needs to be able to change.
-  TICKTZ_DEFAULT_DB_PASSWORD: ${TICKTZ_DB_PASSWORD:-${DB_PASSWORD:?TICKTZ_DB_PASSWORD is required}}
+  TICKTZ_DEFAULT_DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
   TICKTZ_DEFAULT_REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
   TICKTZ_DEFAULT_REDIS_HOST: ${REDIS_HOST:-redis}
   TICKTZ_DEFAULT_REDIS_PORT: ${REDIS_PORT:-6379}
@@ -144,13 +140,8 @@ services:
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-ticktz}
       MYSQL_USER: ${DB_USERNAME:-ticktz}
-      # `TICKTZ_DB_PASSWORD` is the name scripts/install.sh writes. `DB_PASSWORD`
-      # is what instances installed before 1.1.7 have, and still works — it just
-      # also lands in the app's environment, where it outranks anything the
-      # setup wizard writes. Renaming it is what frees an existing instance to
-      # be pointed at a database of its own.
-      MYSQL_PASSWORD: ${TICKTZ_DB_PASSWORD:-${DB_PASSWORD:?TICKTZ_DB_PASSWORD is required}}
-      MYSQL_ROOT_PASSWORD: ${TICKTZ_DB_ROOT_PASSWORD:-${DB_ROOT_PASSWORD:?TICKTZ_DB_ROOT_PASSWORD is required}}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
     volumes:
       - mysql:/var/lib/mysql
       - ./docker/mysql/ticktz.cnf:/etc/mysql/conf.d/ticktz.cnf:ro

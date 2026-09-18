@@ -9,6 +9,13 @@ if [ -x /usr/local/bin/ticktz-place-code ]; then
     /usr/local/bin/ticktz-place-code
 fi
 
+# It has just written the stack's settings into the instance's `.env`. Now take
+# them out of the environment, so that the file is what decides — including the
+# file the setup wizard writes. See docker/php/drop-seeded-env.sh.
+if [ -r "${TICKTZ_DROP_SEEDED_ENV:-/usr/local/bin/ticktz-drop-seeded-env}" ]; then
+    . "${TICKTZ_DROP_SEEDED_ENV:-/usr/local/bin/ticktz-drop-seeded-env}"
+fi
+
 cd "${TICKTZ_APP_ROOT:-/var/www/html}"
 
 # Throw away the compiled config before anything reads it.

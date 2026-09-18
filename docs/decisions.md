@@ -1675,20 +1675,29 @@ starts out containing.
 A prefix rather than a list, so that adding a setting is a line in the compose
 file and no change to the script that reads it.
 
-**The bundled password needed a name of its own.** `env_file: [.env]` hands the
-operator's whole file to the container, so `DB_PASSWORD` was back in the
-environment by a second route no matter what the compose file did. It is
-`TICKTZ_DB_PASSWORD` now. That is not decoration: it is the difference between
-a value the wizard can change and one it cannot, and the two are
-indistinguishable from the screen.
+**The other half, which a prefix alone could not reach.** `env_file: [.env]`
+hands the operator's whole file to the container, so `DB_PASSWORD` is back in
+the environment by a second route whatever the compose file does. The first
+attempt renamed it to `TICKTZ_DB_PASSWORD`, which worked and cost an upgrade
+step — a manual change to a file this project's own versioning policy says a
+patch release must not require. It also needed nested interpolation,
+`${TICKTZ_DB_PASSWORD:-${DB_PASSWORD:?...}}`, which the Compose on this machine
+accepts and the one on the CI runner does not. That second fact is the useful
+one: it would have failed for every self-hoster on an older Compose, and the
+only reason it surfaced is that CI runs an older version than the author's
+laptop.
 
-**What an upgrade cannot do for you.** An existing `.env` still says
-`DB_PASSWORD`, and that file is the operator's. The compose file accepts either
-name so nothing breaks, the bundled database keeps working, and the
-documentation says which two lines to rename. `scripts/install.sh` deliberately
-leaves an old `DB_PASSWORD` alone rather than generating a second password
-under the new name — the MySQL data directory keeps the password it was created
-with, and a fresh one would lock the application out of its own database.
+So the environment is corrected rather than worked around. After the settings
+have been written into `.env`, the entrypoint unsets exactly those the stack
+supplied a default for, and nothing else. No rename, no upgrade step, no
+nesting. What the operator set is not lost — it seeded the file a moment
+earlier, where it is now the starting value rather than the final word; and
+what the stack has no opinion about, from `MAIL_HOST` to their own additions,
+is untouched.
+
+`APP_ENV` stays an environment variable and is deliberately not among the
+seeded set. This stack is production whatever a file says, and a `.env` copied
+from a developer's machine must not be able to turn debug output back on.
 
 **The general shape, which is the part worth keeping.** Configuration that an
 application may later rewrite about itself must not be delivered through a

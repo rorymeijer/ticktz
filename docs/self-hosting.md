@@ -83,17 +83,11 @@ brings the stack up.
 The script is a convenience, not a requirement. The equivalent is:
 
 ```bash
-printf 'TICKTZ_DB_PASSWORD=%s\nTICKTZ_DB_ROOT_PASSWORD=%s\n' \
+printf 'DB_PASSWORD=%s\nDB_ROOT_PASSWORD=%s\n' \
   "$(openssl rand -hex 24)" "$(openssl rand -hex 24)" > .env
 chmod 600 .env
 docker compose -f docker-compose.prod.yml up -d --build --wait
 ```
-
-The prefix matters. Everything in this file is handed to the container as an
-environment variable, and Laravel's dotenv never lets `.env` replace one of
-those. Named `DB_PASSWORD`, the bundled database's password would outrank
-whatever the setup wizard writes — which is exactly the value somebody pointing
-the instance at a database of their own needs to change.
 
 Two lines really is enough. Which database to speak to, which Redis, and which
 drivers to use for sessions, cache and queues are properties of this compose
@@ -193,11 +187,9 @@ The one question worth thinking about, and the wizard asks it plainly:
   the bundled database's details to the container as environment variables, and
   Laravel's dotenv never replaces one of those, so the wizard migrated your
   database, created the administrator in it, and every request afterwards
-  reconnected to the bundled one. **An instance installed before 1.1.7 needs one
-  change to its `.env`** beside the compose file — rename `DB_PASSWORD` to
-  `TICKTZ_DB_PASSWORD` and `DB_ROOT_PASSWORD` to `TICKTZ_DB_ROOT_PASSWORD`, and
-  remove any other `DB_*` line — or the same shadowing continues. Nothing else
-  changes: the bundled database keeps the password it already has.
+  reconnected to the bundled one. Nothing to do on upgrade — the entrypoint
+  now writes those settings into the instance's `.env` and then takes them out
+  of the environment, so the file decides.
 
 If you choose your own, **create the database first**. Ticktz will not create
 it, because a process that can create databases is a process with more rights
