@@ -100,6 +100,23 @@ return [
         'more_hint' => 'Typ verder om de lijst te verkleinen.',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | De handleiding
+    |--------------------------------------------------------------------------
+    */
+    'manual' => [
+        'title' => 'Handleiding',
+        'subtitle' => 'Hoe Ticktz werkt, en hoe je het gebruikt.',
+        'explain_this_page' => 'Leg deze pagina uit',
+        'open_full' => 'Open de volledige handleiding',
+        'loading' => 'Hoofdstuk ophalen…',
+        'failed' => 'Dat hoofdstuk kon niet worden opgehaald. Probeer het zo nog eens.',
+        'empty' => 'Er zijn nog geen hoofdstukken die je kunt lezen.',
+        'back' => 'Alle hoofdstukken',
+        'contents' => 'Hoofdstukken',
+    ],
+
     'errors' => [
         'forbidden' => 'Je hebt geen rechten voor deze actie.',
         'not_found' => 'Het gevraagde item is niet gevonden.',

@@ -6,6 +6,7 @@ import { IconChevronDown, IconMenu, IconX } from '@/Components/Icons';
 import { LocaleSwitcher } from '@/Components/Nav/LocaleSwitcher';
 import { Avatar, Dropdown, DropdownDivider, DropdownLink, FlashMessages } from '@/Components/UI';
 import { useAuth } from '@/hooks/useAuth';
+import { HelpButton } from '@/Components/UI/HelpButton';
 import { useTranslations } from '@/hooks/useTranslations';
 import { cn } from '@/lib/cn';
 import { agentNavigation, isActive } from '@/lib/navigation';
@@ -133,6 +134,7 @@ export default function AppLayout({
 
                         <div className="flex items-center gap-1.5">
                             {actions}
+                            <HelpButton />
                             <LocaleSwitcher />
                             {user ? (
                                 /* The avatar is decorative and the chevron is an icon, so

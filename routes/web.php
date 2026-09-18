@@ -6,6 +6,7 @@ use App\Http\Controllers\Approvals\ApprovalController;
 use App\Http\Controllers\Approvals\ApprovalTokenController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ManualController;
 use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Reports\ReportController;
@@ -107,6 +108,14 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/people', [PeopleController::class, 'index'])
         ->middleware('throttle:120,1')
         ->name('people.index');
+
+    // The manual, and the `?` that opens it at the right place without
+    // leaving the screen somebody is stuck on. Behind `auth` and nothing else:
+    // every chapter gates itself on the permission its subject needs, so the
+    // table of contents is already the part of Ticktz this reader can reach.
+    Route::get('/manual', [ManualController::class, 'index'])->name('manual.index');
+    Route::get('/manual/{slug}', [ManualController::class, 'show'])->name('manual.show');
+    Route::get('/help', [ManualController::class, 'panel'])->name('manual.panel');
 
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 

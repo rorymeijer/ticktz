@@ -50,6 +50,8 @@ export type SharedProps = {
     flash: Flash;
     /** Approvals waiting on the signed-in user, for the nav badge. */
     approvals_waiting: number;
+    /** Which page components have a manual chapter, so the `?` can decide whether to exist. */
+    help: { pages: string[] };
     ziggy: ZiggyConfig & { location: string };
     errors: Record<string, string>;
 };

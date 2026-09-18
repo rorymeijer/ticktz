@@ -99,6 +99,23 @@ return [
         'more_hint' => 'Keep typing to narrow this down.',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | The manual
+    |--------------------------------------------------------------------------
+    */
+    'manual' => [
+        'title' => 'Manual',
+        'subtitle' => 'How Ticktz works, and how to use it.',
+        'explain_this_page' => 'Explain this page',
+        'open_full' => 'Open the full manual',
+        'loading' => 'Fetching the chapter…',
+        'failed' => 'That chapter could not be fetched. Try again in a moment.',
+        'empty' => 'There are no chapters you can read yet.',
+        'back' => 'All chapters',
+        'contents' => 'Chapters',
+    ],
+
     'errors' => [
         'forbidden' => 'You do not have permission to perform this action.',
         'not_found' => 'The requested item could not be found.',

@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Models\ApprovalDecision;
 use App\Models\ApprovalRequest;
+use App\Support\Manual;
 use App\Support\UiTranslations;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -49,6 +50,13 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => fn () => $request->user()?->toInertiaArray(),
             ],
+
+            // Which screens have a chapter behind the `?`. Shared rather than
+            // fetched, so the button can decide whether to exist at all — a
+            // `?` that opens and admits there is nothing written is worse than
+            // no `?`. It is a short list of strings and it never changes at
+            // runtime, so it costs a line on the wire and no query.
+            'help' => ['pages' => Manual::coveredPages()],
 
             'locale' => $locale,
             'locales' => collect(config('ticktz.locales'))
