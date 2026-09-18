@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Asset;
 use App\Models\Queue;
 use App\Models\Team;
 use App\Models\Ticket;
@@ -218,4 +219,44 @@ it('insists on being told which set is being searched', function (): void {
 
     $this->actingAs($agent)->getJson('/people')->assertStatus(422);
     $this->actingAs($agent)->getJson('/people?scope=everybody')->assertStatus(422);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Two endpoints that had no way to be reached
+|--------------------------------------------------------------------------
+|
+| Both of these were built, validated and documented, and neither had anything
+| on a screen that called them. A feature nobody can reach is a feature that
+| does not exist, however well it is tested.
+*/
+
+it('puts somebody on a ticket as a watcher', function (): void {
+    $agent = makeAdmin();
+    $watcher = makeRequester();
+    $ticket = Ticket::factory()->create();
+
+    $this->actingAs($agent)
+        ->post("/agent/tickets/{$ticket->key}/watchers", ['user_id' => $watcher->getKey()])
+        ->assertSessionHasNoErrors();
+
+    expect($ticket->fresh()->watchers->pluck('id'))->toContain($watcher->getKey());
+});
+
+it('records who holds an asset', function (): void {
+    $agent = makeAdmin();
+    $holder = makeRequester();
+    $asset = Asset::factory()->create(['assigned_to' => null]);
+
+    $this->actingAs($agent)
+        ->put("/agent/assets/{$asset->asset_tag}", [
+            'asset_type_id' => $asset->asset_type_id,
+            'asset_tag' => $asset->asset_tag,
+            'name' => $asset->name,
+            'status' => $asset->status,
+            'assigned_to' => $holder->getKey(),
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($asset->fresh()->assigned_to)->toBe($holder->getKey());
 });

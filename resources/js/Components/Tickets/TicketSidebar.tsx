@@ -252,6 +252,32 @@ export function TicketSidebar({
                             ))}
                         </ul>
                     )}
+
+                    {/* The endpoint for this has existed since watchers did;
+                        there has never been anything on the screen that reaches
+                        it, so the only way to put somebody on a ticket was the
+                        API. Anybody with an account, because the person who
+                        needs to follow a ticket is as often the requester's
+                        manager as another agent. */}
+                    {can.update ? (
+                        <div className="mt-3">
+                            <PersonPicker
+                                value={null}
+                                query={{ scope: 'user' }}
+                                exclude={ticket.watchers.map((watcher) => watcher.id)}
+                                placeholder={t('tickets.actions.add_watcher')}
+                                onChange={(person) => {
+                                    if (!person) return;
+
+                                    router.post(
+                                        `/agent/tickets/${ticket.key}/watchers`,
+                                        { user_id: person.id },
+                                        { preserveScroll: true },
+                                    );
+                                }}
+                            />
+                        </div>
+                    ) : null}
                 </CardBody>
             </Card>
 
