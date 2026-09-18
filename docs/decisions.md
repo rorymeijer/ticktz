@@ -1705,3 +1705,123 @@ channel of higher precedence than the one it writes to. Environment variables
 are that channel. They are right for what the container *is* — `APP_ENV` stays
 one, because this stack is production whatever a file claims — and wrong for
 everything the instance is allowed to decide.
+
+---
+
+## D71 — Emulating a compiler is not a build strategy
+
+A release took forty-five minutes. Forty-one of them were one step: `Build and
+push`, in a single job that built `linux/amd64` and `linux/arm64` together
+through QEMU on an Intel runner.
+
+That job's log looks the same whether it is working or dead. It stops on
+`docker-php-ext-install` — a dozen PHP extensions compiled from C — and the only
+sign of life is a timestamp counting upward beside a line about `ld`. Somebody
+watching it cancels, reasonably, at thirty minutes. Two releases were cancelled
+that way, which is the actual cost: not the minutes, but that cutting a release
+became a thing you avoided doing.
+
+**Emulation is the wrong tool for a compile.** QEMU translates instruction by
+instruction, which is fine for running a finished binary and pathological for
+producing one — the work is nothing but instructions. A ten-second `apk add` is
+still ten seconds; a two-minute compile is forty.
+
+GitHub gives public repositories arm64 runners at no cost, so the emulation was
+buying nothing but the convenience of a single job. Each platform is now built
+by a processor that speaks its own instruction set, and the two run at the same
+time, so a release costs the slower of them rather than the sum of both. About
+eight minutes.
+
+**The part that needed care is publishing.** Two jobs cannot each push the same
+tag: whichever finished second would replace the first, and `:latest` would be
+one architecture. So neither pushes a tag at all. Each pushes **by digest** —
+content-addressed, unreachable by name — and a third job writes a manifest list
+over both digests and puts the tags on that. There is no moment at which
+`:latest` exists and is only half the platforms it claims.
+
+The digests travel between jobs as empty files named after themselves, which is
+the smallest thing that carries a digest through an artifact.
+
+**Two smaller things came out of the same read.** The build caches are scoped per
+architecture, because one shared scope means the second build evicts the first's
+layers and neither ever hits again. And every job now checks out the version
+being released rather than the ref the run started from: on a `workflow_dispatch`
+the ref is a branch, so rebuilding an old tag built the branch's code — and the
+semver tag patterns, handed a branch name, produced no tags at all. A release
+reachable only by digest, from a dispatch that reported success.
+
+**The general shape.** A cross-architecture build has three kinds of stage in
+it: ones that produce bytes with an instruction set, ones that produce bytes
+without, and ones that only move files. Only the first has any reason to run on
+the target architecture. The Dockerfile's `vendor` and `assets` stages are
+pinned to `$BUILDPLATFORM` accordingly — a `vendor` tree and a JavaScript bundle
+are the same files whoever builds them. On the runners above that pin is a
+no-op, since the two platforms are already the same. It is there for the laptop
+cross-building one image, and for the day the arm64 runners are unavailable and
+the fallback is QEMU again: then it is one stage emulated instead of three.
+
+---
+
+## D72 — A rule four doors keep, or a dropdown
+
+A ticket that belongs to a team can only be held by somebody on that team.
+
+The obvious way to build that is to leave everyone else out of the dropdown,
+and it is not a rule — it is a shorter list. An assignment arrives from four
+places: the assign action in the agent console, the ticket form, the public
+API, and an automation rule. One of them has a dropdown.
+
+So it is one service, `Assignability`, and every door asks it. The service
+answers three questions from one place: who may hold this ticket (a query, so
+the picker can search inside it and the validator can ask about one person
+without loading everybody), may this person hold it, and — when not — which of
+the two halves is wrong. Two sentences rather than one, because "you cannot
+assign that" leaves the operator guessing whether the problem is the person or
+the ticket.
+
+**A ticket with no team is assignable to anybody.** Refusing would be
+defensible on paper and unusable: a desk routes plenty of work with no team on
+it — an e-mail that matched no queue, a ticket typed straight in — and none of
+it should be impossible to hand to someone.
+
+**The team is read from the attributes, not from a loaded relation.** A ticket
+carries its own `team_id` and inherits its queue's when it has none, which is
+already how `Ticket::visibleTo` decides who can see it. The catch is that the
+code asking the question is sometimes the code doing the moving, so a `queue`
+relation loaded a moment ago answers about the queue the ticket used to be in.
+A ticket with its own team answers with no query at all, which is most of them.
+
+**Creation had to be included or the rule has a hole with a sign on it.** If the
+check lives only on the assign action, the way to give a ticket to somebody
+outside the team is to do it while creating the ticket. Hence the second
+entry point that takes a `team_id` and a `queue_id` rather than a ticket.
+
+**`claim` was the same hole, found while wiring this up.** Do not hand it to
+yourself — take it. It went through no assignment check at all.
+
+### Moving a ticket out from under the person holding it
+
+The case with no comfortable answer: a ticket assigned to somebody on team A is
+moved to team B.
+
+- Refuse the move → routine triage becomes two steps, unassign then move, and
+  the operator has to work out which of the two the error was about.
+- Allow it and leave the ticket assigned → the invariant holds only at the
+  moment of assignment, which is another way of saying it does not hold.
+- Let the move win and release the assignment.
+
+The third. A team move is a deliberate act and the assignment is the part that
+no longer makes sense, so the assignment goes. It goes *audibly*: through the
+same path as any other unassignment, so it is in the audit trail, it notifies,
+and the API response comes back with `assignee` null rather than the operator
+finding out later.
+
+**Only when the move is what the update is doing.** An installation upgrading
+into this rule has tickets that already break it, and editing the subject of
+one is not the moment to take it off whoever has been working on it all week.
+The condition is that `team_id` or `queue_id` is dirty — not that the current
+state is invalid.
+
+`create` is deliberately not given the same clearing. Everything that files a
+ticket validates first, so a mismatch there is a programming error, and
+silently fixing one is how it stays unfound.

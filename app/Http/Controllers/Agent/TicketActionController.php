@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\TicketLink;
 use App\Models\TicketStatus;
 use App\Models\User;
+use App\Services\Tickets\Assignability;
 use App\Services\Tickets\TicketService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,10 +38,12 @@ class TicketActionController extends Controller
 
         $assignee = $data['assignee_id'] ? User::query()->find($data['assignee_id']) : null;
 
-        if ($assignee && ! $assignee->isAgent()) {
-            throw ValidationException::withMessages([
-                'assignee_id' => __('tickets.errors.assignee_not_agent'),
-            ]);
+        // Asked of Assignability rather than checked here, because the same
+        // question is asked when a ticket is created, updated, changed through
+        // the API and assigned by an automation rule. A rule only some of
+        // those enforce is not a rule.
+        if ($assignee && ($refusal = Assignability::refusalFor($ticket, $assignee)) !== null) {
+            throw ValidationException::withMessages(['assignee_id' => $refusal]);
         }
 
         $this->tickets->assign($ticket, $assignee, $request->user());
@@ -54,6 +57,13 @@ class TicketActionController extends Controller
     public function claim(Request $request, Ticket $ticket): RedirectResponse
     {
         $this->authorize('assign', $ticket);
+
+        // The same rule as handing it to somebody else. Taking a ticket is
+        // still assigning it, and a claim button that skipped the check would
+        // be the way around it that everybody finds first.
+        if (($refusal = Assignability::refusalFor($ticket, $request->user())) !== null) {
+            throw ValidationException::withMessages(['assignee_id' => $refusal]);
+        }
 
         $this->tickets->assign($ticket, $request->user(), $request->user());
 

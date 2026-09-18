@@ -185,7 +185,13 @@ paths:
                 queue_id: { type: integer, nullable: true }
                 team_id: { type: integer, nullable: true }
                 request_type_id: { type: integer, nullable: true }
-                assignee_id: { type: integer, nullable: true }
+                assignee_id:
+                  type: integer
+                  nullable: true
+                  description: >-
+                    Must be an active agent on the ticket's team — its own
+                    `team_id`, or the team of its `queue_id` when it has none.
+                    A ticket with no team may go to any active agent.
                 label_ids:
                   type: array
                   maxItems: 20
@@ -250,6 +256,10 @@ paths:
         Status is not editable here; it has to respect the workflow, so it has
         its own endpoint. Setting `assignee_id` additionally needs the
         `tickets.assign` permission.
+
+        Moving a ticket to another team releases an assignee who is not on
+        that team: the response comes back with `assignee` null, and the
+        change is in the ticket's audit trail like any other unassignment.
       security:
         - bearerAuth: [tickets.write]
       requestBody:
@@ -265,7 +275,13 @@ paths:
                 queue_id: { type: integer, nullable: true }
                 team_id: { type: integer, nullable: true }
                 organization_id: { type: integer, nullable: true }
-                assignee_id: { type: integer, nullable: true }
+                assignee_id:
+                  type: integer
+                  nullable: true
+                  description: >-
+                    Must be an active agent on the team the ticket will belong
+                    to once this request is applied — so a call may move a
+                    ticket and assign it in one go.
                 label_ids:
                   type: array
                   items: { type: integer }

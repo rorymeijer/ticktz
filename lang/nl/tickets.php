@@ -173,6 +173,7 @@ return [
         'comment_required' => 'Deze statuswijziging vereist een toelichting.',
         'assignee_required' => 'Wijs het ticket toe voordat je naar deze status gaat.',
         'assignee_not_agent' => 'Alleen agents kunnen tickets toegewezen krijgen.',
+        'assignee_not_in_team' => 'Dit ticket hoort bij :team en kan alleen worden toegewezen aan iemand uit dat team.',
         'link_not_found' => 'Geen ticket met dat nummer.',
         'link_self' => 'Een ticket kan niet aan zichzelf gekoppeld worden.',
     ],

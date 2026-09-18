@@ -14,6 +14,7 @@ use App\Models\Ticket;
 use App\Models\TicketStatus;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Tickets\Assignability;
 use App\Services\Tickets\TicketNumberGenerator;
 use App\Services\Tickets\TicketService;
 use Illuminate\Support\Arr;
@@ -134,6 +135,14 @@ class ActionRunner
 
         if ((int) $ticket->assignee_id === (int) $user->getKey()) {
             return ['ok' => true, 'detail' => 'already assigned'];
+        }
+
+        // The same team rule the console and the API enforce. A rule three
+        // doors keep and the fourth does not is a way in, and this is the door
+        // nobody is watching: an automation assigns at three in the morning,
+        // and the trail says a person did not.
+        if (! Assignability::allows($ticket, $user)) {
+            return ['ok' => false, 'detail' => 'not on this ticket\'s team'];
         }
 
         $tickets->assign($ticket, $user, null);

@@ -9,6 +9,55 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
+## Unreleased
+
+**A ticket can only be held by somebody on its team.** Its own team, or its
+queue's when it has none; a ticket with no team at all still goes to any agent,
+because plenty of work arrives without one. Enforced on the server at all four
+places an assignment can come from — the assign action, the ticket form, the
+API and an automation rule — rather than by leaving people out of a dropdown,
+which only one of the four has.
+
+Two of those four were open. Creating a ticket already assigned skipped the
+check entirely, and so did **claim**: the difference between being handed a
+ticket and taking it was the difference between the rule applying and not.
+
+**Moving a ticket to another team releases an assignee who is not on it.**
+Refusing the move would make routine triage a two-step job. The release is
+audible — the audit trail, the notification and the API response all show it —
+and it happens only when the move is what you are doing, so editing the subject
+of an older ticket that already breaks the rule leaves it alone.
+
+**A release takes eight minutes instead of forty-five.** Nothing about the
+application changed; this is how it is built.
+
+The container image was built for both architectures in one job, with
+`linux/arm64` running through QEMU on an Intel runner. The runtime stage
+compiles a dozen PHP extensions from C, and emulating a compiler means
+translating every instruction of it: forty-one of the forty-five minutes were
+that one step, and a log frozen on `docker-php-ext-install` for half an hour is
+indistinguishable from a build that has died. Two releases were cancelled on
+that suspicion.
+
+Each architecture is now built on a runner of its own architecture — GitHub
+provides arm64 runners free to public repositories — and the two run side by
+side, so a release costs the slower rather than the sum. Neither pushes a tag:
+they push by digest, and a final job writes one manifest list over both and tags
+that. `:latest` therefore never exists as one architecture while the other is
+still building.
+
+Two corrections came with it. Build caches are scoped per architecture, so the
+second build no longer evicts the first's layers. And every job now checks out
+the version being released rather than the ref the run started from: rebuilding
+an old tag from **Run workflow** used to build the branch's code, and the image
+tags — derived from a branch name by a semver pattern — came out empty, giving
+a release whose image was reachable only by digest.
+
+A run started from **Run workflow** also no longer re-drafts the release it
+attaches to. That is how a release whose archive never uploaded gets its
+archive, and doing it by retracting the release from every instance checking for
+updates was the wrong trade.
+
 ## 1.1.7
 
 **Your own database now works on the Docker stack.** Choosing it in the setup

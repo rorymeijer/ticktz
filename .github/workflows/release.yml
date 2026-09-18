@@ -20,6 +20,13 @@ permissions:
   id-token: write
   attestations: write
 
+# The version being released, named once. On a tag push it is the tag; on a
+# `workflow_dispatch` it is what was typed into the box. Every job checks out
+# this ref and every tag is derived from it, so a re-run of an old release
+# cannot build one version's code and label it another's.
+env:
+  TICKTZ_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
 jobs:
   verify:
     name: Verify before publishing
@@ -48,6 +55,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TICKTZ_TAG }}
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -82,20 +91,123 @@ jobs:
         # built from is the kind of thing nobody notices until they are trying
         # to work out which build is in production.
         run: |
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          TAG="$TICKTZ_TAG"
           CODE="v$(grep -oP "(?<=TICKTZ_VERSION', ')[^']+" config/ticktz.php)"
           echo "tag=${TAG} code=${CODE}"
           test "${TAG}" = "${CODE}"
 
+  # Two jobs, one per architecture, each on a runner of that architecture.
+  #
+  # This used to be one job building both platforms through QEMU, and it was
+  # the whole release: forty-one minutes of a forty-five minute run. Nothing
+  # about it was stuck — `docker-php-ext-install` compiles a dozen extensions
+  # from C, and every instruction of that compile was being emulated
+  # instruction by instruction on an Intel runner.
+  #
+  # GitHub gives public repositories arm64 runners at no cost, so the
+  # emulation was only ever buying us the convenience of a single job. Each
+  # platform is now compiled by a processor that speaks its own instruction
+  # set, and the two run at the same time rather than one after the other, so
+  # the release costs the slower of them instead of the sum.
+  #
+  # They push by digest and carry no tag: an image nobody can pull by name is
+  # not published, and `latest` moves exactly once, in the job below, when
+  # both architectures exist. A half-published multi-arch tag — amd64 pushed,
+  # arm64 still building — is the failure this shape makes impossible.
   image:
-    name: Build and publish the image
+    name: Build the image (${{ matrix.platform }})
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      # Both results are wanted even when one fails: knowing that arm64 broke
+      # and amd64 did not is most of the diagnosis.
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TICKTZ_TAG }}
 
-      - uses: docker/setup-qemu-action@v3
+      # No setup-qemu-action. That is the point of this job.
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Sign in to the registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Labels only. The tags belong to the manifest, which is the thing an
+      # operator actually pulls.
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+
+      - name: A name for this platform that a file can have
+        id: platform
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: echo "slug=${PLATFORM//\//-}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,push=true
+          # A cache per architecture. Sharing one scope between them means the
+          # second build evicts the first's layers and neither ever hits.
+          cache-from: type=gha,scope=${{ steps.platform.outputs.slug }}
+          cache-to: type=gha,mode=max,scope=${{ steps.platform.outputs.slug }}
+
+      # An empty file named after the digest: the manifest job needs the
+      # digests and nothing else, and this is the smallest thing that carries
+      # one between jobs.
+      - name: Hand the digest to the manifest job
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ steps.platform.outputs.slug }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Where the two builds become one name.
+  #
+  # `imagetools create` writes a manifest list pointing at both digests, which
+  # is what makes `docker pull ghcr.io/…/ticktz:1.2.3` fetch the right one on
+  # an Ampere VM and on an Intel server without either knowing the other
+  # exists. Seconds, because nothing is rebuilt: the layers are already in the
+  # registry and this only writes the index above them.
+  manifest:
+    name: Publish the image tags
+    needs: image
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
       - uses: docker/setup-buildx-action@v3
 
       - name: Sign in to the registry
@@ -111,25 +223,26 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           # 1.2.3, 1.2, 1 and latest, so an operator can pin as tightly as
           # they want to. `latest` only moves for a real release.
+          #
+          # Each reads the tag explicitly rather than letting the action infer
+          # it from `github.ref`: on a `workflow_dispatch` the ref is a branch,
+          # and a semver pattern given a branch name produces no tag at all —
+          # a release that publishes an image reachable only by digest.
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=semver,pattern={{version}},value=${{ env.TICKTZ_TAG }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.TICKTZ_TAG }}
+            type=semver,pattern={{major}},value=${{ env.TICKTZ_TAG }}
+            type=raw,value=latest,enable=${{ !contains(env.TICKTZ_TAG, '-') }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: runtime
-          # arm64 as well as amd64: a self-hosted service desk lands on an
-          # Apple laptop or an Ampere VM as often as on an Intel server.
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Join the two builds under one name
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf 'ghcr.io/${{ github.repository }}@sha256:%s ' *)
+
+      - name: Show what was published
+        run: docker buildx imagetools inspect "ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version }}"
 
   bundle:
     name: Build the installable archive
@@ -139,7 +252,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          ref: ${{ env.TICKTZ_TAG }}
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -167,11 +280,9 @@ jobs:
           npm run build
 
       - name: Assemble the tree
-        env:
-          TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
-          VERSION="${TAG#v}"
+          VERSION="${TICKTZ_TAG#v}"
           STAGE="dist/ticktz"
 
           mkdir -p "$STAGE"
@@ -251,7 +362,7 @@ jobs:
 
   release:
     name: Draft the release notes
-    needs: [image, bundle]
+    needs: [manifest, bundle]
     runs-on: ubuntu-latest
 
     steps:
@@ -267,7 +378,7 @@ jobs:
       - name: Create the GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          tag_name: ${{ env.TICKTZ_TAG }}
           generate_release_notes: true
           # The two files an in-place upgrade reads: the application, and the
           # digest it is checked against. An update screen that cannot find
@@ -278,12 +389,20 @@ jobs:
           # Drafted rather than published: the generated notes are a commit
           # list, and a release worth tagging is worth a paragraph written by
           # a person.
-          draft: true
+          #
+          # Except on a re-run, which is how a release whose archive never
+          # attached gets its archive. That release is usually already
+          # published, and this action updates the existing one rather than
+          # refusing — so `draft: true` there would retract a live release and
+          # stop every instance seeing the update, to attach a file to it.
+          # A `workflow_dispatch` is a rebuild of something that exists; a tag
+          # push is a new release. Write the notes before dispatching.
+          draft: ${{ github.event_name != 'workflow_dispatch' }}
           body: |
             ## Container image
 
             ```
-            docker pull ghcr.io/${{ github.repository }}:${{ github.event.inputs.tag || github.ref_name }}
+            docker pull ghcr.io/${{ github.repository }}:${{ env.TICKTZ_TAG }}
             ```
 
             Built for `linux/amd64` and `linux/arm64`.

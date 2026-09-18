@@ -173,6 +173,7 @@ return [
         'comment_required' => 'This status change requires a comment.',
         'assignee_required' => 'Assign the ticket before moving it to this status.',
         'assignee_not_agent' => 'Only agents can be assigned tickets.',
+        'assignee_not_in_team' => 'This ticket belongs to :team, and can only be assigned to somebody on that team.',
         'link_not_found' => 'No ticket with that key.',
         'link_self' => 'A ticket cannot be linked to itself.',
     ],
