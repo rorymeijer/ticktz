@@ -9,21 +9,7 @@ self-hosted application that mostly means: a major version may require a manual
 step during an upgrade, a minor version never does, and a patch never changes
 the database.
 
-## Unreleased
-
-**A release is about six minutes rather than eight.** The test suite in the
-release runs the same `pest` and `composer audit` that CI has usually already
-run twice — on the pull request, and on `main` after the merge — and its only
-step CI does not also run is the tag-versus-version check.
-
-It is still there, because a tag can be pushed at any commit and this is then
-the only thing between that commit and everybody's `docker pull`. It just no
-longer holds the image builds up: they start beside it and push by digest under
-no tag, so nothing they produce is reachable by name until the job that applies
-the tags, which does wait for the suite. A failing suite leaves a few untagged
-blobs in the registry and nothing anybody can pull.
-
-## Unreleased
+## 1.2.0
 
 **A user manual, and a `?` that opens it at the page you are on.** Twenty
 chapters in English and Dutch, covering both sides of Ticktz — raising and
@@ -61,8 +47,54 @@ is what describes the request; what does not is everything recording the
 original being handled. Filing the copy as another type moves it to that type's
 queue, team and workflow, and drops answers the new form does not ask for.
 
-**Searchable person pickers everywhere somebody is chosen**, and the staff
-directory is off the forms that used to carry it.
+**Searchable person pickers everywhere somebody is chosen.** Every picker was a
+dropdown filled from a list rendered into the page: the first five hundred
+active agents, or the first hundred users, with the rest dropped and nothing
+saying so. On a desk of forty that is invisible; on a desk of four hundred,
+half the staff simply cannot be chosen.
+
+A list assembled by the page also could not tell the truth about who may hold a
+ticket, so the assignee dropdown offered every agent on the desk while the
+server refused anybody off the ticket's team — the rule reached the operator as
+an error under a name they had just been offered.
+
+The pickers search the server instead, out of the set it will actually accept.
+Team membership, a user's manager, approval steps and automation rules stop
+carrying the staff directory too. A team's leads and an approval step's teams
+and roles deliberately stay checkbox lists: the rule is the size of the pool,
+not the kind of thing in it.
+
+**Two things that were built and unreachable.** Adding a watcher to a ticket
+had an endpoint, a permission and a translated label in both languages, and
+nothing on any screen that called it — so putting somebody on a ticket meant
+the API. Recording who holds an asset was validated by the server and shown on
+the asset page, with no field anywhere to set it, on a register whose entire
+point is knowing who has what.
+
+**The agent console shows the answers the requester gave.** A custom field
+exists so the person who has to act on a request has the information without
+asking for it. The portal collected the answers, stored them and showed them
+back to the customer — and the console never rendered them, so the whole
+feature was half a feature.
+
+**A ticket held by a deactivated agent no longer reads "Unassigned".** The
+assignee control was a dropdown whose option list was filtered to active
+agents. Deactivate somebody who is holding tickets and no option matches any
+more, so the browser falls back to rendering the first one — which was
+"Unassigned". Every ticket they held read as unassigned while still being
+assigned to them.
+
+**A release is about six minutes rather than eight.** The test suite in the
+release runs the same `pest` and `composer audit` that CI has usually already
+run twice — on the pull request, and on `main` after the merge — and its only
+step CI does not also run is the tag-versus-version check.
+
+It is still there, because a tag can be pushed at any commit and this is then
+the only thing between that commit and everybody's `docker pull`. It just no
+longer holds the image builds up: they start beside it and push by digest under
+no tag, so nothing they produce is reachable by name until the job that applies
+the tags, which does wait for the suite. A failing suite leaves a few untagged
+blobs in the registry and nothing anybody can pull.
 
 ## 1.1.8
 
