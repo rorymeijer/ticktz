@@ -69,6 +69,7 @@ rule does nothing; it never reassigns every ticket on the desk.
 | Change the status to | Refused if the workflow does not allow it |
 | Add / remove the label | |
 | Post a comment | Internal by default; supports placeholders |
+| Send a reply template | One of the desk's shared templates; the template decides the wording and whether it reaches the requester |
 | Add a watcher | Which sends them the usual notification |
 | Call a webhook | https only, queued, optionally signed |
 
@@ -82,11 +83,33 @@ a ticket that reassigned itself at three in the morning says which rule did it.
 ### Comment placeholders
 
 ```
-{{ ticket.key }}  {{ ticket.subject }}  {{ ticket.status }}
-{{ ticket.priority }}  {{ requester.name }}  {{ assignee.name }}
+{{ ticket.key }}  {{ ticket.subject }}  {{ ticket.status }}  {{ ticket.priority }}
+{{ ticket.queue }}  {{ ticket.team }}  {{ ticket.portal_url }}
+{{ requester.name }}  {{ requester.first_name }}  {{ requester.email }}
+{{ requester.organization }}  {{ assignee.name }}  {{ assignee.first_name }}
+{{ agent.name }}  {{ agent.first_name }}  {{ app.name }}
 ```
 
 Anything else renders as nothing. Substitution, never evaluation.
+
+`agent.*` is whoever is sending. A rule is nobody, so those render as nothing
+when an automation sends the text — do not sign an automated reply with them.
+
+The same vocabulary fills a reply template, from the same class
+(`App\Services\Tickets\TicketPlaceholders`). One renderer is the point: the
+words an agent inserts by hand and the words a rule sends must not be able to
+differ.
+
+### Reply templates
+
+`Send a reply template` names a row in **Administration → Reply templates** —
+the same list the agent's reply box reads. Prefer it over `Post a comment` for
+anything an agent also sends by hand, so the wording exists once.
+
+The template, not the rule, decides whether the text is a reply or an internal
+note. A rule may only send a template that is active and either unscoped or on
+the ticket's own team; anything else is reported in the run log and nothing is
+sent. See [reply-templates.md](reply-templates.md).
 
 ### Webhooks
 

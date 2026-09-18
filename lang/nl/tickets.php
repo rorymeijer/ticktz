@@ -99,6 +99,11 @@ return [
         'unlink' => 'Koppeling verwijderen',
         'change_status' => 'Status wijzigen',
         'attach' => 'Bestanden toevoegen',
+        'insert_template' => 'Sjabloon gebruiken',
+    ],
+
+    'templates' => [
+        'heading' => 'Antwoordsjablonen',
     ],
 
     'timeline' => [

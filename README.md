@@ -75,6 +75,7 @@ curl -s http://localhost:8080/health | jq
 | [E-mail](docs/email.md) | Mailboxes, notification templates, email-to-ticket |
 | [Service levels](docs/sla.md) | Calendars, policies, targets, escalations |
 | [Automation](docs/automation.md) | Rules, conditions, actions, webhooks |
+| [Reply templates](docs/reply-templates.md) | Canned replies, shared by the reply box and the automation rules |
 | [Knowledge base](docs/kb.md) | Articles, versions, visibility, search, suggestions |
 | [Approvals](docs/approvals.md) | Workflows, steps, the transition gate, deciding by e-mail |
 | [Assets](docs/assets.md) | The register, relations, linking to tickets, CSV import |

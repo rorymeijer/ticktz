@@ -99,6 +99,11 @@ return [
         'unlink' => 'Remove link',
         'change_status' => 'Change status',
         'attach' => 'Attach files',
+        'insert_template' => 'Use a template',
+    ],
+
+    'templates' => [
+        'heading' => 'Reply templates',
     ],
 
     'timeline' => [

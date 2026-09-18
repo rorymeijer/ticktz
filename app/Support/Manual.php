@@ -103,6 +103,10 @@ final class Manual
             'permission' => 'automation.manage',
             'pages' => ['Admin/Automation/Index', 'Admin/Webhooks/Index'],
         ],
+        'admin-reply-templates' => [
+            'permission' => 'templates.manage',
+            'pages' => ['Admin/ReplyTemplates/Index'],
+        ],
         'admin-approvals' => [
             'permission' => 'approvals.manage',
             'pages' => ['Admin/Approvals/Index'],

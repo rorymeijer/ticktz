@@ -11,6 +11,7 @@ use App\Models\Label;
 use App\Models\Organization;
 use App\Models\Priority;
 use App\Models\Queue;
+use App\Models\ReplyTemplate;
 use App\Models\RequestType;
 use App\Models\Team;
 use App\Models\Ticket;
@@ -189,6 +190,15 @@ class AutomationRuleController extends Controller
                 ->get(['id', 'name'])->all(),
             'request_types' => RequestType::query()->where('is_active', true)->orderBy('name')
                 ->get(['id', 'name'])->all(),
+            // Active ones only: a rule pointed at a switched-off template does
+            // nothing, and offering it in the dropdown would be offering a way
+            // to write that rule.
+            'reply_templates' => ReplyTemplate::query()
+                ->where('is_active', true)
+                ->orderBy('position')
+                ->orderBy('name')
+                ->get(['id', 'name', 'is_internal'])
+                ->all(),
             'people' => $this->namedPeople(),
             'sources' => Ticket::SOURCES,
         ];
@@ -268,6 +278,7 @@ class AutomationRuleController extends Controller
             'actions.*.status_id' => ['nullable', 'integer', Rule::exists('ticket_statuses', 'id')],
             'actions.*.label_id' => ['nullable', 'integer', Rule::exists('labels', 'id')],
             'actions.*.body' => ['nullable', 'string', 'max:5000'],
+            'actions.*.template_id' => ['nullable', 'integer', Rule::exists('reply_templates', 'id')],
             'actions.*.internal' => ['boolean'],
             // https only: a rule that can post anywhere is a request forgery
             // primitive, and the payload carries ticket content.

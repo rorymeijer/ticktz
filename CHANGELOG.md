@@ -11,6 +11,31 @@ the database.
 
 ## 1.2.0
 
+**Reply templates, shared by the people and the robots.** The answers a desk
+sends often enough to write down once now live in one list under
+Administration → Reply templates. An agent picks one from the reply box; an
+automation rule sends one with the new *Send a reply template* action.
+
+One list rather than two, because canned text has a habit of existing twice —
+a shared document the agents copy from, and a message body typed into a rule —
+and the copy that goes stale is always the rule's, since nobody opens it when
+the desk changes how it apologises. Both halves also render their placeholders
+through the same class, so the words an agent inserts by hand and the words a
+rule sends cannot come out different.
+
+A template is a reply or an internal note, and that choice lives on the
+template rather than on the moment of sending: "escalated to the supplier, do
+not tell them yet" is exactly the sentence a tickbox in the wrong state should
+not be able to send to a customer. Templates can be scoped to a team, and to
+the language the *requester* reads — not the agent's, since it is the customer
+who has to read the reply.
+
+Placeholders cover the ticket, the people and the desk; an unknown one renders
+as nothing rather than showing a customer the machinery. Four templates are
+seeded in each language, as much for the worked example as the head start.
+Curating them is its own permission, `templates.manage`, because writing what
+a desk says is editorial work rather than administration.
+
 **php-fpm no longer segfaults after an upgrade.** Two opcache settings, each
 defensible alone: `validate_timestamps = 0` and `jit = tracing`.
 

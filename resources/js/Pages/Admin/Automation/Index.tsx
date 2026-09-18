@@ -60,6 +60,7 @@ interface Action {
     queue_id?: number | null;
     status_id?: number | null;
     label_id?: number | null;
+    template_id?: number | null;
     body?: string;
     internal?: boolean;
     url?: string;
@@ -119,6 +120,8 @@ interface Options {
     labels: LabelSummary[];
     organizations: NamedOption[];
     request_types: NamedOption[];
+    /** Active reply templates, for the `reply_template` action. */
+    reply_templates: { id: number; name: string; is_internal: boolean }[];
     /** Only the people the saved rules already name — the rest are searched for. */
     people: UserSummary[];
     sources: string[];
@@ -172,6 +175,8 @@ function actionShape(type: string): keyof Action | 'comment' | 'webhook' | null 
             return 'label_id';
         case 'add_comment':
             return 'comment';
+        case 'reply_template':
+            return 'template_id';
         case 'webhook':
             return 'webhook';
         default:
@@ -1005,6 +1010,11 @@ function ActionRow({
         queue_id: { key: 'queue_id', items: options.queues, label: t('automation.action_config.queue') },
         status_id: { key: 'status_id', items: options.statuses, label: t('automation.action_config.status') },
         label_id: { key: 'label_id', items: options.labels, label: t('automation.action_config.label') },
+        template_id: {
+            key: 'template_id',
+            items: options.reply_templates,
+            label: t('automation.action_config.template'),
+        },
     };
 
     const picker = shape && shape in pickers ? pickers[shape as string] : null;
@@ -1073,6 +1083,14 @@ function ActionRow({
                     <IconX className="h-3.5 w-3.5" />
                 </button>
             </div>
+
+            {shape === 'template_id' ? (
+                <p className="text-xs text-slate-500">
+                    {options.reply_templates.length === 0
+                        ? t('automation.action_config.template_none')
+                        : t('automation.action_config.template_help')}
+                </p>
+            ) : null}
 
             {shape === 'comment' ? (
                 <div className="space-y-2">

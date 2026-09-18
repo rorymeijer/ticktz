@@ -73,6 +73,13 @@ Route::prefix('agent')->name('agent.')->middleware('can:tickets.view')->group(fu
 
     Route::post('tickets/{ticket}/comments', [TicketCommentController::class, 'store'])->name('tickets.comments.store');
 
+    // The canned replies, rendered for this ticket. Throttled like the other
+    // type-ahead endpoints: it is opened from a button in the reply box, so a
+    // busy agent hits it often and a script could hit it far more.
+    Route::get('tickets/{ticket}/reply-templates', [TicketCommentController::class, 'templates'])
+        ->middleware('throttle:120,1')
+        ->name('tickets.reply-templates');
+
     Route::put('tickets/{ticket}/assignee', [TicketActionController::class, 'assign'])->name('tickets.assign');
     Route::post('tickets/{ticket}/claim', [TicketActionController::class, 'claim'])->name('tickets.claim');
     Route::post('tickets/{ticket}/clone', [TicketActionController::class, 'clone'])->name('tickets.clone');

@@ -8,7 +8,9 @@ A **trigger** is the moment a rule is considered — a ticket created, updated, 
 
 **Conditions** narrow it. Field comparisons — priority is high, queue is Hardware, assignee is nobody — combined with all or any.
 
-**Actions** are what happens: assign to somebody, move to a team, set a priority, add a label, transition, add a watcher, send a webhook.
+**Actions** are what happens: assign to somebody, move to a team, set a priority, add a label, transition, add a watcher, send a webhook, or send one of the desk's reply templates.
+
+For anything your agents also send by hand, prefer *Send a reply template* over typing the text into the rule. The template is one row that both the rule and the reply box read, so the wording cannot end up with two versions — see **Reply templates**.
 
 ## Rules to write rules by
 

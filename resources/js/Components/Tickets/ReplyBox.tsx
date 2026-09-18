@@ -1,12 +1,21 @@
 import { useForm } from '@inertiajs/react';
-import { useRef, useState, type FormEventHandler } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEventHandler } from 'react';
 
-import { IconLock, IconPaperclip, IconX } from '@/Components/Icons';
+import { IconBook, IconLock, IconPaperclip, IconX } from '@/Components/Icons';
 import { RichTextEditor } from '@/Components/RichText/RichTextEditor';
-import { Button } from '@/Components/UI';
+import { Button, Dropdown, DropdownButton, DropdownHeading } from '@/Components/UI';
 import { useTranslations } from '@/hooks/useTranslations';
 import { cn } from '@/lib/cn';
 import { isBlankHtml } from '@/lib/richtext';
+
+/** A canned reply, already filled in for the ticket on screen. */
+interface ReplyTemplate {
+    id: number;
+    name: string;
+    description: string | null;
+    is_internal: boolean;
+    body: string;
+}
 
 /**
  * Reply / internal note composer.
@@ -27,6 +36,15 @@ export function ReplyBox({
     const { t } = useTranslations();
     const [internal, setInternal] = useState(!canReply && canNote);
     const fileInput = useRef<HTMLInputElement>(null);
+    const templates = useReplyTemplates(ticketKey, canReply || canNote);
+
+    // A template is a reply or a note, never both, and the tab decides which
+    // half is on offer. Showing the internal ones while the reply tab is open
+    // would put "do not tell the customer yet" one click from the customer.
+    const offered = useMemo(
+        () => templates.filter((template) => template.is_internal === internal),
+        [templates, internal],
+    );
 
     const form = useForm<{ body: string; is_internal: boolean; attachments: File[] }>({
         body: '',
@@ -50,6 +68,20 @@ export function ReplyBox({
                 if (fileInput.current) fileInput.current.value = '';
             },
         });
+    };
+
+    /**
+     * Put the template in the editor without throwing away what is already
+     * there. An agent who has typed two sentences and then reaches for the
+     * standard closing paragraph means "and this", not "instead of that" —
+     * and a composer that silently eats a draft is one an agent stops
+     * trusting with anything longer than a line.
+     */
+    const insert = (template: ReplyTemplate) => {
+        form.setData(
+            'body',
+            isBlankHtml(form.data.body) ? template.body : `${form.data.body}${template.body}`,
+        );
     };
 
     const tab = (value: boolean, label: string, icon?: React.ReactNode) => (
@@ -133,22 +165,53 @@ export function ReplyBox({
                 ) : null}
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900">
-                        <IconPaperclip className="h-4 w-4" />
-                        {t('tickets.actions.attach')}
-                        <input
-                            ref={fileInput}
-                            type="file"
-                            multiple
-                            className="sr-only"
-                            onChange={(event) =>
-                                form.setData('attachments', [
-                                    ...form.data.attachments,
-                                    ...Array.from(event.target.files ?? []),
-                                ])
-                            }
-                        />
-                    </label>
+                    <div className="flex flex-wrap items-center gap-3">
+                        {offered.length > 0 ? (
+                            <Dropdown
+                                align="left"
+                                trigger={
+                                    <button
+                                        type="button"
+                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900"
+                                    >
+                                        <IconBook className="h-4 w-4" />
+                                        {t('tickets.actions.insert_template')}
+                                    </button>
+                                }
+                            >
+                                <DropdownHeading>{t('tickets.templates.heading')}</DropdownHeading>
+                                {offered.map((template) => (
+                                    <DropdownButton key={template.id} onClick={() => insert(template)}>
+                                        <span className="min-w-0">
+                                            <span className="block truncate">{template.name}</span>
+                                            {template.description ? (
+                                                <span className="block truncate text-xs text-slate-500">
+                                                    {template.description}
+                                                </span>
+                                            ) : null}
+                                        </span>
+                                    </DropdownButton>
+                                ))}
+                            </Dropdown>
+                        ) : null}
+
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900">
+                            <IconPaperclip className="h-4 w-4" />
+                            {t('tickets.actions.attach')}
+                            <input
+                                ref={fileInput}
+                                type="file"
+                                multiple
+                                className="sr-only"
+                                onChange={(event) =>
+                                    form.setData('attachments', [
+                                        ...form.data.attachments,
+                                        ...Array.from(event.target.files ?? []),
+                                    ])
+                                }
+                            />
+                        </label>
+                    </div>
 
                     <Button
                         type="submit"
@@ -161,4 +224,42 @@ export function ReplyBox({
             </div>
         </form>
     );
+}
+
+/**
+ * The canned replies for this ticket, fetched once.
+ *
+ * Fetched when the box mounts rather than when the button is first clicked,
+ * because the button's existence is the answer to "does this desk have any?".
+ * A desk with no templates should see no control, and a control that appears
+ * only to say "nothing here" is worse than no control.
+ *
+ * The bodies arrive already filled in: the placeholder vocabulary lives on the
+ * server, and substituting in the browser would give this feature a second
+ * implementation that could disagree with the one the automation rules use.
+ */
+function useReplyTemplates(ticketKey: string, enabled: boolean): ReplyTemplate[] {
+    const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
+
+    useEffect(() => {
+        if (!enabled) {
+            return;
+        }
+
+        const controller = new AbortController();
+
+        fetch(`/agent/tickets/${ticketKey}/reply-templates`, {
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+        })
+            .then((response) => (response.ok ? response.json() : { templates: [] }))
+            .then((data: { templates?: ReplyTemplate[] }) => setTemplates(data.templates ?? []))
+            // Silent: a reply box that still works is more useful than an
+            // error about a convenience the agent has not asked for yet.
+            .catch(() => undefined);
+
+        return () => controller.abort();
+    }, [ticketKey, enabled]);
+
+    return templates;
 }

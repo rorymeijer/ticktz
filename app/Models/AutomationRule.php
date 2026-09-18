@@ -143,6 +143,17 @@ class AutomationRule extends Model
 
     public const ACTION_ADD_COMMENT = 'add_comment';
 
+    /**
+     * Send one of the desk's reply templates.
+     *
+     * Distinct from `add_comment`, which carries its own text. A rule that
+     * quotes the text inline is a second copy of wording that already exists,
+     * and the copy is the one nobody remembers to update when the desk changes
+     * how it apologises. This one names a {@see ReplyTemplate} and the
+     * template decides both the words and whether they go to the customer.
+     */
+    public const ACTION_REPLY_TEMPLATE = 'reply_template';
+
     public const ACTION_ADD_WATCHER = 'add_watcher';
 
     public const ACTION_WEBHOOK = 'webhook';
@@ -157,6 +168,7 @@ class AutomationRule extends Model
         self::ACTION_ADD_LABEL,
         self::ACTION_REMOVE_LABEL,
         self::ACTION_ADD_COMMENT,
+        self::ACTION_REPLY_TEMPLATE,
         self::ACTION_ADD_WATCHER,
         self::ACTION_WEBHOOK,
     ];

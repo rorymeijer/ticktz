@@ -48,6 +48,7 @@ return [
         'required' => 'verplicht',
         'language' => 'Taal',
         'key' => 'Sleutel',
+        'slug' => 'Slug',
         'type' => 'Type',
         'order' => 'Volgorde',
         'default' => 'Standaard',

@@ -8,7 +8,9 @@ Een **aanleiding** is het moment waarop een regel wordt overwogen — een ticket
 
 **Voorwaarden** perken het in. Veldvergelijkingen — prioriteit is hoog, wachtrij is Hardware, behandelaar is niemand — gecombineerd met alles of één daarvan.
 
-**Acties** zijn wat er gebeurt: aan iemand toewijzen, naar een team verplaatsen, een prioriteit zetten, een label toevoegen, een overgang maken, een volger toevoegen, een webhook versturen.
+**Acties** zijn wat er gebeurt: aan iemand toewijzen, naar een team verplaatsen, een prioriteit zetten, een label toevoegen, een overgang maken, een volger toevoegen, een webhook versturen, of een van de antwoordsjablonen van de servicedesk versturen.
+
+Gebruik voor tekst die je behandelaars ook met de hand versturen liever *Verstuur een antwoordsjabloon* dan de tekst in de regel te typen. Het sjabloon is één rij die zowel de regel als het antwoordvak leest, zodat er geen twee versies van de tekst kunnen ontstaan — zie **Antwoordsjablonen**.
 
 ## Regels om regels mee te schrijven
 

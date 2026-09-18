@@ -9,6 +9,7 @@ use App\Models\AutomationRule;
 use App\Models\Label;
 use App\Models\Priority;
 use App\Models\Queue;
+use App\Models\ReplyTemplate;
 use App\Models\Team;
 use App\Models\Ticket;
 use App\Models\TicketStatus;
@@ -16,6 +17,7 @@ use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Tickets\Assignability;
 use App\Services\Tickets\TicketNumberGenerator;
+use App\Services\Tickets\TicketPlaceholders;
 use App\Services\Tickets\TicketService;
 use Illuminate\Support\Arr;
 use Throwable;
@@ -39,6 +41,7 @@ class ActionRunner
         private readonly TicketNumberGenerator $numbers,
         private readonly AuditLogger $audit,
         private readonly AutomationGuard $guard,
+        private readonly TicketPlaceholders $placeholders,
     ) {}
 
     /**
@@ -116,6 +119,7 @@ class ActionRunner
             AutomationRule::ACTION_ADD_LABEL => $this->label($ticket, Arr::get($action, 'label_id'), attach: true),
             AutomationRule::ACTION_REMOVE_LABEL => $this->label($ticket, Arr::get($action, 'label_id'), attach: false),
             AutomationRule::ACTION_ADD_COMMENT => $this->comment($tickets, $ticket, $action),
+            AutomationRule::ACTION_REPLY_TEMPLATE => $this->replyTemplate($tickets, $ticket, Arr::get($action, 'template_id')),
             AutomationRule::ACTION_ADD_WATCHER => $this->watcher($tickets, $ticket, Arr::get($action, 'user_id')),
             AutomationRule::ACTION_WEBHOOK => $this->webhook($ticket, $rule, $action, $context),
             default => ['ok' => false, 'detail' => 'unknown action'],
@@ -278,13 +282,68 @@ class ActionRunner
 
         $tickets->comment(
             $ticket,
-            $this->fill($body, $ticket),
+            // Not escaped: this body is plain text that the comment's own
+            // sanitiser converts to HTML on the way in, and escaping first
+            // would show a customer the string `&amp;` where the desk wrote
+            // an ampersand. A reply template is HTML already and is escaped —
+            // see replyTemplate().
+            $this->placeholders->render($body, $ticket),
             null,
             internal: (bool) Arr::get($action, 'internal', true),
             source: 'automation',
         );
 
         return ['ok' => true];
+    }
+
+    /**
+     * Send one of the desk's reply templates, unattended.
+     *
+     * The template decides the words *and* whether they reach the customer:
+     * `is_internal` lives on the template rather than on the rule, so a note
+     * that says "escalated to the supplier, do not tell them yet" cannot be
+     * turned into a customer reply by an administrator ticking a box on a rule
+     * three screens away.
+     *
+     * Team scoping is checked against the ticket rather than trusted from the
+     * rule. An administrator wires a rule up once; the template can move to
+     * another team afterwards, and when it does the rule stops rather than
+     * sending one team's wording to another team's customer. That shows up in
+     * the execution log, which is where a rule that quietly stopped working
+     * needs to be visible.
+     *
+     * @return array{ok: bool, detail?: string}
+     */
+    private function replyTemplate(TicketService $tickets, Ticket $ticket, mixed $templateId): array
+    {
+        $template = $templateId
+            ? ReplyTemplate::query()->sendableOn($ticket)->find((int) $templateId)
+            : null;
+
+        if (! $template) {
+            return ['ok' => false, 'detail' => 'no such template for this ticket'];
+        }
+
+        // Escaped, because a template body is HTML and a requester called
+        // `<b>Jan` must not become markup in a reply the desk did not write.
+        // The actor is null: an automated reply has no author, which is what
+        // makes it read as the desk rather than as whichever agent happened
+        // to be named in the rule.
+        $body = $this->placeholders->render($template->body, $ticket, null, escape: true);
+
+        if (trim(strip_tags($body)) === '') {
+            return ['ok' => false, 'detail' => 'template rendered empty'];
+        }
+
+        $tickets->comment(
+            $ticket,
+            $body,
+            null,
+            internal: $template->is_internal,
+            source: 'automation',
+        );
+
+        return ['ok' => true, 'detail' => $template->name];
     }
 
     /**
@@ -331,29 +390,5 @@ class ActionRunner
         );
 
         return ['ok' => true, 'detail' => 'queued'];
-    }
-
-    /**
-     * The handful of placeholders an automated comment may use. Substitution,
-     * never evaluation — the same rule the e-mail templates follow.
-     */
-    private function fill(string $body, Ticket $ticket): string
-    {
-        $ticket->loadMissing(['status', 'priority', 'requester', 'assignee']);
-
-        $values = [
-            'ticket.key' => $ticket->key,
-            'ticket.subject' => $ticket->subject,
-            'ticket.status' => (string) $ticket->status?->name,
-            'ticket.priority' => (string) $ticket->priority?->name,
-            'requester.name' => (string) $ticket->requester?->name,
-            'assignee.name' => (string) $ticket->assignee?->name,
-        ];
-
-        return preg_replace_callback(
-            '/\{\{(.*?)\}\}/s',
-            static fn (array $matches): string => $values[trim($matches[1])] ?? '',
-            $body,
-        ) ?? $body;
     }
 }

@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\LdapConfigController;
 use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\PriorityController;
 use App\Http\Controllers\Admin\QueueController;
+use App\Http\Controllers\Admin\ReplyTemplateController;
 use App\Http\Controllers\Admin\RequestTypeController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -155,6 +156,17 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
     Route::resource('workflows', WorkflowController::class)->except('show');
     Route::resource('queues', QueueController::class)->except('show');
+
+    // Canned replies, edited in one list and used in two places: the agent's
+    // reply box and the `reply_template` automation action. Bound by id, since
+    // an administrator renaming one must not break the screen they renamed it
+    // on.
+    Route::get('reply-templates', [ReplyTemplateController::class, 'index'])->name('reply-templates.index');
+    Route::post('reply-templates', [ReplyTemplateController::class, 'store'])->name('reply-templates.store');
+    Route::put('reply-templates/{replyTemplate}', [ReplyTemplateController::class, 'update'])
+        ->name('reply-templates.update');
+    Route::delete('reply-templates/{replyTemplate}', [ReplyTemplateController::class, 'destroy'])
+        ->name('reply-templates.destroy');
 
     // Outgoing webhooks. `webhooks.manage` rather than `settings.manage`: an
     // integrator who wires up a middleware platform needs these screens and

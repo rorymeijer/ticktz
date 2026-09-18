@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             SettingsSeeder::class,
             TicketWorkflowSeeder::class,
             SlaSeeder::class,
+            ReplyTemplateSeeder::class,
         ]);
     }
 }

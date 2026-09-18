@@ -48,6 +48,7 @@ return [
         'required' => 'required',
         'language' => 'Language',
         'key' => 'Key',
+        'slug' => 'Slug',
         'type' => 'Type',
         'order' => 'Order',
         'default' => 'Default',

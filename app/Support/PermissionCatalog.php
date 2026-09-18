@@ -61,6 +61,12 @@ final class PermissionCatalog
         'automation' => [
             'automation.manage',
         ],
+        // Separate from `settings.manage` on purpose: curating the words the
+        // desk sends is editorial work, and the person who does it well is
+        // often a senior agent rather than whoever administers the instance.
+        'templates' => [
+            'templates.manage',
+        ],
         'reports' => [
             'reports.view',
             'reports.manage',

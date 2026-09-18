@@ -89,6 +89,13 @@ export default function AdminLayout({
             section: 'service_desk',
         },
         {
+            key: 'reply-templates',
+            href: '/admin/reply-templates',
+            label: t('admin.nav.reply_templates'),
+            permission: 'templates.manage',
+            section: 'service_desk',
+        },
+        {
             key: 'asset-types',
             href: '/admin/asset-types',
             label: t('admin.nav.asset_types'),
